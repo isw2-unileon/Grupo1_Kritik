@@ -7,6 +7,8 @@ install:
 	go mod download
 	cd frontend && npm ci
 	cd e2e && npm ci
+	go get github.com/joho/godotenv
+	go get github.com/supabase-community/supabase-go
 
 ## Run backend with hot reload
 run-backend:
