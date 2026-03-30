@@ -18,11 +18,7 @@ on:
       - ".github/workflows/backend.yml"
 
 jobs:
-<<<<<<< HEAD
-  build:
-=======
   backend-build:
->>>>>>> 87d8ebbf3c177b2e01a0ccb3ed0e0757a94a1d87
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

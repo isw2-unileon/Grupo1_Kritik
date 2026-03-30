@@ -16,11 +16,7 @@ defaults:
     working-directory: frontend
 
 jobs:
-<<<<<<< HEAD
-  build:
-=======
   frontend-build:
->>>>>>> 87d8ebbf3c177b2e01a0ccb3ed0e0757a94a1d87
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
