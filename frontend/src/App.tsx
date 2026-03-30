@@ -4,7 +4,7 @@ export default function App() {
 
   // Estado para guardar el mensaje de la API
   const [message, setMessage] = useState<string>("Loading...")
-  const API_URL = "https://grupo1-kritik-backend.onrender.com/";
+  const API_URL = "https://grupo1-kritik-backend.onrender.com";
 
   useEffect(() => {
     const fetchHello = async () => {
@@ -22,14 +22,15 @@ export default function App() {
   }, [])
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-6">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-4">App</h1>
         <p className="text-gray-500">
-          Edit <code className="bg-gray-100 px-2 py-1 rounded">src/App.tsx</code> to get start.
+          Edit <code className="bg-gray-100 px-2 py-1 rounded">src/App.tsx</code> to get started.
         </p>
       </div>
-      <div className="bg-gray-100 p-4 rounded-lg">
+
+      <div className="bg-gray-100 p-4 rounded-lg text-center">
         <p className="text-sm text-gray-400 uppercase tracking-widest mb-1">Backend Response:</p>
         <p className="text-xl font-mono text-gray-800 italic">
           "{message}"
