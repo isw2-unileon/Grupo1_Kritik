@@ -29,7 +29,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"https://grupo1-kritik-frontend.onrender.com",
+			"https://grupo1-kritik.onrender.com/",
 			"http://localhost:5173",
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
