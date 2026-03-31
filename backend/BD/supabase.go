@@ -26,9 +26,10 @@ type Content struct {
 var client *supabase.Client
 
 func InitialiseBD() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error al cargar el archivo .env")
+	if err := godotenv.Load(); err != nil {
+		if err = godotenv.Load("../../.env"); err != nil {
+			log.Fatal("Error al cargar el archivo .env:\n", err)
+		}
 	}
 
 	url := os.Getenv("SUPABASE_URL")
