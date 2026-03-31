@@ -9,6 +9,7 @@ install:
 	cd e2e && npm ci
 	go get github.com/joho/godotenv
 	go get github.com/supabase-community/supabase-go
+	go get golang.org/x/crypto/bcrypt
 
 ## Run backend with hot reload
 run-backend:

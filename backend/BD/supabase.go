@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/supabase-community/supabase-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -44,9 +45,9 @@ func InitialiseBD() {
 }
 
 /*
- ======================
+ =========================================================
  User functions
- ======================
+ =========================================================
 */
 
 // GetUserByID returns the User associated with the userID or an error if it occurred
@@ -97,11 +98,17 @@ func AddUser(newUser User) (bool, error) {
 		InitialiseBD()
 	}
 
-	//TODO: queda hasear la contraseña
+	hasedPassword, err := HashPassword(newUser.Password)
+
+	if err != nil {
+		return false, err
+	}
+
+	newUser.Password = hasedPassword
 
 	var insertedUsers []User
 
-	_, err := client.From("Users").Insert(newUser, false, "", "", "").ExecuteTo(&insertedUsers)
+	_, err = client.From("Users").Insert(newUser, false, "", "", "").ExecuteTo(&insertedUsers)
 
 	if err != nil {
 		return false, fmt.Errorf("error inserting user:\n%w", err)
@@ -157,9 +164,9 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 }
 
 /*
- ======================
+ =========================================================
  Content functions
- ======================
+ =========================================================
 */
 
 // GetContentByID returns the Content associated with the contentID or an error if it occurred
@@ -265,4 +272,25 @@ func DeleteContentByName(contentName string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+/*
+ =========================================================
+ Hash functions
+ =========================================================
+*/
+
+// HashPassword recibes the plain password and return the hash
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// VerifyPassword compares a plain password with the hassed password
+func VerifyPassword(plainPassword, hashedPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
+	return err == nil
 }
