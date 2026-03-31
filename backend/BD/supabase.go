@@ -10,17 +10,17 @@ import (
 )
 
 type User struct {
-	ID       string `json:"id"`
+	ID       int    `json:"id,omitempty"`
 	Email    string `json:"Email"`
 	Name     string `json:"Name"`
 	Password string `json:"Password"`
 }
 
 type Content struct {
-	ID    string `json:"id"`
+	ID    int    `json:"id,omitempty"`
 	Name  string `json:"Name"`
 	Type  string `json:"Type"`
-	Grade string `json:"Grade"`
+	Grade int    `json:"Grade"`
 }
 
 var client *supabase.Client
@@ -95,6 +95,8 @@ func AddUser(newUser User) (bool, error) {
 	if client == nil {
 		InitialiseBD()
 	}
+
+	//TODO: queda hasear la contraseña
 
 	var insertedUsers []User
 
