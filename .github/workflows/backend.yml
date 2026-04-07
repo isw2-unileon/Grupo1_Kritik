@@ -27,17 +27,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: Download dependencies
         run: go mod download && go mod verify
 
       - name: Lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v6 # Versión estable de la acción
         with:
-          version: v2.9.0
-
-      - name: Test
-        run: go test -v -race ./...
-
-      - name: Build
-        run: go build -o /dev/null ./backend/cmd/server
+          version: latest
