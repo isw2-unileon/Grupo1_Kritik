@@ -12,16 +12,17 @@ import (
 
 type User struct {
 	ID       int    `json:"id,omitempty"`
-	Email    string `json:"Email"`
-	Name     string `json:"Name"`
-	Password string `json:"Password"`
+	Email    string `json:"Email,omitempty"`
+	Name     string `json:"Name,omitempty"`
+	Password string `json:"Password,omitempty"`
 }
 
 type Content struct {
-	ID    int    `json:"id,omitempty"`
-	Name  string `json:"Name"`
-	Type  string `json:"Type"`
-	Grade int    `json:"Grade"`
+	ID          int    `json:"id,omitempty"`
+	Name        string `json:"Name,omitempty"`
+	Type        string `json:"Type,omitempty"`
+	Grade       int    `json:"Grade,omitempty"`
+	Description string `json:"Description,omitempty"`
 }
 
 var client *supabase.Client
@@ -92,8 +93,8 @@ func GetUserByEmail(userEmail string) (*User, error) {
 
 // AddUser adds a new User to the database
 //
-// Returns true if the User was added or false and an error if it was not added
-func AddUser(newUser User) (bool, error) {
+// Returns the added User or nil and an error if it was not added
+func AddUser(newUser User) (*User, error) {
 	if client == nil {
 		InitialiseBD()
 	}
@@ -101,7 +102,7 @@ func AddUser(newUser User) (bool, error) {
 	hasedPassword, err := HashPassword(newUser.Password)
 
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	newUser.Password = hasedPassword
@@ -111,10 +112,10 @@ func AddUser(newUser User) (bool, error) {
 	_, err = client.From("Users").Insert(newUser, false, "", "", "").ExecuteTo(&insertedUsers)
 
 	if err != nil {
-		return false, fmt.Errorf("error inserting user:\n%w", err)
+		return nil, fmt.Errorf("error inserting user:\n%w", err)
 	}
 
-	return true, nil
+	return &insertedUsers[0], nil
 }
 
 // DeleteUserByID deletes the User associated with the userID
@@ -161,6 +162,43 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// UpdateUserInfo updates 1 or more parameters from the selected User
+//
+// Recibes the id or email from the user to edit and an User with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited User if the info was edited or nil and an error if it could not be edited
+func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
+	if client == nil {
+		InitialiseBD()
+	}
+
+	newUserInfo.Email = userEmail
+	if newUserInfo.Password != "" {
+		hasedPassword, err := HashPassword(newUserInfo.Password)
+		if err != nil {
+			newUserInfo.Password = hasedPassword
+		}
+	}
+
+	var updatedUsers []User
+
+	_, err := client.From("Users").
+		Update(newUserInfo, "", "").
+		Eq("Email", userEmail).
+		ExecuteTo(&updatedUsers)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the user: %w", err)
+	}
+
+	if len(updatedUsers) == 0 {
+		return nil, fmt.Errorf("not foud any user with the ID %s to update", userEmail)
+	}
+
+	return &updatedUsers[0], nil
 }
 
 /*
@@ -211,8 +249,8 @@ func GetContentByName(contentName string) (*Content, error) {
 
 // AddContent adds a new Content to the database
 //
-// Returns true if the Content was added or false and an error if it was not added
-func AddContent(newContent Content) (bool, error) {
+// Returns the added Content or nil and an error if it was not added
+func AddContent(newContent Content) (*Content, error) {
 	if client == nil {
 		InitialiseBD()
 	}
@@ -222,10 +260,10 @@ func AddContent(newContent Content) (bool, error) {
 	_, err := client.From("Content").Insert(newContent, false, "", "", "").ExecuteTo(&insertedContent)
 
 	if err != nil {
-		return false, fmt.Errorf("error inserting content:\n%w", err)
+		return nil, fmt.Errorf("error inserting content:\n%w", err)
 	}
 
-	return true, nil
+	return &insertedContent[0], nil
 }
 
 // DeleteContentByID deletes the Content associated with the contentID
@@ -274,6 +312,35 @@ func DeleteContentByName(contentName string) (bool, error) {
 	return true, nil
 }
 
+// UpdateContentInfo updates 1 or more parameters from the selected Content
+//
+// Recibes the name from the content to edit and a Content with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited Content if the info was edited or nil and an error if it could not be edited
+func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, error) {
+	if client == nil {
+		InitialiseBD()
+	}
+
+	var updatedContents []Content
+
+	_, err := client.From("Content").
+		Update(newContentInfo, "", "").
+		Eq("Name", contentName).
+		ExecuteTo(&updatedContents)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the content: %w", err)
+	}
+
+	if len(updatedContents) == 0 {
+		return nil, fmt.Errorf("not foud any content with the Name %s to update", contentName)
+	}
+
+	return &updatedContents[0], nil
+}
+
 /*
  =========================================================
  Hash functions
@@ -282,6 +349,9 @@ func DeleteContentByName(contentName string) (bool, error) {
 
 // HashPassword recibes the plain password and return the hash
 func HashPassword(password string) (string, error) {
+	if password == "" {
+		return password, nil
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
