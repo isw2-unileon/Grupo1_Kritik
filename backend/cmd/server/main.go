@@ -17,6 +17,7 @@ import (
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+// main
 func main() {
 	ctx := context.Background()
 
