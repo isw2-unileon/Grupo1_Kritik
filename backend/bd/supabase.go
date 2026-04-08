@@ -1,4 +1,4 @@
-package BD
+package bd
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// User struct
 type User struct {
 	ID       int    `json:"id,omitempty"`
 	Email    string `json:"Email,omitempty"`
@@ -17,6 +18,7 @@ type User struct {
 	Password string `json:"Password,omitempty"`
 }
 
+// Content struct
 type Content struct {
 	ID          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
@@ -27,6 +29,7 @@ type Content struct {
 
 var client *supabase.Client
 
+// InitialiseBD initialises the data base
 func InitialiseBD() {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
