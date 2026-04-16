@@ -38,7 +38,7 @@ func TestGetUserByEmailNotFound(t *testing.T) {
 // ADD USER
 func TestAddUser(t *testing.T) {
 	newUser := User{
-		Email:    "testuser@gmail.com",
+		Email:    "testuser2@gmail.com",
 		Name:     "testuser",
 		Password: "testpassword",
 	}
@@ -116,7 +116,8 @@ func TestDeleteUserByEmailError(t *testing.T) {
 // UPDATE USER
 func TestUpdateUserInfo(t *testing.T) {
 	newUserInfo := User{
-		Name: "testuser2",
+		Name:     "testuser2",
+		Password: "testpassword2",
 	}
 
 	updatedUser, err := UpdateUserInfo("testuser@gmail.com", newUserInfo)
@@ -180,7 +181,7 @@ func TestGetContentByNameNotFound(t *testing.T) {
 // ADD CONTENT
 func TestAddContent(t *testing.T) {
 	newContent := Content{
-		Name:  "testcontent",
+		Name:  "testcontent2",
 		Type:  "Film",
 		Grade: 10,
 	}
