@@ -131,7 +131,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 	newUserInfo.Email = userEmail
 	if newUserInfo.Password != "" {
 		hasedPassword, err := HashPassword(newUserInfo.Password)
-		if err != nil {
+		if err == nil {
 			newUserInfo.Password = hasedPassword
 		}
 	}
