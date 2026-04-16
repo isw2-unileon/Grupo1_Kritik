@@ -12,7 +12,6 @@ import (
 
 // User struct
 type User struct {
-	ID       int    `json:"id,omitempty"`
 	Email    string `json:"Email,omitempty"`
 	Name     string `json:"Name,omitempty"`
 	Password string `json:"Password,omitempty"`
@@ -20,7 +19,6 @@ type User struct {
 
 // Content struct
 type Content struct {
-	ID          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
 	Type        string `json:"Type,omitempty"`
 	Grade       int    `json:"Grade,omitempty"`
@@ -29,8 +27,7 @@ type Content struct {
 
 var client *supabase.Client
 
-// InitialiseBD initialises the data base
-func InitialiseBD() {
+func init() {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
 			log.Fatal("Error al cargar el archivo .env:\n", err)
@@ -54,34 +51,8 @@ func InitialiseBD() {
  =========================================================
 */
 
-// GetUserByID returns the User associated with the userID or an error if it occurred
-func GetUserByID(userID string) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var users []User
-	_, err := client.From("Users").
-		Select("*", "exact", false).
-		Eq("id", userID).
-		ExecuteTo(&users)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with ID %s", userID)
-	}
-
-	return &users[0], nil
-}
-
 // GetUserByEmail returns the User associated with the userEmail or an error if it occurred
 func GetUserByEmail(userEmail string) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var users []User
 	_, err := client.From("Users").
@@ -104,9 +75,6 @@ func GetUserByEmail(userEmail string) (*User, error) {
 //
 // Returns the added User or nil and an error if it was not added
 func AddUser(newUser User) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	hasedPassword, err := HashPassword(newUser.Password)
 
@@ -129,39 +97,10 @@ func AddUser(newUser User) (*User, error) {
 	return &insertedUsers[0], nil
 }
 
-// DeleteUserByID deletes the User associated with the userID
-//
-// Returns true if the User was deleted, false y it could not be deleted or an error if it occurred
-func DeleteUserByID(userID string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var deletedUsers []User
-
-	_, err := client.From("Users").
-		Delete("", "representation").
-		Eq("id", userID).
-		ExecuteTo(&deletedUsers)
-
-	if err != nil {
-		return false, fmt.Errorf("error deleting user:\n%w", err)
-	}
-
-	if len(deletedUsers) == 0 {
-		return false, fmt.Errorf("not foud any user with the ID %s to delete", userID)
-	}
-
-	return true, nil
-}
-
 // DeleteUserByEmail deletes the User associated with the userEmail
 //
 // Returns true if the User was deleted, false y it could not be deleted or an error if it occurred
 func DeleteUserByEmail(userEmail string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var deletedUsers []User
 
@@ -183,14 +122,11 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 
 // UpdateUserInfo updates 1 or more parameters from the selected User
 //
-// Recibes the id or email from the user to edit and an User with the new information
+// Recibes the email from the user to edit and an User with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited User if the info was edited or nil and an error if it could not be edited
 func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	newUserInfo.Email = userEmail
 	if newUserInfo.Password != "" {
@@ -212,7 +148,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 	}
 
 	if len(updatedUsers) == 0 {
-		return nil, fmt.Errorf("not foud any user with the ID %s to update", userEmail)
+		return nil, fmt.Errorf("not foud any user with the email %s to update", userEmail)
 	}
 
 	return &updatedUsers[0], nil
@@ -224,34 +160,8 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
  =========================================================
 */
 
-// GetContentByID returns the Content associated with the contentID or an error if it occurred
-func GetContentByID(contentID string) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var contents []Content
-	_, err := client.From("Content").
-		Select("*", "exact", false).
-		Eq("id", contentID).
-		ExecuteTo(&contents)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(contents) == 0 {
-		return nil, fmt.Errorf("not found content with ID %s", contentID)
-	}
-
-	return &contents[0], nil
-}
-
 // GetContentByName returns the Content associated with the contentName or an error if it occurred
 func GetContentByName(contentName string) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var contents []Content
 	_, err := client.From("Content").
@@ -274,9 +184,6 @@ func GetContentByName(contentName string) (*Content, error) {
 //
 // Returns the added Content or nil and an error if it was not added
 func AddContent(newContent Content) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var insertedContent []Content
 
@@ -291,45 +198,16 @@ func AddContent(newContent Content) (*Content, error) {
 	return &insertedContent[0], nil
 }
 
-// DeleteContentByID deletes the Content associated with the contentID
-//
-// Returns true if the Content was deleted, false y it could not be deleted or an error if it occurred
-func DeleteContentByID(contentID string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var deletedContents []Content
-
-	_, err := client.From("Content").
-		Delete("", "representation").
-		Eq("id", contentID).
-		ExecuteTo(&deletedContents)
-
-	if err != nil {
-		return false, fmt.Errorf("error deleting content:\n%w", err)
-	}
-
-	if len(deletedContents) == 0 {
-		return false, fmt.Errorf("not foud any content with the ID %s to delete", contentID)
-	}
-
-	return true, nil
-}
-
 // DeleteContentByName deletes the Content associated with the contentName
 //
 // Returns true if the Content was deleted, false y it could not be deleted or an error if it occurred
 func DeleteContentByName(contentName string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var deletedContent []Content
 
 	_, err := client.From("Content").
 		Delete("", "representation").
-		Eq("Email", contentName).
+		Eq("Name", contentName).
 		ExecuteTo(&deletedContent)
 
 	if err != nil {
@@ -350,9 +228,6 @@ func DeleteContentByName(contentName string) (bool, error) {
 //
 // Returns the edited Content if the info was edited or nil and an error if it could not be edited
 func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var updatedContents []Content
 
