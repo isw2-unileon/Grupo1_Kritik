@@ -61,7 +61,10 @@ func GetUserByID(userID string) (*User, error) {
 	}
 
 	var users []User
-	_, err := client.From("Users").Select("*", "exact", false).Eq("id", userID).ExecuteTo(&users)
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("id", userID).
+		ExecuteTo(&users)
 
 	if err != nil {
 		return nil, err
@@ -81,7 +84,10 @@ func GetUserByEmail(userEmail string) (*User, error) {
 	}
 
 	var users []User
-	_, err := client.From("Users").Select("*", "exact", false).Eq("Email", userEmail).ExecuteTo(&users)
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("Email", userEmail).
+		ExecuteTo(&users)
 
 	if err != nil {
 		return nil, err
@@ -112,7 +118,9 @@ func AddUser(newUser User) (*User, error) {
 
 	var insertedUsers []User
 
-	_, err = client.From("Users").Insert(newUser, false, "", "", "").ExecuteTo(&insertedUsers)
+	_, err = client.From("Users").
+		Insert(newUser, false, "", "", "").
+		ExecuteTo(&insertedUsers)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting user:\n%w", err)
@@ -131,7 +139,10 @@ func DeleteUserByID(userID string) (bool, error) {
 
 	var deletedUsers []User
 
-	_, err := client.From("Users").Delete("exact", "").Eq("id", userID).ExecuteTo(&deletedUsers)
+	_, err := client.From("Users").
+		Delete("", "representation").
+		Eq("id", userID).
+		ExecuteTo(&deletedUsers)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting user:\n%w", err)
@@ -154,7 +165,10 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 
 	var deletedUsers []User
 
-	_, err := client.From("Users").Delete("exact", "").Eq("Email", userEmail).ExecuteTo(&deletedUsers)
+	_, err := client.From("Users").
+		Delete("", "representation").
+		Eq("Email", userEmail).
+		ExecuteTo(&deletedUsers)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting user:\n%w", err)
@@ -217,7 +231,10 @@ func GetContentByID(contentID string) (*Content, error) {
 	}
 
 	var contents []Content
-	_, err := client.From("Content").Select("*", "exact", false).Eq("id", contentID).ExecuteTo(&contents)
+	_, err := client.From("Content").
+		Select("*", "exact", false).
+		Eq("id", contentID).
+		ExecuteTo(&contents)
 
 	if err != nil {
 		return nil, err
@@ -237,7 +254,10 @@ func GetContentByName(contentName string) (*Content, error) {
 	}
 
 	var contents []Content
-	_, err := client.From("Content").Select("*", "exact", false).Eq("Name", contentName).ExecuteTo(&contents)
+	_, err := client.From("Content").
+		Select("*", "exact", false).
+		Eq("Name", contentName).
+		ExecuteTo(&contents)
 
 	if err != nil {
 		return nil, err
@@ -260,7 +280,9 @@ func AddContent(newContent Content) (*Content, error) {
 
 	var insertedContent []Content
 
-	_, err := client.From("Content").Insert(newContent, false, "", "", "").ExecuteTo(&insertedContent)
+	_, err := client.From("Content").
+		Insert(newContent, false, "", "", "").
+		ExecuteTo(&insertedContent)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting content:\n%w", err)
@@ -279,7 +301,10 @@ func DeleteContentByID(contentID string) (bool, error) {
 
 	var deletedContents []Content
 
-	_, err := client.From("Content").Delete("exact", "").Eq("id", contentID).ExecuteTo(&deletedContents)
+	_, err := client.From("Content").
+		Delete("", "representation").
+		Eq("id", contentID).
+		ExecuteTo(&deletedContents)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting content:\n%w", err)
@@ -302,7 +327,10 @@ func DeleteContentByName(contentName string) (bool, error) {
 
 	var deletedContent []Content
 
-	_, err := client.From("Content").Delete("exact", "").Eq("Email", contentName).ExecuteTo(&deletedContent)
+	_, err := client.From("Content").
+		Delete("", "representation").
+		Eq("Email", contentName).
+		ExecuteTo(&deletedContent)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting content:\n%w", err)
