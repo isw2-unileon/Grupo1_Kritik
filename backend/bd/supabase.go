@@ -133,6 +133,8 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 		hasedPassword, err := HashPassword(newUserInfo.Password)
 		if err == nil {
 			newUserInfo.Password = hasedPassword
+		} else {
+			return nil, err
 		}
 	}
 
