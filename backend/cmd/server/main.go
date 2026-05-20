@@ -12,7 +12,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
 	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/handlers"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -22,6 +24,9 @@ func main() {
 	ctx := context.Background()
 
 	cfg := config.Load()
+
+	// Initialize auth package with JWT secret
+	auth.Initialize(cfg.JWTSecret)
 
 	gin.SetMode(cfg.GinMode)
 
@@ -45,6 +50,11 @@ func main() {
 	api.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!"})
 	})
+
+	// Auth endpoints
+	authGroup := r.Group("/auth")
+	authGroup.POST("/register", handlers.RegisterHandler)
+	authGroup.POST("/login", handlers.LoginHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
