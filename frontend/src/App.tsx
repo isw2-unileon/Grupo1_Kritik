@@ -1,41 +1,56 @@
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, NavLink, Link } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 export default function App() {
-
-  // Estado para guardar el mensaje de la API
-  const [message, setMessage] = useState<string>("Loading...")
-  const API_URL = "https://grupo1-kritik-backend.onrender.com";
-
-  useEffect(() => {
-    const fetchHello = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/hello`);
-        const data = await response.json()
-        setMessage(data.message || "No message found")
-      } catch (error) {
-        console.error("Error fetching API:", error)
-        setMessage("Error connecting to backend")
-      }
-    }
-
-    fetchHello()
-  }, [])
-
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-6">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">App</h1>
-        <p className="text-gray-500">
-          Edit <code className="bg-gray-100 px-2 py-1 rounded">src/App.tsx</code> to get started.
-        </p>
-      </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <header className="border-b border-white/10 bg-slate-950/80">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-8">
+            <Link
+              to="/"
+              className="text-xl font-semibold tracking-[0.24em] text-cyan-300 transition hover:text-cyan-200"
+            >
+              Kritik
+            </Link>
 
-      <div className="bg-gray-100 p-4 rounded-lg text-center">
-        <p className="text-sm text-gray-400 uppercase tracking-widest mb-1">Backend Response:</p>
-        <p className="text-xl font-mono text-gray-800 italic">
-          "{message}"
-        </p>
+            <nav className="flex items-center gap-3">
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-2 text-sm transition ${isActive
+                    ? "bg-cyan-400 text-slate-950"
+                    : "text-slate-200 hover:bg-white/5"
+                  }`
+                }
+              >
+                Login
+              </NavLink>
+              <NavLink
+                to="/register"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-2 text-sm transition ${isActive
+                    ? "bg-cyan-400 text-slate-950"
+                    : "text-slate-200 hover:bg-white/5"
+                  }`
+                }
+              >
+                Register
+              </NavLink>
+            </nav>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-6xl px-6 py-10 sm:px-8">
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Routes>
+        </main>
       </div>
-    </main>
+    </BrowserRouter>
   );
 }
