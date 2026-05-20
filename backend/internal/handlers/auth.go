@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/bd"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/bd"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 )
 
 // RegisterRequest holds the registration payload.
