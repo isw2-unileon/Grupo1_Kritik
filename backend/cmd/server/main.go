@@ -12,9 +12,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/auth"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/handlers"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
