@@ -1,4 +1,14 @@
+import { FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+
 export default function LoginPage() {
+    const navigate = useNavigate();
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        navigate("/dashboard");
+    };
+
     return (
         <div className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/5 p-10 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
             <div className="mb-8 space-y-3">
@@ -11,7 +21,7 @@ export default function LoginPage() {
                 </p>
             </div>
 
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <label className="block">
                     <span className="text-sm font-medium text-slate-200">Nombre de usuario</span>
                     <input
