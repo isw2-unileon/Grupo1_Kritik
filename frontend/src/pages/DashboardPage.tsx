@@ -14,18 +14,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <header className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-4 shadow-[0_40px_120px_rgba(15,23,42,0.25)] sm:p-6">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-300/20">
-              <span className="font-semibold">K</span>
-            </div>
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Kritik</p>
-              <p className="text-base font-semibold text-white">Panel principal</p>
-            </div>
-          </div>
-
+      <header className="-mt-10 border-b border-white/10 bg-slate-950/80">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-5 sm:px-8 md:flex-row md:items-center md:justify-between">
           <button
             type="button"
             className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-slate-950/90 text-slate-100 hover:border-white/20 md:hidden"
@@ -39,7 +29,8 @@ export default function DashboardPage() {
 
           <nav
             id="main-navigation"
-            className={`${isNavOpen ? "block" : "hidden"} w-full rounded-3xl bg-slate-950/95 p-4 shadow-xl shadow-slate-950/20 md:block md:w-auto md:bg-transparent md:p-0`}
+            className={`${isNavOpen ? "block" : "hidden"} w-full md:block md:w-auto`}
+            aria-label="Navegación principal"
           >
             <ul className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
               {navigation.map((item) => (
@@ -86,14 +77,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center justify-between gap-4">
-            <div className="hidden items-center gap-3 rounded-full border border-white/10 bg-slate-950/70 px-4 py-2 text-sm text-slate-300 sm:flex">
-              <span className="font-semibold text-white">Ctrl</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-200">
-                N
-              </span>
-              <span>Publicar reseña</span>
-            </div>
-
             <Link
               to="/publish-review"
               className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
