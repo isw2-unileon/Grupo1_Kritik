@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function LandingPage() {
     return (
         <div className="space-y-12">
@@ -16,18 +18,18 @@ export default function LandingPage() {
                     </p>
 
                     <div className="flex flex-col gap-4 sm:flex-row">
-                        <a
-                            href="/register"
+                        <Link
+                            to="/register"
                             className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-7 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                         >
                             Crear cuenta
-                        </a>
-                        <a
-                            href="/login"
+                        </Link>
+                        <Link
+                            to="/login"
                             className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-7 py-3 text-sm text-white transition hover:border-white/25 hover:bg-white/10"
                         >
                             Iniciar sesión
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </section>

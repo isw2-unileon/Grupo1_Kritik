@@ -3,6 +3,7 @@ package auth
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -37,9 +38,11 @@ func GenerateToken(userID int, email string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
+		slog.Error("auth: failed to sign token", "user_id", userID, "error", err)
 		return "", fmt.Errorf("error signing token: %w", err)
 	}
 
+	slog.Debug("auth: token generated", "user_id", userID, "email", email)
 	return tokenString, nil
 }
 
@@ -53,12 +56,15 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return []byte(jwtSecret), nil
 	})
 	if err != nil {
+		slog.Warn("auth: token validation failed", "error", err)
 		return nil, fmt.Errorf("error parsing token: %w", err)
 	}
 
 	if !token.Valid {
+		slog.Warn("auth: invalid token")
 		return nil, fmt.Errorf("invalid token")
 	}
 
+	slog.Debug("auth: token validated", "user_id", claims.UserID, "email", claims.Email)
 	return claims, nil
 }
