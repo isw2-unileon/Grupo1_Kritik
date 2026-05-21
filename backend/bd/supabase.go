@@ -139,7 +139,7 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 
 // UpdateUserInfo updates 1 or more parameters from the selected User
 //
-// Recibes the email from the user to edit and an User with the new information
+// Recibes the email from the User to edit and an User with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited User if the info was edited or nil and an error if it could not be edited
@@ -242,7 +242,7 @@ func DeleteProductByName(productName string) (bool, error) {
 
 // UpdateProductInfo updates 1 or more parameters from the selected Product
 //
-// Recibes the name from the product to edit and a Product with the new information
+// Recibes the name from the Product to edit and a Product with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited Product if the info was edited or nil and an error if it could not be edited
@@ -264,6 +264,99 @@ func UpdateProductInfo(productName string, newProductInfo Product) (*Product, er
 	}
 
 	return &updatedProducts[0], nil
+}
+
+/*
+ =========================================================
+ Review functions
+ =========================================================
+*/
+
+// GetReviewByName returns the Review associated with the reviewName or an error if it occurred
+func GetReviewByName(reviewName string) (*Review, error) {
+	var reviews []Review
+
+	_, err := client.From("Review").
+		Select("*", "exact", false).
+		Eq("Name", reviewName).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(reviews) == 0 {
+		return nil, fmt.Errorf("not found review with name %s", reviewName)
+	}
+
+	return &reviews[0], nil
+}
+
+// AddReview adds a new Review to the database
+//
+// Returns the added Review or nil and an error if it was not added
+func AddReview(newReview Review) (*Review, error) {
+
+	var insertedReview []Review
+
+	_, err := client.From("Review").
+		Insert(newReview, false, "", "", "").
+		ExecuteTo(&insertedReview)
+
+	if err != nil {
+		return nil, fmt.Errorf("error inserting review:\n%w", err)
+	}
+
+	return &insertedReview[0], nil
+}
+
+// DeleteReviewByName deletes the Review associated with the reviewName
+//
+// Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
+func DeleteReviewByName(reviewName string) (bool, error) {
+
+	var deletedReview []Review
+
+	_, err := client.From("Review").
+		Delete("", "representation").
+		Eq("Name", reviewName).
+		ExecuteTo(&deletedReview)
+
+	if err != nil {
+		return false, fmt.Errorf("error deleting review:\n%w", err)
+	}
+
+	if len(deletedReview) == 0 {
+		return false, fmt.Errorf("not foud any review with the name %s to delete", reviewName)
+	}
+
+	return true, nil
+}
+
+// UpdateReviewInfo updates 1 or more parameters from the selected Review
+//
+// Recibes the name from the Review to edit and a Review with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited Review if the info was edited or nil and an error if it could not be edited
+func UpdateReviewInfo(reviewName string, newReviewInfo Review) (*Review, error) {
+
+	var updatedReviews []Review
+
+	_, err := client.From("Review").
+		Update(newReviewInfo, "", "").
+		Eq("Name", reviewName).
+		ExecuteTo(&updatedReviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the review: %w", err)
+	}
+
+	if len(updatedReviews) == 0 {
+		return nil, fmt.Errorf("not foud any review with the Name %s to update", reviewName)
+	}
+
+	return &updatedReviews[0], nil
 }
 
 /*
