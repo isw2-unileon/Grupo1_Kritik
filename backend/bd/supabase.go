@@ -17,8 +17,8 @@ type User struct {
 	Password string `json:"Password,omitempty"`
 }
 
-// Content struct
-type Content struct {
+// Product struct
+type Product struct {
 	Name        string `json:"Name,omitempty"`
 	Type        string `json:"Type,omitempty"`
 	Grade       int    `json:"Grade,omitempty"`
@@ -158,95 +158,95 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 
 /*
  =========================================================
- Content functions
+ Product functions
  =========================================================
 */
 
-// GetContentByName returns the Content associated with the contentName or an error if it occurred
-func GetContentByName(contentName string) (*Content, error) {
+// GetProductByName returns the Product associated with the productName or an error if it occurred
+func GetProductByName(productName string) (*Product, error) {
 
-	var contents []Content
-	_, err := client.From("Content").
+	var products []Product
+	_, err := client.From("Product").
 		Select("*", "exact", false).
-		Eq("Name", contentName).
-		ExecuteTo(&contents)
+		Eq("Name", productName).
+		ExecuteTo(&products)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if len(contents) == 0 {
-		return nil, fmt.Errorf("not found content with name %s", contentName)
+	if len(products) == 0 {
+		return nil, fmt.Errorf("not found product with name %s", productName)
 	}
 
-	return &contents[0], nil
+	return &products[0], nil
 }
 
-// AddContent adds a new Content to the database
+// AddProduct adds a new Product to the database
 //
-// Returns the added Content or nil and an error if it was not added
-func AddContent(newContent Content) (*Content, error) {
+// Returns the added Product or nil and an error if it was not added
+func AddProduct(newProduct Product) (*Product, error) {
 
-	var insertedContent []Content
+	var insertedProduct []Product
 
-	_, err := client.From("Content").
-		Insert(newContent, false, "", "", "").
-		ExecuteTo(&insertedContent)
+	_, err := client.From("Product").
+		Insert(newProduct, false, "", "", "").
+		ExecuteTo(&insertedProduct)
 
 	if err != nil {
-		return nil, fmt.Errorf("error inserting content:\n%w", err)
+		return nil, fmt.Errorf("error inserting product:\n%w", err)
 	}
 
-	return &insertedContent[0], nil
+	return &insertedProduct[0], nil
 }
 
-// DeleteContentByName deletes the Content associated with the contentName
+// DeleteProductByName deletes the Product associated with the productName
 //
-// Returns true if the Content was deleted, false y it could not be deleted or an error if it occurred
-func DeleteContentByName(contentName string) (bool, error) {
+// Returns true if the Product was deleted, false y it could not be deleted or an error if it occurred
+func DeleteProductByName(productName string) (bool, error) {
 
-	var deletedContent []Content
+	var deletedProduct []Product
 
-	_, err := client.From("Content").
+	_, err := client.From("Product").
 		Delete("", "representation").
-		Eq("Name", contentName).
-		ExecuteTo(&deletedContent)
+		Eq("Name", productName).
+		ExecuteTo(&deletedProduct)
 
 	if err != nil {
-		return false, fmt.Errorf("error deleting content:\n%w", err)
+		return false, fmt.Errorf("error deleting product:\n%w", err)
 	}
 
-	if len(deletedContent) == 0 {
-		return false, fmt.Errorf("not foud any content with the name %s to delete", contentName)
+	if len(deletedProduct) == 0 {
+		return false, fmt.Errorf("not foud any product with the name %s to delete", productName)
 	}
 
 	return true, nil
 }
 
-// UpdateContentInfo updates 1 or more parameters from the selected Content
+// UpdateProductInfo updates 1 or more parameters from the selected Product
 //
-// Recibes the name from the content to edit and a Content with the new information
+// Recibes the name from the product to edit and a Product with the new information
 // (if any parameter is empty, it wont be edited)
 //
-// Returns the edited Content if the info was edited or nil and an error if it could not be edited
-func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, error) {
+// Returns the edited Product if the info was edited or nil and an error if it could not be edited
+func UpdateProductInfo(productName string, newProductInfo Product) (*Product, error) {
 
-	var updatedContents []Content
+	var updatedProducts []Product
 
-	_, err := client.From("Content").
-		Update(newContentInfo, "", "").
-		Eq("Name", contentName).
-		ExecuteTo(&updatedContents)
+	_, err := client.From("Product").
+		Update(newProductInfo, "", "").
+		Eq("Name", productName).
+		ExecuteTo(&updatedProducts)
 
 	if err != nil {
-		return nil, fmt.Errorf("error updating the content: %w", err)
+		return nil, fmt.Errorf("error updating the product: %w", err)
 	}
 
-	if len(updatedContents) == 0 {
-		return nil, fmt.Errorf("not foud any content with the Name %s to update", contentName)
+	if len(updatedProducts) == 0 {
+		return nil, fmt.Errorf("not foud any product with the Name %s to update", productName)
 	}
 
-	return &updatedContents[0], nil
+	return &updatedProducts[0], nil
 }
 
 /*

@@ -149,91 +149,91 @@ func TestUpdateUserInfoError(t *testing.T) {
 
 /*
  =========================================================
- Content functions
+ Product functions
  =========================================================
 */
 
-// GET CONTENT
-func TestGetContentByName(t *testing.T) {
-	content, err := GetContentByName("testcontent")
+// GET PRODUCT
+func TestGetProductByName(t *testing.T) {
+	product, err := GetProductByName("testproduct")
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	if content == nil {
-		t.Errorf("Content is nil")
+	if product == nil {
+		t.Errorf("Product is nil")
 	}
 }
 
-func TestGetContentByNameNotFound(t *testing.T) {
-	content, err := GetContentByName("0")
+func TestGetProductByNameNotFound(t *testing.T) {
+	product, err := GetProductByName("0")
 
 	if err == nil {
 		t.Errorf("Expected error")
 	}
 
-	if content != nil {
-		t.Errorf("Content should be nil")
+	if product != nil {
+		t.Errorf("Product should be nil")
 	}
 }
 
-// ADD CONTENT
-func TestAddContent(t *testing.T) {
-	newContent := Content{
-		Name:  "testcontent2",
+// ADD PRODUCT
+func TestAddProduct(t *testing.T) {
+	newProduct := Product{
+		Name:  "testproduct2",
 		Type:  "Film",
 		Grade: 10,
 	}
 
-	addedContent, err := AddContent(newContent)
+	addedProduct, err := AddProduct(newProduct)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	if addedContent == nil {
-		t.Errorf("Added content is nil")
+	if addedProduct == nil {
+		t.Errorf("Added product is nil")
 	}
 }
 
-func TestAddContentMissingData(t *testing.T) {
-	newContent := Content{
+func TestAddProductMissingData(t *testing.T) {
+	newProduct := Product{
 		Type:  "Film",
 		Grade: 10,
 	}
 
-	addedContent, err := AddContent(newContent)
+	addedProduct, err := AddProduct(newProduct)
 
 	if err == nil {
 		t.Errorf("An error was espected")
 	}
 
-	if addedContent != nil {
-		t.Errorf("Added content should be nil")
+	if addedProduct != nil {
+		t.Errorf("Added product should be nil")
 	}
 }
 
-// DELETE CONTENT
-func TestDeleteContentByName(t *testing.T) {
-	contentToDelete := Content{
-		Name:  "contenttodelete",
+// DELETE PRODUCT
+func TestDeleteProductByName(t *testing.T) {
+	productToDelete := Product{
+		Name:  "producttodelete",
 		Type:  "Series",
 		Grade: 5,
 	}
 
-	addedContent, err := AddContent(contentToDelete)
+	addedProduct, err := AddProduct(productToDelete)
 
 	if err != nil {
-		t.Errorf("Could not add content to delete")
+		t.Errorf("Could not add product to delete")
 	}
 
-	if addedContent == nil {
-		t.Errorf("Added content is nil")
+	if addedProduct == nil {
+		t.Errorf("Added product is nil")
 		return
 	}
 
-	isDeleted, err := DeleteContentByName(addedContent.Name)
+	isDeleted, err := DeleteProductByName(addedProduct.Name)
 
 	if err != nil {
 		t.Error(err)
@@ -244,8 +244,8 @@ func TestDeleteContentByName(t *testing.T) {
 	}
 }
 
-func TestDeleteContentByNameError(t *testing.T) {
-	isDeleted, err := DeleteContentByName("0")
+func TestDeleteProductByNameError(t *testing.T) {
+	isDeleted, err := DeleteProductByName("0")
 
 	if err == nil {
 		t.Error(err)
@@ -256,36 +256,36 @@ func TestDeleteContentByNameError(t *testing.T) {
 	}
 }
 
-// UPDATE CONTENT
-func TestUpdateContentInfo(t *testing.T) {
-	newContentInfo := Content{
+// UPDATE PRODUCT
+func TestUpdateProductInfo(t *testing.T) {
+	newProductInfo := Product{
 		Type: "Series",
 	}
 
-	updatedContent, err := UpdateContentInfo("testcontent", newContentInfo)
+	updatedProduct, err := UpdateProductInfo("testproduct", newProductInfo)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	if updatedContent == nil {
-		t.Errorf("Updated content is nil")
+	if updatedProduct == nil {
+		t.Errorf("Updated product is nil")
 	}
 }
 
-func TestUpdateContentInfoError(t *testing.T) {
-	newContentInfo := Content{
-		Name: "testcontent2",
+func TestUpdateProductInfoError(t *testing.T) {
+	nenProductInfo := Product{
+		Name: "testproduct2",
 	}
 
-	updatedContent, err := UpdateContentInfo("dhfdskhjdfsj", newContentInfo) // Content not in BD
+	updatedProduct, err := UpdateProductInfo("dhfdskhjdfsj", nenProductInfo) // Product not in BD
 
 	if err == nil {
 		t.Error("An error was expected")
 	}
 
-	if updatedContent != nil {
-		t.Errorf("Updated content should be nil")
+	if updatedProduct != nil {
+		t.Errorf("Updated product should be nil")
 	}
 }
 
