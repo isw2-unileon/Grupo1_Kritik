@@ -181,9 +181,9 @@ func TestGetProductByNameNotFound(t *testing.T) {
 // ADD PRODUCT
 func TestAddProduct(t *testing.T) {
 	newProduct := Product{
-		Name:  "testproduct2",
-		Type:  "Film",
-		Grade: 10,
+		Name:         "testproduct2",
+		Type:         "Film",
+		AverageGrade: 10,
 	}
 
 	addedProduct, err := AddProduct(newProduct)
@@ -199,8 +199,8 @@ func TestAddProduct(t *testing.T) {
 
 func TestAddProductMissingData(t *testing.T) {
 	newProduct := Product{
-		Type:  "Film",
-		Grade: 10,
+		Type:         "Film",
+		AverageGrade: 10,
 	}
 
 	addedProduct, err := AddProduct(newProduct)
@@ -217,9 +217,9 @@ func TestAddProductMissingData(t *testing.T) {
 // DELETE PRODUCT
 func TestDeleteProductByName(t *testing.T) {
 	productToDelete := Product{
-		Name:  "producttodelete",
-		Type:  "Series",
-		Grade: 5,
+		Name:         "producttodelete",
+		Type:         "Series",
+		AverageGrade: 5,
 	}
 
 	addedProduct, err := AddProduct(productToDelete)
