@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, NavLink, Link } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
@@ -67,13 +67,18 @@ function Header() {
 }
 
 function AppContent() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <Header />
 
       <main className="mx-auto max-w-6xl px-6 py-10 sm:px-8">
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/"
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route

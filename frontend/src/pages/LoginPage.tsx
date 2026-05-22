@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { isEmpty, isValidEmail } from "@/utils/validation";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,6 +15,21 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+
+    if (isEmpty(username)) {
+      setError("El usuario o correo es obligatorio");
+      return;
+    }
+
+    if (isEmpty(password)) {
+      setError("La contraseña es obligatoria");
+      return;
+    }
+
+    if (username.includes("@") && !isValidEmail(username)) {
+      setError("El correo electrónico no tiene un formato válido");
+      return;
+    }
 
     setLoading(true);
     try {
