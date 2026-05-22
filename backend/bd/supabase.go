@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
+	"cloud.google.com/go/civil"
 	"github.com/joho/godotenv"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
@@ -13,33 +13,35 @@ import (
 
 // User struct
 type User struct {
-	Email    string    `json:"Email,omitempty"`
-	Name     string    `json:"Name,omitempty"`
-	Surname  string    `json:"Surname,omitempty"`
-	UserName string    `json:"UserName,omitempty"`
-	Password string    `json:"Password,omitempty"`
-	Birth    time.Time `json:"Birth,omitempty"`
+	Id       int        `json:"id,omitempty"`
+	Email    string     `json:"Email,omitempty"`
+	Name     string     `json:"Name,omitempty"`
+	Surname  string     `json:"Surname,omitempty"`
+	UserName string     `json:"UserName,omitempty"`
+	Password string     `json:"Password,omitempty"`
+	Birth    civil.Date `json:"Birth,omitempty"`
 }
 
 // Product struct
 type Product struct {
-	Name         string    `json:"Name,omitempty"`
-	Type         string    `json:"Type,omitempty"`
-	AverageGrade int       `json:"AverageGrade,omitempty"`
-	Description  string    `json:"Description,omitempty"`
-	Release      time.Time `json:"Release,omitempty"`
-	Genre        []string  `json:"Genre,omitempty"`
+	Id           int        `json:"id,omitempty"`
+	Name         string     `json:"Name,omitempty"`
+	Type         string     `json:"Type,omitempty"`
+	AverageGrade int        `json:"AverageGrade,omitempty"`
+	Description  string     `json:"Description,omitempty"`
+	Release      civil.Date `json:"Release,omitempty"`
+	Genre        []string   `json:"Genre,omitempty"`
 }
 
 // Review struct
 type Review struct {
+	Id          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
-	Type        string `json:"Type,omitempty"`
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductId int `json:"ProductId,omitempty"`
-	UserId    int `json:"UserId,omitempty"`
+	ProductName string `json:"ProductName,omitempty"`
+	UserName    string `json:"UserName,omitempty"`
 }
 
 var client *supabase.Client

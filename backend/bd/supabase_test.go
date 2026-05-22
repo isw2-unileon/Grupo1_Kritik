@@ -2,6 +2,8 @@ package bd
 
 import (
 	"testing"
+
+	"cloud.google.com/go/civil"
 )
 
 /*
@@ -12,7 +14,22 @@ import (
 
 // GET USER
 func TestGetUserByEmail(t *testing.T) {
-	user, err := GetUserByEmail("testuser@gmail.com")
+	testUserToGet := User{
+		Email:    "testusertoget@gmail.com",
+		Name:     "testuser",
+		Surname:  "toget",
+		UserName: "testusertoget",
+		Password: "testpassword",
+		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
+	}
+
+	_, err := AddUser(testUserToGet)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	user, err := GetUserByEmail(testUserToGet.Email)
 
 	if err != nil {
 		t.Error(err)
@@ -21,6 +38,8 @@ func TestGetUserByEmail(t *testing.T) {
 	if user == nil {
 		t.Errorf("User is nil")
 	}
+
+	_, err = DeleteUserByEmail(testUserToGet.Email)
 }
 
 func TestGetUserByEmailNotFound(t *testing.T) {
@@ -37,13 +56,16 @@ func TestGetUserByEmailNotFound(t *testing.T) {
 
 // ADD USER
 func TestAddUser(t *testing.T) {
-	newUser := User{
-		Email:    "testuser2@gmail.com",
+	testUserToAdd := User{
+		Email:    "testusertoadd@gmail.com",
 		Name:     "testuser",
+		Surname:  "toadd",
+		UserName: "testusertoadd",
 		Password: "testpassword",
+		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
-	addedUser, err := AddUser(newUser)
+	addedUser, err := AddUser(testUserToAdd)
 
 	if err != nil {
 		t.Error(err)
@@ -52,6 +74,8 @@ func TestAddUser(t *testing.T) {
 	if addedUser == nil {
 		t.Errorf("Added user is nil")
 	}
+
+	_, err = DeleteUserByEmail(testUserToAdd.Email)
 }
 
 func TestAddUserMissingData(t *testing.T) {
@@ -69,6 +93,8 @@ func TestAddUserMissingData(t *testing.T) {
 	if addedUser != nil {
 		t.Errorf("Added user should be nil")
 	}
+
+	_, err = DeleteUserByEmail(newUser.Email)
 }
 
 // DELETE USER
@@ -286,6 +312,206 @@ func TestUpdateProductInfoError(t *testing.T) {
 
 	if updatedProduct != nil {
 		t.Errorf("Updated product should be nil")
+	}
+}
+
+/*
+ =========================================================
+ Review functions
+ =========================================================
+*/
+
+// GET REVIEW
+func TestGetReviewByName(t *testing.T) {
+	review, err := GetReviewByName("testreview")
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if review == nil {
+		t.Errorf("Review is nil")
+	}
+}
+
+func TestGetReviewByNameNotFound(t *testing.T) {
+	review, err := GetReviewByName("0")
+
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+
+	if review != nil {
+		t.Errorf("Review should be nil")
+	}
+}
+
+// ADD REVIEW
+func TestAddReview(t *testing.T) {
+	testUser := User{
+		Email:    "testusertoaddreview@gmail.com",
+		Name:     "testuser",
+		Surname:  "toaddreview",
+		UserName: "testusertoaddreview",
+		Password: "testpassword",
+		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
+	}
+
+	testProduct := Product{
+		Name:    "testproduct",
+		Type:    "Film",
+		Genre:   []string{"terror", "suspense"},
+		Release: civil.Date{Year: 2004, Month: 11, Day: 10},
+	}
+
+	user, err := AddUser(testUser)
+	if err != nil {
+		DeleteUserByEmail(testUser.Email)
+		t.Error(err)
+		return
+	}
+	product, err := AddProduct(testProduct)
+	if err != nil {
+		// No need to handle this error
+		DeleteUserByEmail(testUser.Email)
+		DeleteProductByName(testProduct.Name)
+		t.Error(err)
+		return
+	}
+
+	newReview := Review{
+		Name:        "testreview2",
+		Recommended: true,
+		Description: "Good film",
+		UserName:    user.UserName,
+		ProductName: product.Name,
+	}
+
+	addedReview, err := AddReview(newReview)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if addedReview == nil {
+		t.Errorf("Added review is nil")
+	}
+
+	_, err = DeleteUserByEmail(testUser.Email)
+	_, err = DeleteProductByName(testProduct.Name)
+}
+
+func TestAddReviewMissingData(t *testing.T) {
+	testUser := User{
+		Email:    "testusertoaddreview@gmail.com",
+		Name:     "testuser",
+		Surname:  "toaddreview",
+		UserName: "testusertoaddreview",
+		Password: "testpassword",
+	}
+
+	testProduct := Product{
+		Name:  "testproduct",
+		Type:  "Film",
+		Genre: []string{"terror", "suspense"},
+	}
+
+	user, err := AddUser(testUser)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	product, err := AddProduct(testProduct)
+	if err != nil {
+		// No need to handle this error
+		DeleteUserByEmail(testUser.Email)
+		t.Error(err)
+		return
+	}
+
+	newReview := Review{
+		Recommended: true,
+		Description: "Good film",
+		UserName:    user.UserName,
+		ProductName: product.Name,
+	}
+
+	addedReview, err := AddReview(newReview)
+
+	if err == nil {
+		t.Error("Should have returned an error")
+	} else {
+		t.Log(err)
+	}
+
+	if addedReview != nil {
+		t.Errorf("Added review should be nil, but its not")
+	}
+
+	_, err = DeleteUserByEmail(testUser.Email)
+	_, err = DeleteProductByName(testProduct.Name)
+}
+
+func TestAddReviewNotMatchingUserName(t *testing.T) {
+	newReview := Review{
+		Name:        "testreview2",
+		Recommended: true,
+		Description: "Good film",
+		UserName:    "ajfsjfsk",
+		ProductName: "skdnldsknjv",
+	}
+
+	addedReview, err := AddReview(newReview)
+
+	if err == nil {
+		t.Error("Should have returned an error")
+	} else {
+		t.Log(err)
+	}
+
+	if addedReview != nil {
+		t.Errorf("Added review should be nil, but its not")
+	}
+}
+
+// DELETE REVIEW
+func TestDeleteReviewByName(t *testing.T) {
+	reviewToDelete := Review{
+		Name:        "reviewtodelete",
+		Recommended: true,
+	}
+
+	addedReview, err := AddReview(reviewToDelete)
+
+	if err != nil {
+		t.Errorf("Could not add review to delete")
+	}
+
+	if addedReview == nil {
+		t.Errorf("Added review is nil")
+		return
+	}
+
+	isDeleted, err := DeleteReviewByName(addedReview.Name)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !isDeleted {
+		t.Errorf("Function returned false")
+	}
+}
+
+func TestDeleteReviewByNameError(t *testing.T) {
+	isDeleted, err := DeleteReviewByName("0")
+
+	if err == nil {
+		t.Error(err)
+	}
+
+	if isDeleted {
+		t.Errorf("Function returned true")
 	}
 }
 
