@@ -17,7 +17,7 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
 )
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 // main
 func main() {

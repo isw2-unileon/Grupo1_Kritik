@@ -2,7 +2,7 @@ package bd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -12,10 +12,13 @@ import (
 
 // User struct
 type User struct {
-	ID       int    `json:"id,omitempty"`
-	Email    string `json:"Email,omitempty"`
-	Name     string `json:"Name,omitempty"`
-	Password string `json:"Password,omitempty"`
+	ID        int    `json:"id,omitempty"`
+	Email     string `json:"Email,omitempty"`
+	Name      string `json:"Name,omitempty"`
+	Password  string `json:"Password,omitempty"`
+	Surname   string `json:"Surname"`
+	UserName  string `json:"UserName"`
+	Birth     string `json:"Birth"`
 }
 
 // Content struct
@@ -33,19 +36,28 @@ var client *supabase.Client
 func InitialiseBD() {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
-			log.Fatal("Error al cargar el archivo .env:\n", err)
+			slog.Error("supabase: failed to load .env", "error", err)
+			os.Exit(1)
 		}
 	}
 
 	url := os.Getenv("SUPABASE_URL")
 	key := os.Getenv("SUPABASE_KEY")
 
+	if url == "" || key == "" {
+		slog.Error("supabase: SUPABASE_URL or SUPABASE_KEY not set")
+		os.Exit(1)
+	}
+
 	var errClient error
 	client, errClient = supabase.NewClient(url, key, &supabase.ClientOptions{})
 
 	if errClient != nil {
-		log.Fatalf("Error al crear cliente: %v", errClient)
+		slog.Error("supabase: failed to create client", "error", errClient)
+		os.Exit(1)
 	}
+
+	slog.Info("supabase: client initialised")
 }
 
 /*
@@ -89,6 +101,26 @@ func GetUserByEmail(userEmail string) (*User, error) {
 
 	if len(users) == 0 {
 		return nil, fmt.Errorf("not found user with email %s", userEmail)
+	}
+
+	return &users[0], nil
+}
+
+// GetUserByUserName returns the User associated with the username or an error if it occurred
+func GetUserByUserName(username string) (*User, error) {
+	if client == nil {
+		InitialiseBD()
+	}
+
+	var users []User
+	_, err := client.From("Users").Select("*", "exact", false).Eq("UserName", username).ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("not found user with username %s", username)
 	}
 
 	return &users[0], nil

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Home", href: "#home" },
@@ -10,6 +11,8 @@ const navigation = [
 ];
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   return (
@@ -46,6 +49,7 @@ export default function DashboardPage() {
               <li>
                 <button
                   type="button"
+                  onClick={() => { logout(); navigate("/"); }}
                   className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/10 md:w-auto"
                 >
                   Cerrar sesión
