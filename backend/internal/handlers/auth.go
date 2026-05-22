@@ -10,6 +10,7 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 )
 
+// RegisterRequest represents the payload for user registration.
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
@@ -19,17 +20,20 @@ type RegisterRequest struct {
 	Birth    string `json:"birth"`
 }
 
+// LoginRequest represents the payload for user login.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	UserName string `json:"user_name"`
 	Password string `json:"password" binding:"required"`
 }
 
+// AuthResponse represents the response returned after successful authentication.
 type AuthResponse struct {
 	Token string       `json:"token"`
 	User  UserResponse `json:"user"`
 }
 
+// UserResponse represents the user data returned in API responses.
 type UserResponse struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
@@ -38,6 +42,7 @@ type UserResponse struct {
 	UserName string `json:"user_name"`
 }
 
+// RegisterHandler handles user registration.
 func RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 
@@ -110,6 +115,7 @@ func RegisterHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// LoginHandler handles user login and returns a JWT token.
 func LoginHandler(c *gin.Context) {
 	var req LoginRequest
 
