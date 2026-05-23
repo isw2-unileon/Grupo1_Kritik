@@ -52,14 +52,15 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!"})
 	})
 
-	// Review endpoints (protected: require a valid JWT)
-	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
-	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
-
 	// Auth endpoints
 	authGroup := r.Group("/auth")
 	authGroup.POST("/register", handlers.RegisterHandler)
 	authGroup.POST("/login", handlers.LoginHandler)
+
+	// Review endpoints (protected: require a valid JWT)
+	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
+	api.GET("/reviews", middleware.RequireAuth(), handlers.GetUserReviewsHandler)
+	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

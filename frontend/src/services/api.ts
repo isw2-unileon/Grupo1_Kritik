@@ -103,3 +103,21 @@ export async function createReview(review: NewReview): Promise<unknown> {
   }
   return res.json();
 }
+
+export interface Review {
+  id: number;
+  Name: string;
+  Description: string;
+  Recommended: boolean;
+  Rating: number;
+  ProductName: string;
+  UserName: string;
+}
+
+export async function getReviews(): Promise<Review[]> {
+  const res = await authedFetch(`${BASE}/api/reviews`);
+  if (!res.ok) {
+    throw new Error("could not load reviews");
+  }
+  return res.json();
+}

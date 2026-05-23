@@ -13,6 +13,11 @@ import (
 // recommendThreshold: ratings at or above this value mark the review as recommended.
 const recommendThreshold = 6.0
 
+// isRecommended reports whether a rating is high enough to recommend the product.
+func isRecommended(rating float64) bool {
+	return rating >= recommendThreshold
+}
+
 // CreateReviewRequest is the payload for publishing a review.
 type CreateReviewRequest struct {
 	Title       string  `json:"title"`        // stored as Review.Name (unique)
@@ -63,7 +68,7 @@ func CreateReviewHandler(c *gin.Context) {
 		Name:        req.Title,
 		Description: req.Description,
 		Rating:      req.Rating,
-		Recommended: req.Rating >= recommendThreshold,
+		Recommended: isRecommended(req.Rating),
 		ProductName: req.ProductName,
 		UserName:    user.UserName,
 	})
@@ -93,4 +98,29 @@ func SearchProductHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, products)
+}
+
+// GetUserReviewsHandler returns the reviews written by the authenticated user.
+func GetUserReviewsHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	user, err := bd.GetUserByID(strconv.Itoa(userID))
+	if err != nil {
+		slog.Error("get reviews: user lookup failed", "user_id", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})
+		return
+	}
+
+	reviews, err := bd.GetReviewsByUser(user.UserName)
+	if err != nil {
+		slog.Error("get reviews: query failed", "user", user.UserName, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	c.JSON(http.StatusOK, reviews)
 }

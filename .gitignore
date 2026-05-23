@@ -38,4 +38,7 @@ coverage/
 playwright-report/
 test-results/
 
+# Logs
+*.diff
+
 AGENTS.md
