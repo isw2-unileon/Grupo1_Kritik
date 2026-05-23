@@ -20,7 +20,7 @@ func TestGetUserByEmail(t *testing.T) {
 		Surname:  "toget",
 		UserName: "testusertoget",
 		Password: "testpassword",
-		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
 	_, err := AddUser(testUserToGet)
@@ -62,7 +62,7 @@ func TestAddUser(t *testing.T) {
 		Surname:  "toadd",
 		UserName: "testusertoadd",
 		Password: "testpassword",
-		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
 	addedUser, err := AddUser(testUserToAdd)
@@ -99,31 +99,29 @@ func TestAddUserMissingData(t *testing.T) {
 
 // DELETE USER
 func TestDeleteUserByEmail(t *testing.T) {
-	userToDelete := User{
-		Email:    "usertodelete@gmail.com",
-		Name:     "usertodelete",
+	testUserToDelete := User{
+		Email:    "testusertodelete@gmail.com",
+		Name:     "testuser",
+		Surname:  "todelete",
+		UserName: "testusertodelete",
 		Password: "testpassword",
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
-	addedUser, err := AddUser(userToDelete)
-
+	_, err := AddUser(testUserToDelete)
 	if err != nil {
-		t.Errorf("Could not add user to delete")
-	}
-
-	if addedUser == nil {
-		t.Errorf("Added user is nil")
+		t.Error(err)
 		return
 	}
 
-	isDeleted, err := DeleteUserByEmail(addedUser.Email)
+	isDeleted, err := DeleteUserByEmail(testUserToDelete.Email)
 
 	if err != nil {
 		t.Error(err)
 	}
 
 	if !isDeleted {
-		t.Errorf("Function returned false")
+		t.Errorf("Function returned false, should be true")
 	}
 }
 
@@ -135,18 +133,33 @@ func TestDeleteUserByEmailError(t *testing.T) {
 	}
 
 	if isDeleted {
-		t.Errorf("Function returned true")
+		t.Errorf("Function returned true, should be false")
 	}
 }
 
 // UPDATE USER
-func TestUpdateUserInfo(t *testing.T) {
+func TestEditUserInfo(t *testing.T) {
+	testUserToEdit := User{
+		Email:    "testusertoedit@gmail.com",
+		Name:     "testuser",
+		Surname:  "toedit",
+		UserName: "testusertoedit",
+		Password: "testpassword",
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
+	}
+
+	_, err := AddUser(testUserToEdit)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	newUserInfo := User{
 		Name:     "testuser2",
 		Password: "testpassword2",
 	}
 
-	updatedUser, err := UpdateUserInfo("testuser@gmail.com", newUserInfo)
+	updatedUser, err := UpdateUserInfo(testUserToEdit.Email, newUserInfo)
 
 	if err != nil {
 		t.Error(err)
@@ -154,10 +167,14 @@ func TestUpdateUserInfo(t *testing.T) {
 
 	if updatedUser == nil {
 		t.Errorf("Updated user is nil")
+	} else if updatedUser.Name != newUserInfo.Name {
+		t.Errorf("Updated user's name does not match")
 	}
+
+	_, err = DeleteUserByEmail(testUserToEdit.Email)
 }
 
-func TestUpdateUserInfoError(t *testing.T) {
+func TestEditUserInfoError(t *testing.T) {
 	newUserInfo := User{
 		Name: "testuser2",
 	}
@@ -354,14 +371,14 @@ func TestAddReview(t *testing.T) {
 		Surname:  "toaddreview",
 		UserName: "testusertoaddreview",
 		Password: "testpassword",
-		Birth:    civil.Date{Year: 2009, Month: 11, Day: 10},
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
 	testProduct := Product{
 		Name:    "testproduct",
 		Type:    "Film",
 		Genre:   []string{"terror", "suspense"},
-		Release: civil.Date{Year: 2004, Month: 11, Day: 10},
+		Release: &civil.Date{Year: 2004, Month: 11, Day: 10},
 	}
 
 	user, err := AddUser(testUser)

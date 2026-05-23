@@ -13,24 +13,24 @@ import (
 
 // User struct
 type User struct {
-	Id       int        `json:"id,omitempty"`
-	Email    string     `json:"Email,omitempty"`
-	Name     string     `json:"Name,omitempty"`
-	Surname  string     `json:"Surname,omitempty"`
-	UserName string     `json:"UserName,omitempty"`
-	Password string     `json:"Password,omitempty"`
-	Birth    civil.Date `json:"Birth,omitempty"`
+	Id       int         `json:"id,omitempty"`
+	Email    string      `json:"Email,omitempty"`
+	Name     string      `json:"Name,omitempty"`
+	Surname  string      `json:"Surname,omitempty"`
+	UserName string      `json:"UserName,omitempty"`
+	Password string      `json:"Password,omitempty"`
+	Birth    *civil.Date `json:"Birth,omitempty"`
 }
 
 // Product struct
 type Product struct {
-	Id           int        `json:"id,omitempty"`
-	Name         string     `json:"Name,omitempty"`
-	Type         string     `json:"Type,omitempty"`
-	AverageGrade int        `json:"AverageGrade,omitempty"`
-	Description  string     `json:"Description,omitempty"`
-	Release      civil.Date `json:"Release,omitempty"`
-	Genre        []string   `json:"Genre,omitempty"`
+	Id           int         `json:"id,omitempty"`
+	Name         string      `json:"Name,omitempty"`
+	Type         string      `json:"Type,omitempty"`
+	AverageGrade int         `json:"AverageGrade,omitempty"`
+	Description  string      `json:"Description,omitempty"`
+	Release      *civil.Date `json:"Release,omitempty"`
+	Genre        []string    `json:"Genre,omitempty"`
 }
 
 // Review struct
