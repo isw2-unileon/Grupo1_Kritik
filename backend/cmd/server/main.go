@@ -15,6 +15,7 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/middleware"
 )
 
 var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -50,6 +51,10 @@ func main() {
 	api.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!"})
 	})
+
+	// Review endpoints (protected: require a valid JWT)
+	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
+	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
 
 	// Auth endpoints
 	authGroup := r.Group("/auth")

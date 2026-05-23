@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import ReviewsSection from "@/components/ReviewsSection";
 
 const navigation = [
   { name: "Home", href: "#home" },
@@ -136,38 +137,7 @@ export default function DashboardPage() {
             </div>
           </article>
 
-          <article id="reviews" className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Revisiones hechas</p>
-                <h2 className="mt-3 text-3xl font-semibold text-white">Tus reseñas recientes</h2>
-              </div>
-              <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-sm font-semibold text-cyan-300">
-                2 reseñas creadas
-              </span>
-            </div>
-
-            <div className="mt-6 grid gap-4">
-              {[
-                {
-                  title: "Restaurante Mar y Sol",
-                  detail: "Enviado hace 3 días",
-                },
-                {
-                  title: "Hotel Bosque Verde",
-                  detail: "Enviado hace 1 semana",
-                },
-              ].map((item) => (
-                <article
-                  key={item.title}
-                  className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5"
-                >
-                  <h3 className="text-xl font-semibold text-white">{item.title}</h3>
-                  <p className="mt-2 text-slate-400">{item.detail}</p>
-                </article>
-              ))}
-            </div>
-          </article>
+          <ReviewsSection />
         </section>
 
         <aside className="space-y-6">
