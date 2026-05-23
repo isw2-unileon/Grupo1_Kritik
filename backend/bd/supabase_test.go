@@ -168,7 +168,7 @@ func TestEditUserInfo(t *testing.T) {
 	if updatedUser == nil {
 		t.Errorf("Updated user is nil")
 	} else if updatedUser.Name != newUserInfo.Name {
-		t.Errorf("Updated user's name does not match")
+		t.Errorf("Updated user name is different")
 	}
 
 	_, err = DeleteUserByEmail(testUserToEdit.Email)
@@ -198,7 +198,21 @@ func TestEditUserInfoError(t *testing.T) {
 
 // GET PRODUCT
 func TestGetProductByName(t *testing.T) {
-	product, err := GetProductByName("testproduct")
+	testProductToGet := Product{
+		Name:         "testproduct",
+		Type:         "Film",
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
+	}
+
+	_, err := AddProduct(testProductToGet)
+	if err != nil {
+		t.Error(err)
+	}
+
+	product, err := GetProductByName(testProductToGet.Name)
 
 	if err != nil {
 		t.Error(err)
@@ -207,10 +221,12 @@ func TestGetProductByName(t *testing.T) {
 	if product == nil {
 		t.Errorf("Product is nil")
 	}
+
+	_, err = DeleteProductByName(testProductToGet.Name)
 }
 
 func TestGetProductByNameNotFound(t *testing.T) {
-	product, err := GetProductByName("0")
+	product, err := GetProductByName("skjvnlkjhvs")
 
 	if err == nil {
 		t.Errorf("Expected error")
@@ -223,13 +239,16 @@ func TestGetProductByNameNotFound(t *testing.T) {
 
 // ADD PRODUCT
 func TestAddProduct(t *testing.T) {
-	newProduct := Product{
-		Name:         "testproduct2",
+	testProductToAdd := Product{
+		Name:         "testproduct",
 		Type:         "Film",
-		AverageGrade: 10,
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	addedProduct, err := AddProduct(newProduct)
+	addedProduct, err := AddProduct(testProductToAdd)
 
 	if err != nil {
 		t.Error(err)
@@ -238,15 +257,20 @@ func TestAddProduct(t *testing.T) {
 	if addedProduct == nil {
 		t.Errorf("Added product is nil")
 	}
+
+	_, err = DeleteProductByName(testProductToAdd.Name)
 }
 
 func TestAddProductMissingData(t *testing.T) {
-	newProduct := Product{
-		Type:         "Film",
-		AverageGrade: 10,
+	testProductToAdd := Product{
+		Name:         "testproduct",
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	addedProduct, err := AddProduct(newProduct)
+	addedProduct, err := AddProduct(testProductToAdd)
 
 	if err == nil {
 		t.Errorf("An error was espected")
@@ -259,24 +283,21 @@ func TestAddProductMissingData(t *testing.T) {
 
 // DELETE PRODUCT
 func TestDeleteProductByName(t *testing.T) {
-	productToDelete := Product{
-		Name:         "producttodelete",
-		Type:         "Series",
+	testProductToDelete := Product{
+		Name:         "testproduct",
+		Type:         "Film",
 		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	addedProduct, err := AddProduct(productToDelete)
-
+	_, err := AddProduct(testProductToDelete)
 	if err != nil {
-		t.Errorf("Could not add product to delete")
+		t.Error(err)
 	}
 
-	if addedProduct == nil {
-		t.Errorf("Added product is nil")
-		return
-	}
-
-	isDeleted, err := DeleteProductByName(addedProduct.Name)
+	isDeleted, err := DeleteProductByName(testProductToDelete.Name)
 
 	if err != nil {
 		t.Error(err)
@@ -288,7 +309,7 @@ func TestDeleteProductByName(t *testing.T) {
 }
 
 func TestDeleteProductByNameError(t *testing.T) {
-	isDeleted, err := DeleteProductByName("0")
+	isDeleted, err := DeleteProductByName("dfdgfdfdgs")
 
 	if err == nil {
 		t.Error(err)
@@ -300,12 +321,26 @@ func TestDeleteProductByNameError(t *testing.T) {
 }
 
 // UPDATE PRODUCT
-func TestUpdateProductInfo(t *testing.T) {
+func TestEditProductInfo(t *testing.T) {
+	testProductToEdit := Product{
+		Name:         "testproduct",
+		Type:         "Film",
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
+	}
+
+	_, err := AddProduct(testProductToEdit)
+	if err != nil {
+		t.Error(err)
+	}
+
 	newProductInfo := Product{
 		Type: "Series",
 	}
 
-	updatedProduct, err := UpdateProductInfo("testproduct", newProductInfo)
+	updatedProduct, err := UpdateProductInfo(testProductToEdit.Name, newProductInfo)
 
 	if err != nil {
 		t.Error(err)
@@ -313,15 +348,19 @@ func TestUpdateProductInfo(t *testing.T) {
 
 	if updatedProduct == nil {
 		t.Errorf("Updated product is nil")
+	} else if updatedProduct.Name != testProductToEdit.Name {
+		t.Errorf("Updated product name is different")
 	}
+
+	_, err = DeleteProductByName(testProductToEdit.Name)
 }
 
-func TestUpdateProductInfoError(t *testing.T) {
-	nenProductInfo := Product{
+func TestEditProductInfoError(t *testing.T) {
+	newProductInfo := Product{
 		Name: "testproduct2",
 	}
 
-	updatedProduct, err := UpdateProductInfo("dhfdskhjdfsj", nenProductInfo) // Product not in BD
+	updatedProduct, err := UpdateProductInfo("dhfdskhjdfsj", newProductInfo) // Product not in BD
 
 	if err == nil {
 		t.Error("An error was expected")
