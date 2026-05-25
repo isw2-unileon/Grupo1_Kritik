@@ -99,6 +99,26 @@ func GetUserByEmail(userEmail string) (*User, error) {
 	return &users[0], nil
 }
 
+// GetUserByUserName returns the User associated with the username or an error if it occurred
+func GetUserByUserName(username string) (*User, error) {
+
+	var users []User
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("UserName", username).
+		ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("not found user with username %s", username)
+	}
+
+	return &users[0], nil
+}
+
 // AddUser adds a new User to the database
 //
 // Returns the added User or nil and an error if it was not added
@@ -345,9 +365,7 @@ func DeleteReviewByName(reviewName string) (bool, error) {
 	return true, nil
 }
 
-// GetReviewsByUserEmail gets an array of Review associated to a User
-//
-// Return an array of Review or an error if occurred
+// GetReviewsByUserEmail gets an array of Review associated to an User
 func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
 	user, err := GetUserByEmail(userEmail)
 	if err != nil {
@@ -369,8 +387,6 @@ func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
 }
 
 // GetReviewsByProductName gets an array of Review associated to Product
-//
-// Return an array of Review or an error if occurred
 func GetReviewsByProductName(productName string) ([]Review, error) {
 	product, err := GetProductByName(productName)
 	if err != nil {
