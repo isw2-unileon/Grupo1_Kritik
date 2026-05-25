@@ -121,12 +121,12 @@ func GetUserByUserName(userName string) (*User, error) {
 }
 
 // GetUserByID returns the User associated with the userId or an error if it occurred
-func GetUserByID(userId int) (*User, error) {
+func GetUserByID(userID int) (*User, error) {
 
 	var users []User
 	_, err := client.From("Users").
 		Select("*", "exact", false).
-		Eq("ID", strconv.Itoa(userId)).
+		Eq("ID", strconv.Itoa(userID)).
 		ExecuteTo(&users)
 
 	if err != nil {
@@ -134,7 +134,7 @@ func GetUserByID(userId int) (*User, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with id %d", userId)
+		return nil, fmt.Errorf("not found user with id %d", userID)
 	}
 
 	return &users[0], nil
