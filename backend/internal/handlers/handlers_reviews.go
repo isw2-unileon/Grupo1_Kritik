@@ -12,7 +12,7 @@ import (
 // CreateReviewRequest is the payload for publishing a review.
 type CreateReviewRequest struct {
 	Title       string `json:"title"`        // stored as Review.Name (unique)
-	ProductId   int    `json:"product_name"` // must be an existing Product
+	ProductID   int    `json:"product_name"` // must be an existing Product
 	Description string `json:"description"`
 	Recommended bool   `json:"recommended"`
 }
@@ -49,7 +49,7 @@ func CreateReviewHandler(c *gin.Context) {
 		Name:        req.Title,
 		Description: req.Description,
 		Recommended: req.Recommended,
-		ProductID:   req.ProductId,
+		ProductID:   req.ProductID,
 		UserID:      user.ID,
 	})
 	if err != nil {

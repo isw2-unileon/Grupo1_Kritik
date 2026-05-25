@@ -41,7 +41,7 @@ type Review struct {
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductId,omitempty"`
+	ProductID int `json:"ProductID,omitempty"`
 	UserID    int `json:"UserId,omitempty"`
 }
 
@@ -120,6 +120,7 @@ func GetUserByUserName(userName string) (*User, error) {
 	return &users[0], nil
 }
 
+// GetUserByID returns the User associated with the userId or an error if it occurred
 func GetUserByID(userId int) (*User, error) {
 
 	var users []User
@@ -417,7 +418,7 @@ func GetReviewsByProductName(productName string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("ProductId", fmt.Sprintf("%d", product.ID)).
+		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
