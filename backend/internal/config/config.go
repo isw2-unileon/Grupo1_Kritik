@@ -8,6 +8,7 @@ type Config struct {
 	Port            string
 	GinMode         string
 	CORSAllowOrigin string
+	JWTSecret       string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -16,6 +17,7 @@ func Load() *Config {
 		Port:            getEnv("PORT", "8080"),
 		GinMode:         getEnv("GIN_MODE", "debug"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
+		JWTSecret:       getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 	}
 }
 

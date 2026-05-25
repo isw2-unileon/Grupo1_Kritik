@@ -2,7 +2,7 @@ package bd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"cloud.google.com/go/civil"
@@ -49,19 +49,28 @@ var client *supabase.Client
 func init() {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
-			log.Fatal("Error al cargar el archivo .env:\n", err)
+			slog.Error("supabase: failed to load .env", "error", err)
+			os.Exit(1)
 		}
 	}
 
 	url := os.Getenv("SUPABASE_URL")
 	key := os.Getenv("SUPABASE_KEY")
 
+	if url == "" || key == "" {
+		slog.Error("supabase: SUPABASE_URL or SUPABASE_KEY not set")
+		os.Exit(1)
+	}
+
 	var errClient error
 	client, errClient = supabase.NewClient(url, key, &supabase.ClientOptions{})
 
 	if errClient != nil {
-		log.Fatalf("Error al crear cliente: %v", errClient)
+		slog.Error("supabase: failed to create client", "error", errClient)
+		os.Exit(1)
 	}
+
+	slog.Info("supabase: client initialised")
 }
 
 /*
@@ -90,18 +99,38 @@ func GetUserByEmail(userEmail string) (*User, error) {
 	return &users[0], nil
 }
 
-// AddUser adds a new User to the database
-//
-// Returns the added User or nil and an error if it was not added
-func AddUser(newUser User) (*User, error) {
+// GetUserByUserName returns the User associated with the username or an error if it occurred
+func GetUserByUserName(username string) (*User, error) {
+	if client == nil {
+		InitialiseBD()
+	}
 
-	hasedPassword, err := HashPassword(newUser.Password)
+	var users []User
+	_, err := client.From("Users").Select("*", "exact", false).Eq("UserName", username).ExecuteTo(&users)
 
 	if err != nil {
 		return nil, err
 	}
 
-	newUser.Password = hasedPassword
+	if len(users) == 0 {
+		return nil, fmt.Errorf("not found user with username %s", username)
+	}
+
+	return &users[0], nil
+}
+
+// AddUser adds a new User to the database
+//
+// Returns the added User or nil and an error if it was not added
+func AddUser(newUser User) (*User, error) {
+
+	hashedPassword, err := HashPassword(newUser.Password)
+
+	if err != nil {
+		return nil, err
+	}
+
+	newUser.Password = hashedPassword
 
 	var insertedUsers []User
 
@@ -118,7 +147,7 @@ func AddUser(newUser User) (*User, error) {
 
 // DeleteUserByEmail deletes the User associated with the userEmail
 //
-// Returns true if the User was deleted, false y it could not be deleted or an error if it occurred
+// Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteUserByEmail(userEmail string) (bool, error) {
 
 	var deletedUsers []User
@@ -133,7 +162,7 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 	}
 
 	if len(deletedUsers) == 0 {
-		return false, fmt.Errorf("not foud any user with the email %s to delete", userEmail)
+		return false, fmt.Errorf("not found any user with the email %s to delete", userEmail)
 	}
 
 	return true, nil
@@ -155,6 +184,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 		} else {
 			return nil, err
 		}
+		newUserInfo.Password = hashedPassword
 	}
 
 	var updatedUsers []User
@@ -383,7 +413,7 @@ func GetReviewsByProductName(productName string) ([]Review, error) {
  =========================================================
 */
 
-// HashPassword recibes the plain password and return the hash
+// HashPassword receives the plain password and returns the hash
 func HashPassword(password string) (string, error) {
 	if password == "" {
 		return password, nil
@@ -395,7 +425,7 @@ func HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// VerifyPassword compares a plain password with the hassed password
+// VerifyPassword compares a plain password with the hashed password
 func VerifyPassword(plainPassword, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
 	return err == nil

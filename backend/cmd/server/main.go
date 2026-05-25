@@ -12,16 +12,22 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/middleware"
 )
 
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 // main
 func main() {
 	ctx := context.Background()
 
 	cfg := config.Load()
+
+	// Initialize auth package with JWT secret
+	auth.Initialize(cfg.JWTSecret)
 
 	gin.SetMode(cfg.GinMode)
 
@@ -43,8 +49,18 @@ func main() {
 
 	api := r.Group("/api")
 	api.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
+		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!"})
 	})
+
+	// Auth endpoints
+	authGroup := r.Group("/auth")
+	authGroup.POST("/register", handlers.RegisterHandler)
+	authGroup.POST("/login", handlers.LoginHandler)
+
+	// Review endpoints (protected: require a valid JWT)
+	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
+	api.GET("/reviews", middleware.RequireAuth(), handlers.GetUserReviewsHandler)
+	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -59,7 +75,7 @@ func main() {
 	go func() {
 		slog.Info("server listening", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server error", "error", err)
+			logger.Error("server error", "error!", err)
 			os.Exit(1)
 		}
 	}()
