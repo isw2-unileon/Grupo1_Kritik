@@ -401,11 +401,11 @@ func TestGetReviewByName(t *testing.T) {
 		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	_, err := AddUser(testUserToReview)
+	testUser, err := AddUser(testUserToReview)
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = AddProduct(testProductToReview)
+	testProduct, err := AddProduct(testProductToReview)
 	if err != nil {
 		t.Error(err)
 	}
@@ -414,8 +414,8 @@ func TestGetReviewByName(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserName:    testUserToReview.UserName,
-		ProductName: testProductToReview.Name,
+		UserId:      testUser.Id,
+		ProductId:   testProduct.Id,
 	}
 	_, err = AddReview(testReviewToGet)
 	if err != nil {
@@ -469,11 +469,11 @@ func TestAddReview(t *testing.T) {
 		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	_, err := AddUser(testUserToReview)
+	testUser, err := AddUser(testUserToReview)
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = AddProduct(testProductToReview)
+	testProduct, err := AddProduct(testProductToReview)
 	if err != nil {
 		t.Error(err)
 	}
@@ -482,8 +482,8 @@ func TestAddReview(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserName:    testUserToReview.UserName,
-		ProductName: testProductToReview.Name,
+		UserId:      testUser.Id,
+		ProductId:   testProduct.Id,
 	}
 
 	addedReview, err := AddReview(testReviewToAdd)
@@ -526,8 +526,8 @@ func TestAddReviewNotUserInBD(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserName:    "dsjvslsjvlkjskvn", // Non existing user
-		ProductName: "kdsjblsdjgñsdjlk", // Non existing product
+		UserId:      -1, // Non existing user
+		ProductId:   -1, // Non existing product
 	}
 
 	addedReview, err := AddReview(testReviewToAdd)
@@ -563,11 +563,11 @@ func TestDeleteReviewByName(t *testing.T) {
 		Genre:        []string{"Drama", "Comedy"},
 	}
 
-	_, err := AddUser(testUserToReview)
+	testUser, err := AddUser(testUserToReview)
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = AddProduct(testProductToReview)
+	testProduct, err := AddProduct(testProductToReview)
 	if err != nil {
 		t.Error(err)
 	}
@@ -576,8 +576,8 @@ func TestDeleteReviewByName(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserName:    testUserToReview.UserName,
-		ProductName: testProductToReview.Name,
+		UserId:      testUser.Id,
+		ProductId:   testProduct.Id,
 	}
 
 	_, err = AddReview(testReviewToDelete)
@@ -611,80 +611,137 @@ func TestDeleteReviewByNameError(t *testing.T) {
 	}
 }
 
-// UPDATE REVIEW
-func TestEditReviewInfo(t *testing.T) {
-	//testUserToReview := User{
-	//	Email:    "testusertoReview@gmail.com",
-	//	Name:     "testuser",
-	//	Surname:  "toreview",
-	//	UserName: "testusertoreview",
-	//	Password: "testpassword",
-	//	Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
-	//}
-	//
-	//testProductToReview := Product{
-	//	Name:         "testproduct",
-	//	Type:         "Film",
-	//	AverageGrade: 5,
-	//	Description:  "testdescription",
-	//	Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
-	//	Genre:        []string{"Drama", "Comedy"},
-	//}
-	//
-	//_, err := AddUser(testUserToReview)
-	//if err != nil {
-	//	t.Error(err)
-	//}
-	//_, err = AddProduct(testProductToReview)
-	//if err != nil {
-	//	t.Error(err)
-	//}
-	//
-	//testReviewToGet := Review{
-	//	Name:        "testreview",
-	//	Recommended: true,
-	//	Description: "testdescription",
-	//	UserName:    testUserToReview.UserName,
-	//	ProductName: testProductToReview.Name,
-	//}
-	//_, err = AddReview(testReviewToGet)
-	//if err != nil {
-	//	t.Error(err)
-	//}
-
-	newReviewInfo := Review{
-		Recommended: false,
+func TestGetReviewsByUserEmail(t *testing.T) {
+	testUserToReview := User{
+		Email:    "testusertoReview@gmail.com",
+		Name:     "testuser",
+		Surname:  "toreview",
+		UserName: "testusertoreview",
+		Password: "testpassword",
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
 	}
 
-	review, err := GetReviewByName("testreview")
+	testProductToReview := Product{
+		Name:         "testproduct",
+		Type:         "Film",
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
+	}
+
+	testUser, err := AddUser(testUserToReview)
 	if err != nil {
 		t.Error(err)
 	}
-	if review != nil {
-		t.Log("The review is in the database")
-	} else {
-		t.Log("The review is NOT in the database")
-	}
-
-	updatedReview, err := UpdateReviewInfo("testreview", newReviewInfo)
-
+	testProduct, err := AddProduct(testProductToReview)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if updatedReview == nil {
-		t.Errorf("Updated review is nil")
-	} else if updatedReview.Recommended != newReviewInfo.Recommended {
-		t.Errorf("Updated review recomendation is different")
+	testReview := Review{
+		Name:        "testreview",
+		Recommended: true,
+		Description: "testdescription",
+		UserId:      testUser.Id,
+		ProductId:   testProduct.Id,
 	}
 
-	//_, err = DeleteReviewByName(testReviewToGet.Name)
-	//_, err = DeleteUserByEmail(testUserToReview.Email)
-	//_, err = DeleteProductByName(testProductToReview.Name)
+	_, err = AddReview(testReview)
+	if err != nil {
+		t.Error(err)
+	}
+
+	reviews, err := GetReviewsByUserEmail(testUser.Email)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(reviews) != 1 {
+		t.Errorf("Function returned wrong number of reviews")
+	}
+
+	_, err = DeleteReviewByName(testReview.Name)
+	_, err = DeleteUserByEmail(testUserToReview.Email)
+	_, err = DeleteProductByName(testProductToReview.Name)
 }
 
-func TestEditReviewInfoError(t *testing.T) {
+func TestGetReviewsByUserEmailInvalidUser(t *testing.T) {
+	reviews, err := GetReviewsByUserEmail("-1")
+	if err == nil {
+		t.Error("An error was expected")
+	}
 
+	if len(reviews) != 0 {
+		t.Errorf("Function returned wrong number of reviews")
+	}
+}
+
+func TestGetReviewsByProductName(t *testing.T) {
+	testUserToReview := User{
+		Email:    "testusertoReview@gmail.com",
+		Name:     "testuser",
+		Surname:  "toreview",
+		UserName: "testusertoreview",
+		Password: "testpassword",
+		Birth:    &civil.Date{Year: 2009, Month: 11, Day: 10},
+	}
+
+	testProductToReview := Product{
+		Name:         "testproduct",
+		Type:         "Film",
+		AverageGrade: 5,
+		Description:  "testdescription",
+		Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+		Genre:        []string{"Drama", "Comedy"},
+	}
+
+	testUser, err := AddUser(testUserToReview)
+	if err != nil {
+		t.Error(err)
+	}
+	testProduct, err := AddProduct(testProductToReview)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testReview := Review{
+		Name:        "testreview",
+		Recommended: true,
+		Description: "testdescription",
+		UserId:      testUser.Id,
+		ProductId:   testProduct.Id,
+	}
+
+	_, err = AddReview(testReview)
+	if err != nil {
+		t.Error(err)
+	}
+
+	reviews, err := GetReviewsByProductName(testProduct.Name)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(reviews) != 1 {
+		t.Errorf("Function returned wrong number of reviews")
+	}
+	t.Log(len(reviews))
+
+	_, err = DeleteReviewByName(testReview.Name)
+	_, err = DeleteUserByEmail(testUserToReview.Email)
+	_, err = DeleteProductByName(testProductToReview.Name)
+}
+
+func TestGetReviewsByProductNameInvalidUser(t *testing.T) {
+	reviews, err := GetReviewsByProductName("-1")
+	if err == nil {
+		t.Error("An error was expected")
+	}
+
+	if len(reviews) != 0 {
+		t.Errorf("Function returned wrong number of reviews")
+	}
 }
 
 /*

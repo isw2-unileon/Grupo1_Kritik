@@ -40,8 +40,8 @@ type Review struct {
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductName string `json:"ProductName,omitempty"`
-	UserName    string `json:"UserName,omitempty"`
+	ProductId int `json:"ProductId,omitempty"`
+	UserId    int `json:"UserId,omitempty"`
 }
 
 var client *supabase.Client
@@ -335,30 +335,46 @@ func DeleteReviewByName(reviewName string) (bool, error) {
 	return true, nil
 }
 
-// UpdateReviewInfo updates 1 or more parameters from the selected Review
-//
-// Recibes the name from the Review to edit and a Review with the new information
-// (if any parameter is empty, it wont be edited)
-//
-// Returns the edited Review if the info was edited or nil and an error if it could not be edited
-func UpdateReviewInfo(reviewName string, newReviewInfo Review) (*Review, error) {
+// GetReviewsByUserEmail gets an array of Review associated to an User
+func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
+	user, err := GetUserByEmail(userEmail)
+	if err != nil {
+		return nil, err
+	}
 
-	var updatedReviews []Review
+	var reviews []Review
 
-	_, err := client.From("Review").
-		Update(newReviewInfo, "", "").
-		Eq("Name", reviewName).
-		ExecuteTo(&updatedReviews)
+	_, err = client.From("Review").
+		Select("*", "exact", false).
+		Eq("UserId", fmt.Sprintf("%d", user.Id)).
+		ExecuteTo(&reviews)
 
 	if err != nil {
-		return nil, fmt.Errorf("error updating the review: %w", err)
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
 	}
 
-	if len(updatedReviews) == 0 {
-		return nil, fmt.Errorf("not foud any review with the Name %s to update", reviewName)
+	return reviews, nil
+}
+
+// GetReviewsByProductName gets an array of Review associated to Product
+func GetReviewsByProductName(productName string) ([]Review, error) {
+	product, err := GetProductByName(productName)
+	if err != nil {
+		return nil, err
 	}
 
-	return &updatedReviews[0], nil
+	var reviews []Review
+
+	_, err = client.From("Review").
+		Select("*", "exact", false).
+		Eq("UserId", fmt.Sprintf("%d", product.Id)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
 }
 
 /*
