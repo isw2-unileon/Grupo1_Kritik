@@ -41,8 +41,8 @@ type Review struct {
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductID,omitempty"`
-	UserID    int `json:"UserID,omitempty"`
+	ProductID int `json:"ProductId,omitempty"`
+	UserID    int `json:"UserId,omitempty"`
 }
 
 var client *supabase.Client
@@ -133,7 +133,7 @@ func GetUserByID(userId int) (*User, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with id %s", userId)
+		return nil, fmt.Errorf("not found user with id %d", userId)
 	}
 
 	return &users[0], nil
@@ -396,7 +396,7 @@ func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("UserID", fmt.Sprintf("%d", user.ID)).
+		Eq("UserId", fmt.Sprintf("%d", user.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
@@ -417,7 +417,7 @@ func GetReviewsByProductName(productName string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
+		Eq("ProductId", fmt.Sprintf("%d", product.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {

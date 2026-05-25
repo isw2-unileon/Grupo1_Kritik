@@ -39,7 +39,7 @@ func TestGetUserByEmail(t *testing.T) {
 		t.Errorf("User is nil")
 	}
 
-	_, err = DeleteUserByEmail(testUserToGet.Email)
+	_, _ = DeleteUserByEmail(testUserToGet.Email)
 }
 
 func TestGetUserByEmailNotFound(t *testing.T) {
@@ -75,7 +75,7 @@ func TestAddUser(t *testing.T) {
 		t.Errorf("Added user is nil")
 	}
 
-	_, err = DeleteUserByEmail(testUserToAdd.Email)
+	_, _ = DeleteUserByEmail(testUserToAdd.Email)
 }
 
 func TestAddUserMissingData(t *testing.T) {
@@ -96,7 +96,7 @@ func TestAddUserMissingData(t *testing.T) {
 		t.Errorf("Added user should be nil")
 	}
 
-	_, err = DeleteUserByEmail(testUserToAdd.Email)
+	_, _ = DeleteUserByEmail(testUserToAdd.Email)
 }
 
 // DELETE USER
@@ -173,7 +173,7 @@ func TestEditUserInfo(t *testing.T) {
 		t.Errorf("Updated user name is different")
 	}
 
-	_, err = DeleteUserByEmail(testUserToEdit.Email)
+	_, _ = DeleteUserByEmail(testUserToEdit.Email)
 }
 
 func TestEditUserInfoError(t *testing.T) {
@@ -224,7 +224,7 @@ func TestGetProductByName(t *testing.T) {
 		t.Errorf("Product is nil")
 	}
 
-	_, err = DeleteProductByName(testProductToGet.Name)
+	_, _ = DeleteProductByName(testProductToGet.Name)
 }
 
 func TestGetProductByNameNotFound(t *testing.T) {
@@ -260,7 +260,7 @@ func TestAddProduct(t *testing.T) {
 		t.Errorf("Added product is nil")
 	}
 
-	_, err = DeleteProductByName(testProductToAdd.Name)
+	_, _ = DeleteProductByName(testProductToAdd.Name)
 }
 
 func TestAddProductMissingData(t *testing.T) {
@@ -282,7 +282,7 @@ func TestAddProductMissingData(t *testing.T) {
 		t.Errorf("Added product should be nil")
 	}
 
-	_, err = DeleteProductByName(testProductToAdd.Name)
+	_, _ = DeleteProductByName(testProductToAdd.Name)
 }
 
 // DELETE PRODUCT
@@ -356,7 +356,7 @@ func TestEditProductInfo(t *testing.T) {
 		t.Errorf("Updated product name is different")
 	}
 
-	_, err = DeleteProductByName(testProductToEdit.Name)
+	_, _ = DeleteProductByName(testProductToEdit.Name)
 }
 
 func TestEditProductInfoError(t *testing.T) {
@@ -432,9 +432,9 @@ func TestGetReviewByName(t *testing.T) {
 		t.Errorf("Review is nil")
 	}
 
-	_, err = DeleteReviewByName(testReviewToGet.Name)
-	_, err = DeleteUserByEmail(testUserToReview.Email)
-	_, err = DeleteProductByName(testProductToReview.Name)
+	_, _ = DeleteReviewByName(testReviewToGet.Name)
+	_, _ = DeleteUserByEmail(testUserToReview.Email)
+	_, _ = DeleteProductByName(testProductToReview.Name)
 }
 
 func TestGetReviewByNameNotFound(t *testing.T) {
@@ -496,9 +496,9 @@ func TestAddReview(t *testing.T) {
 		t.Errorf("Added review is nil")
 	}
 
-	_, err = DeleteReviewByName(testReviewToAdd.Name)
-	_, err = DeleteUserByEmail(testUserToReview.Email)
-	_, err = DeleteProductByName(testProductToReview.Name)
+	_, _ = DeleteReviewByName(testReviewToAdd.Name)
+	_, _ = DeleteUserByEmail(testUserToReview.Email)
+	_, _ = DeleteProductByName(testProductToReview.Name)
 }
 
 func TestAddReviewMissingData(t *testing.T) {
@@ -518,7 +518,7 @@ func TestAddReviewMissingData(t *testing.T) {
 		t.Errorf("Added review should be nil, but its not")
 	}
 
-	_, err = DeleteReviewByName(testReviewToAdd.Name)
+	_, _ = DeleteReviewByName(testReviewToAdd.Name)
 }
 
 func TestAddReviewNotUserInBD(t *testing.T) {
@@ -540,7 +540,7 @@ func TestAddReviewNotUserInBD(t *testing.T) {
 		t.Errorf("Added review should be nil, but its not")
 	}
 
-	_, err = DeleteReviewByName(testReviewToAdd.Name)
+	_, _ = DeleteReviewByName(testReviewToAdd.Name)
 }
 
 // DELETE REVIEW
@@ -595,8 +595,8 @@ func TestDeleteReviewByName(t *testing.T) {
 		t.Errorf("Function returned false")
 	}
 
-	_, err = DeleteUserByEmail(testUserToReview.Email)
-	_, err = DeleteProductByName(testProductToReview.Name)
+	_, _ = DeleteUserByEmail(testUserToReview.Email)
+	_, _ = DeleteProductByName(testProductToReview.Name)
 }
 
 func TestDeleteReviewByNameError(t *testing.T) {
@@ -661,9 +661,9 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 		t.Errorf("Function returned wrong number of reviews")
 	}
 
-	_, err = DeleteReviewByName(testReview.Name)
-	_, err = DeleteUserByEmail(testUserToReview.Email)
-	_, err = DeleteProductByName(testProductToReview.Name)
+	_, _ = DeleteReviewByName(testReview.Name)
+	_, _ = DeleteUserByEmail(testUserToReview.Email)
+	_, _ = DeleteProductByName(testProductToReview.Name)
 }
 
 func TestGetReviewsByUserEmailInvalidUser(t *testing.T) {
@@ -727,9 +727,9 @@ func TestGetReviewsByProductName(t *testing.T) {
 		t.Errorf("Function returned wrong number of reviews")
 	}
 
-	_, err = DeleteReviewByName(testReview.Name)
-	_, err = DeleteUserByEmail(testUserToReview.Email)
-	_, err = DeleteProductByName(testProductToReview.Name)
+	_, _ = DeleteReviewByName(testReview.Name)
+	_, _ = DeleteUserByEmail(testUserToReview.Email)
+	_, _ = DeleteProductByName(testProductToReview.Name)
 }
 
 func TestGetReviewsByProductNameInvalidProduct(t *testing.T) {
