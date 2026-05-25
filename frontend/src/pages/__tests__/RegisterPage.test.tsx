@@ -71,7 +71,7 @@ describe("RegisterPage", () => {
   });
 
   it("shows validation error when name is empty on submit", async () => {
-    const user = userEvent.setup();
+    //const user = userEvent.setup();
     renderRegisterPage();
 
     submitForm();
