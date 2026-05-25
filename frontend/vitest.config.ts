@@ -1,12 +1,7 @@
-import { defineConfig } from "vitest/config";
-import path from "path";
+import { defineConfig, mergeConfig } from "vitest/config";
+import viteConfig from "./vite.config";
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+export default mergeConfig(viteConfig, defineConfig({
   test: {
     environment: "happy-dom",
     setupFiles: "./vitest.setup.ts",
@@ -20,4 +15,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
