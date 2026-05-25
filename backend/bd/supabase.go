@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	"cloud.google.com/go/civil"
 	"github.com/joho/godotenv"
@@ -100,12 +101,12 @@ func GetUserByEmail(userEmail string) (*User, error) {
 }
 
 // GetUserByUserName returns the User associated with the username or an error if it occurred
-func GetUserByUserName(username string) (*User, error) {
+func GetUserByUserName(userName string) (*User, error) {
 
 	var users []User
 	_, err := client.From("Users").
 		Select("*", "exact", false).
-		Eq("UserName", username).
+		Eq("UserName", userName).
 		ExecuteTo(&users)
 
 	if err != nil {
@@ -113,7 +114,26 @@ func GetUserByUserName(username string) (*User, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with username %s", username)
+		return nil, fmt.Errorf("not found user with userName %s", userName)
+	}
+
+	return &users[0], nil
+}
+
+func GetUserById(userId int) (*User, error) {
+
+	var users []User
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("Id", strconv.Itoa(userId)).
+		ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("not found user with id %s", userId)
 	}
 
 	return &users[0], nil
