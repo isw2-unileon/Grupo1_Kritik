@@ -14,7 +14,7 @@ import (
 
 // User struct
 type User struct {
-	Id       int         `json:"id,omitempty"`
+	ID       int         `json:"id,omitempty"`
 	Email    string      `json:"Email,omitempty"`
 	Name     string      `json:"Name,omitempty"`
 	Surname  string      `json:"Surname,omitempty"`
@@ -25,7 +25,7 @@ type User struct {
 
 // Product struct
 type Product struct {
-	Id           int         `json:"id,omitempty"`
+	ID           int         `json:"id,omitempty"`
 	Name         string      `json:"Name,omitempty"`
 	Type         string      `json:"Type,omitempty"`
 	AverageGrade int         `json:"AverageGrade,omitempty"`
@@ -36,13 +36,13 @@ type Product struct {
 
 // Review struct
 type Review struct {
-	Id          int    `json:"id,omitempty"`
+	ID          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductId int `json:"ProductId,omitempty"`
-	UserId    int `json:"UserId,omitempty"`
+	ProductID int `json:"ProductID,omitempty"`
+	UserID    int `json:"UserID,omitempty"`
 }
 
 var client *supabase.Client
@@ -120,12 +120,12 @@ func GetUserByUserName(userName string) (*User, error) {
 	return &users[0], nil
 }
 
-func GetUserById(userId int) (*User, error) {
+func GetUserByID(userId int) (*User, error) {
 
 	var users []User
 	_, err := client.From("Users").
 		Select("*", "exact", false).
-		Eq("Id", strconv.Itoa(userId)).
+		Eq("ID", strconv.Itoa(userId)).
 		ExecuteTo(&users)
 
 	if err != nil {
@@ -396,7 +396,7 @@ func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("UserId", fmt.Sprintf("%d", user.Id)).
+		Eq("UserID", fmt.Sprintf("%d", user.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
@@ -417,7 +417,7 @@ func GetReviewsByProductName(productName string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("ProductId", fmt.Sprintf("%d", product.Id)).
+		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {

@@ -102,10 +102,10 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	slog.Info("register: user created", "id", addedUser.Id, "email", addedUser.Email, "user_name", addedUser.UserName)
+	slog.Info("register: user created", "id", addedUser.ID, "email", addedUser.Email, "user_name", addedUser.UserName)
 
 	response := UserResponse{
-		ID:       addedUser.Id,
+		ID:       addedUser.ID,
 		Email:    addedUser.Email,
 		Name:     addedUser.Name,
 		Surname:  addedUser.Surname,
@@ -160,19 +160,19 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateToken(user.Id, user.Email)
+	token, err := auth.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		slog.Error("login: token generation failed", "user_id", user.Id, "error", err)
+		slog.Error("login: token generation failed", "user_id", user.ID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
 	}
 
-	slog.Info("login: success", "id", user.Id, "email", user.Email, "user_name", user.UserName)
+	slog.Info("login: success", "id", user.ID, "email", user.Email, "user_name", user.UserName)
 
 	response := AuthResponse{
 		Token: token,
 		User: UserResponse{
-			ID:       user.Id,
+			ID:       user.ID,
 			Email:    user.Email,
 			Name:     user.Name,
 			Surname:  user.Surname,

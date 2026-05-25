@@ -38,7 +38,7 @@ func CreateReviewHandler(c *gin.Context) {
 
 	// The Review table stores the author by username, but the JWT only carries
 	// the user ID, so we look the user up to get their username.
-	user, err := bd.GetUserById(userID)
+	user, err := bd.GetUserByID(userID)
 	if err != nil {
 		slog.Error("create review: user lookup failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})
@@ -49,8 +49,8 @@ func CreateReviewHandler(c *gin.Context) {
 		Name:        req.Title,
 		Description: req.Description,
 		Recommended: req.Recommended,
-		ProductId:   req.ProductId,
-		UserId:      user.Id,
+		ProductID:   req.ProductId,
+		UserID:      user.ID,
 	})
 	if err != nil {
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
@@ -58,7 +58,7 @@ func CreateReviewHandler(c *gin.Context) {
 		return
 	}
 
-	slog.Info("create review: success", "review", review.Name, "user", user.UserName, "product", review.ProductId)
+	slog.Info("create review: success", "review", review.Name, "user", user.UserName, "product", review.ProductID)
 	c.JSON(http.StatusCreated, review)
 }
 
@@ -88,7 +88,7 @@ func GetUserReviewsHandler(c *gin.Context) {
 		return
 	}
 
-	user, err := bd.GetUserById(userID)
+	user, err := bd.GetUserByID(userID)
 	if err != nil {
 		slog.Error("get reviews: user lookup failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})

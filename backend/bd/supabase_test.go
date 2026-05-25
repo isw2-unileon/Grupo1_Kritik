@@ -414,8 +414,8 @@ func TestGetReviewByName(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      testUser.Id,
-		ProductId:   testProduct.Id,
+		UserID:      testUser.ID,
+		ProductID:   testProduct.ID,
 	}
 	_, err = AddReview(testReviewToGet)
 	if err != nil {
@@ -482,8 +482,8 @@ func TestAddReview(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      testUser.Id,
-		ProductId:   testProduct.Id,
+		UserID:      testUser.ID,
+		ProductID:   testProduct.ID,
 	}
 
 	addedReview, err := AddReview(testReviewToAdd)
@@ -526,8 +526,8 @@ func TestAddReviewNotUserInBD(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      -1, // Non existing user
-		ProductId:   -1, // Non existing product
+		UserID:      -1, // Non existing user
+		ProductID:   -1, // Non existing product
 	}
 
 	addedReview, err := AddReview(testReviewToAdd)
@@ -576,8 +576,8 @@ func TestDeleteReviewByName(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      testUser.Id,
-		ProductId:   testProduct.Id,
+		UserID:      testUser.ID,
+		ProductID:   testProduct.ID,
 	}
 
 	_, err = AddReview(testReviewToDelete)
@@ -643,8 +643,8 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      testUser.Id,
-		ProductId:   testProduct.Id,
+		UserID:      testUser.ID,
+		ProductID:   testProduct.ID,
 	}
 
 	_, err = AddReview(testReview)
@@ -709,8 +709,8 @@ func TestGetReviewsByProductName(t *testing.T) {
 		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
-		UserId:      testUser.Id,
-		ProductId:   testProduct.Id,
+		UserID:      testUser.ID,
+		ProductID:   testProduct.ID,
 	}
 
 	_, err = AddReview(testReview)
