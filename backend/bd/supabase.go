@@ -214,8 +214,9 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 	if newUserInfo.Password != "" {
 		hashedPassword, err := HashPassword(newUserInfo.Password)
 		if err != nil {
-			newUserInfo.Password = hashedPassword
+			return nil, fmt.Errorf("error hashing password: %w", err)
 		}
+		newUserInfo.Password = hashedPassword
 	}
 
 	var updatedUsers []User
@@ -334,7 +335,7 @@ func DeleteContentByName(contentName string) (bool, error) {
 
 	var deletedContent []Content
 
-	_, err := client.From("Content").Delete("exact", "").Eq("Email", contentName).ExecuteTo(&deletedContent)
+	_, err := client.From("Content").Delete("exact", "").Eq("Name", contentName).ExecuteTo(&deletedContent)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting content:\n%w", err)
