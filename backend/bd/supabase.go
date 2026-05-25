@@ -367,7 +367,7 @@ func GetReviewsByProductName(productName string) ([]Review, error) {
 
 	_, err = client.From("Review").
 		Select("*", "exact", false).
-		Eq("UserId", fmt.Sprintf("%d", product.Id)).
+		Eq("ProductId", fmt.Sprintf("%d", product.Id)).
 		ExecuteTo(&reviews)
 
 	if err != nil {

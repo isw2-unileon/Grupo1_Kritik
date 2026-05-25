@@ -733,7 +733,7 @@ func TestGetReviewsByProductName(t *testing.T) {
 	_, err = DeleteProductByName(testProductToReview.Name)
 }
 
-func TestGetReviewsByProductNameInvalidUser(t *testing.T) {
+func TestGetReviewsByProductNameInvalidProduct(t *testing.T) {
 	reviews, err := GetReviewsByProductName("-1")
 	if err == nil {
 		t.Error("An error was expected")
