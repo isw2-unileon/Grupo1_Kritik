@@ -726,7 +726,6 @@ func TestGetReviewsByProductName(t *testing.T) {
 	if len(reviews) != 1 {
 		t.Errorf("Function returned wrong number of reviews")
 	}
-	t.Log(len(reviews))
 
 	_, err = DeleteReviewByName(testReview.Name)
 	_, err = DeleteUserByEmail(testUserToReview.Email)
