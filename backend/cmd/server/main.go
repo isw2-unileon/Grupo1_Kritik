@@ -15,6 +15,7 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/middleware"
 )
 
 var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -55,6 +56,11 @@ func main() {
 	authGroup := r.Group("/auth")
 	authGroup.POST("/register", handlers.RegisterHandler)
 	authGroup.POST("/login", handlers.LoginHandler)
+
+	// Review endpoints (protected: require a valid JWT)
+	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
+	api.GET("/reviews", middleware.RequireAuth(), handlers.GetUserReviewsHandler)
+	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

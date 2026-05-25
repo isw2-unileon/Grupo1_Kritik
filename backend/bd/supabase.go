@@ -134,13 +134,13 @@ func AddUser(newUser User) (*User, error) {
 		InitialiseBD()
 	}
 
-	hasedPassword, err := HashPassword(newUser.Password)
+	hashedPassword, err := HashPassword(newUser.Password)
 
 	if err != nil {
 		return nil, err
 	}
 
-	newUser.Password = hasedPassword
+	newUser.Password = hashedPassword
 
 	var insertedUsers []User
 
@@ -155,7 +155,7 @@ func AddUser(newUser User) (*User, error) {
 
 // DeleteUserByID deletes the User associated with the userID
 //
-// Returns true if the User was deleted, false y it could not be deleted or an error if it occurred
+// Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteUserByID(userID string) (bool, error) {
 	if client == nil {
 		InitialiseBD()
@@ -170,7 +170,7 @@ func DeleteUserByID(userID string) (bool, error) {
 	}
 
 	if len(deletedUsers) == 0 {
-		return false, fmt.Errorf("not foud any user with the ID %s to delete", userID)
+		return false, fmt.Errorf("not found any user with the ID %s to delete", userID)
 	}
 
 	return true, nil
@@ -178,7 +178,7 @@ func DeleteUserByID(userID string) (bool, error) {
 
 // DeleteUserByEmail deletes the User associated with the userEmail
 //
-// Returns true if the User was deleted, false y it could not be deleted or an error if it occurred
+// Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteUserByEmail(userEmail string) (bool, error) {
 	if client == nil {
 		InitialiseBD()
@@ -193,7 +193,7 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 	}
 
 	if len(deletedUsers) == 0 {
-		return false, fmt.Errorf("not foud any user with the email %s to delete", userEmail)
+		return false, fmt.Errorf("not found any user with the email %s to delete", userEmail)
 	}
 
 	return true, nil
@@ -201,7 +201,7 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 
 // UpdateUserInfo updates 1 or more parameters from the selected User
 //
-// Recibes the id or email from the user to edit and an User with the new information
+// Receives the id or email from the user to edit and a User with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited User if the info was edited or nil and an error if it could not be edited
@@ -212,10 +212,11 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 
 	newUserInfo.Email = userEmail
 	if newUserInfo.Password != "" {
-		hasedPassword, err := HashPassword(newUserInfo.Password)
+		hashedPassword, err := HashPassword(newUserInfo.Password)
 		if err != nil {
-			newUserInfo.Password = hasedPassword
+			return nil, fmt.Errorf("error hashing password: %w", err)
 		}
+		newUserInfo.Password = hashedPassword
 	}
 
 	var updatedUsers []User
@@ -230,7 +231,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 	}
 
 	if len(updatedUsers) == 0 {
-		return nil, fmt.Errorf("not foud any user with the ID %s to update", userEmail)
+		return nil, fmt.Errorf("not found any user with the ID %s to update", userEmail)
 	}
 
 	return &updatedUsers[0], nil
@@ -303,7 +304,7 @@ func AddContent(newContent Content) (*Content, error) {
 
 // DeleteContentByID deletes the Content associated with the contentID
 //
-// Returns true if the Content was deleted, false y it could not be deleted or an error if it occurred
+// Returns true if the Content was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteContentByID(contentID string) (bool, error) {
 	if client == nil {
 		InitialiseBD()
@@ -318,7 +319,7 @@ func DeleteContentByID(contentID string) (bool, error) {
 	}
 
 	if len(deletedContents) == 0 {
-		return false, fmt.Errorf("not foud any content with the ID %s to delete", contentID)
+		return false, fmt.Errorf("not found any content with the ID %s to delete", contentID)
 	}
 
 	return true, nil
@@ -326,7 +327,7 @@ func DeleteContentByID(contentID string) (bool, error) {
 
 // DeleteContentByName deletes the Content associated with the contentName
 //
-// Returns true if the Content was deleted, false y it could not be deleted or an error if it occurred
+// Returns true if the Content was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteContentByName(contentName string) (bool, error) {
 	if client == nil {
 		InitialiseBD()
@@ -334,14 +335,14 @@ func DeleteContentByName(contentName string) (bool, error) {
 
 	var deletedContent []Content
 
-	_, err := client.From("Content").Delete("exact", "").Eq("Email", contentName).ExecuteTo(&deletedContent)
+	_, err := client.From("Content").Delete("exact", "").Eq("Name", contentName).ExecuteTo(&deletedContent)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting content:\n%w", err)
 	}
 
 	if len(deletedContent) == 0 {
-		return false, fmt.Errorf("not foud any content with the name %s to delete", contentName)
+		return false, fmt.Errorf("not found any content with the name %s to delete", contentName)
 	}
 
 	return true, nil
@@ -349,7 +350,7 @@ func DeleteContentByName(contentName string) (bool, error) {
 
 // UpdateContentInfo updates 1 or more parameters from the selected Content
 //
-// Recibes the name from the content to edit and a Content with the new information
+// Receives the name from the content to edit and a Content with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited Content if the info was edited or nil and an error if it could not be edited
@@ -370,7 +371,7 @@ func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, er
 	}
 
 	if len(updatedContents) == 0 {
-		return nil, fmt.Errorf("not foud any content with the Name %s to update", contentName)
+		return nil, fmt.Errorf("not found any content with the Name %s to update", contentName)
 	}
 
 	return &updatedContents[0], nil
@@ -382,7 +383,7 @@ func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, er
  =========================================================
 */
 
-// HashPassword recibes the plain password and return the hash
+// HashPassword receives the plain password and returns the hash
 func HashPassword(password string) (string, error) {
 	if password == "" {
 		return password, nil
@@ -394,7 +395,7 @@ func HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// VerifyPassword compares a plain password with the hassed password
+// VerifyPassword compares a plain password with the hashed password
 func VerifyPassword(plainPassword, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
 	return err == nil
