@@ -6,13 +6,12 @@ import "fmt"
 // Name is the (unique) review title, Rating is 0-10 with one decimal, and
 // Recommended is derived from the rating by the handler.
 type Review struct {
-	ID          int     `json:"id,omitempty"`
-	Name        string  `json:"Name,omitempty"`
-	Description string  `json:"Description,omitempty"`
-	Recommended bool    `json:"Recommended"`
-	Rating      float64 `json:"Rating"`
-	ProductName string  `json:"ProductName,omitempty"`
-	UserName    string  `json:"UserName,omitempty"`
+	ID          int    `json:"id,omitempty"`
+	Name        string `json:"Name,omitempty"`
+	Description string `json:"Description,omitempty"`
+	Recommended bool   `json:"Recommended"`
+	ProductName string `json:"ProductName,omitempty"`
+	UserName    string `json:"UserName,omitempty"`
 }
 
 // Product is the item a review points to. Only the fields we use are mapped;

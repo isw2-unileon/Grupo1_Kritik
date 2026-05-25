@@ -18,7 +18,7 @@ export default function PublishReviewPage() {
   // Review fields.
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [rating, setRating] = useState(""); // kept as string for the number input
+  const [recommended, setRecommended] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -68,10 +68,8 @@ export default function PublishReviewPage() {
       setError("Escribe el contenido de la reseña");
       return;
     }
-
-    const ratingValue = parseFloat(rating);
-    if (Number.isNaN(ratingValue) || ratingValue < 0 || ratingValue > 10) {
-      setError("La nota debe ser un número entre 0 y 10");
+    if (recommended === null) {
+      setError("Indica si recomiendas el producto o no");
       return;
     }
 
@@ -81,7 +79,7 @@ export default function PublishReviewPage() {
         title: title.trim(),
         product_name: selected.Name,
         description: description.trim(),
-        rating: ratingValue,
+        recommended,
       });
       navigate("/dashboard");
     } catch (err) {
@@ -101,7 +99,7 @@ export default function PublishReviewPage() {
           Publicar una nueva reseña
         </h1>
         <p className="text-slate-400">
-          Busca el producto que quieres reseñar y comparte tu valoración.
+          Busca el producto que quieres reseñar y comparte tu opinión.
         </p>
       </div>
 
@@ -158,21 +156,35 @@ export default function PublishReviewPage() {
           />
         </label>
 
-        <label className="block">
+        <div className="block">
           <span className="text-sm font-medium text-slate-200">
-            Nota (de 0 a 10, un decimal)
+            ¿Recomiendas este producto?
           </span>
-          <input
-            type="number"
-            value={rating}
-            onChange={(e) => setRating(e.target.value)}
-            min={0}
-            max={10}
-            step={0.1}
-            placeholder="8.1"
-            className={inputClasses}
-          />
-        </label>
+          <div className="mt-2 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setRecommended(true)}
+              className={`flex-1 rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
+                recommended === true
+                  ? "border-emerald-400 bg-emerald-400/10 text-emerald-300"
+                  : "border-white/10 bg-slate-950/80 text-slate-300 hover:border-white/25"
+              }`}
+            >
+              Sí, lo recomiendo
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecommended(false)}
+              className={`flex-1 rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
+                recommended === false
+                  ? "border-red-400 bg-red-400/10 text-red-300"
+                  : "border-white/10 bg-slate-950/80 text-slate-300 hover:border-white/25"
+              }`}
+            >
+              No lo recomiendo
+            </button>
+          </div>
+        </div>
 
         <label className="block">
           <span className="text-sm font-medium text-slate-200">Tu reseña</span>

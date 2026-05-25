@@ -28,7 +28,7 @@ export interface NewReview {
   title: string;
   product_name: string;
   description: string;
-  rating: number;
+  recommended: boolean;
 }
 
 const BASE = "";
@@ -109,7 +109,6 @@ export interface Review {
   Name: string;
   Description: string;
   Recommended: boolean;
-  Rating: number;
   ProductName: string;
   UserName: string;
 }

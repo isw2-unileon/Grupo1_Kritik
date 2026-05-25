@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -10,24 +11,24 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/bd"
 )
 
-// recommendThreshold: ratings at or above this value mark the review as recommended.
-const recommendThreshold = 6.0
-
-// isRecommended reports whether a rating is high enough to recommend the product.
-func isRecommended(rating float64) bool {
-	return rating >= recommendThreshold
-}
-
 // CreateReviewRequest is the payload for publishing a review.
 type CreateReviewRequest struct {
-	Title       string  `json:"title"`        // stored as Review.Name (unique)
-	ProductName string  `json:"product_name"` // must be an existing Product
-	Description string  `json:"description"`
-	Rating      float64 `json:"rating"` // 0-10, one decimal
+	Title       string `json:"title"`        // stored as Review.Name (unique)
+	ProductName string `json:"product_name"` // must be an existing Product
+	Description string `json:"description"`
+	Recommended bool   `json:"recommended"`
+}
+
+// validateReviewRequest checks that the required text fields are present.
+func validateReviewRequest(req CreateReviewRequest) error {
+	if req.Title == "" || req.ProductName == "" || req.Description == "" {
+		return errors.New("title, product and description are required")
+	}
+	return nil
 }
 
 // CreateReviewHandler creates a review for an existing product on behalf of the
-// authenticated user. Recommended is derived from the rating.
+// authenticated user.
 func CreateReviewHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
@@ -46,12 +47,8 @@ func CreateReviewHandler(c *gin.Context) {
 	req.ProductName = strings.TrimSpace(req.ProductName)
 	req.Description = strings.TrimSpace(req.Description)
 
-	if req.Title == "" || req.ProductName == "" || req.Description == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title, product and description are required"})
-		return
-	}
-	if req.Rating < 0 || req.Rating > 10 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "rating must be between 0 and 10"})
+	if err := validateReviewRequest(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -67,8 +64,7 @@ func CreateReviewHandler(c *gin.Context) {
 	review, err := bd.AddReview(bd.Review{
 		Name:        req.Title,
 		Description: req.Description,
-		Rating:      req.Rating,
-		Recommended: isRecommended(req.Rating),
+		Recommended: req.Recommended,
 		ProductName: req.ProductName,
 		UserName:    user.UserName,
 	})

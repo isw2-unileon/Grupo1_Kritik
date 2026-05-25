@@ -84,16 +84,11 @@ export default function ReviewsSection() {
               key={review.id}
               className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5 transition hover:border-cyan-400/40 hover:bg-slate-950"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-white">
-                    {review.ProductName}
-                  </h3>
-                  <p className="text-sm text-cyan-300">{review.Name}</p>
-                </div>
-                <span className="shrink-0 rounded-full bg-cyan-400/10 px-3 py-1 text-sm font-semibold text-cyan-300">
-                  {review.Rating.toFixed(1)} / 10
-                </span>
+              <div>
+                <h3 className="text-xl font-semibold text-white">
+                  {review.ProductName}
+                </h3>
+                <p className="text-sm text-cyan-300">{review.Name}</p>
               </div>
 
               <p className="mt-3 text-slate-300">{review.Description}</p>
