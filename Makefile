@@ -10,6 +10,7 @@ install:
 	go get github.com/joho/godotenv
 	go get github.com/supabase-community/supabase-go
 	go get golang.org/x/crypto/bcrypt
+	go get cloud.google.com/go/civil
 
 ## Run backend with hot reload
 run-backend:

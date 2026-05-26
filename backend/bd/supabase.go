@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
+	"cloud.google.com/go/civil"
 	"github.com/joho/godotenv"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
@@ -12,28 +14,40 @@ import (
 
 // User struct
 type User struct {
-	ID        int    `json:"id,omitempty"`
-	Email     string `json:"Email,omitempty"`
-	Name      string `json:"Name,omitempty"`
-	Password  string `json:"Password,omitempty"`
-	Surname   string `json:"Surname"`
-	UserName  string `json:"UserName"`
-	Birth     string `json:"Birth"`
+	ID       int         `json:"id,omitempty"`
+	Email    string      `json:"Email,omitempty"`
+	Name     string      `json:"Name,omitempty"`
+	Surname  string      `json:"Surname,omitempty"`
+	UserName string      `json:"UserName,omitempty"`
+	Password string      `json:"Password,omitempty"`
+	Birth    *civil.Date `json:"Birth,omitempty"`
 }
 
-// Content struct
-type Content struct {
+// Product struct
+type Product struct {
+	ID           int         `json:"id,omitempty"`
+	Name         string      `json:"Name,omitempty"`
+	Type         string      `json:"Type,omitempty"`
+	AverageGrade int         `json:"AverageGrade,omitempty"`
+	Description  string      `json:"Description,omitempty"`
+	Release      *civil.Date `json:"Release,omitempty"`
+	Genre        []string    `json:"Genre,omitempty"`
+}
+
+// Review struct
+type Review struct {
 	ID          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
-	Type        string `json:"Type,omitempty"`
-	Grade       int    `json:"Grade,omitempty"`
+	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
+
+	ProductID int `json:"ProductID,omitempty"`
+	UserID    int `json:"UserId,omitempty"`
 }
 
 var client *supabase.Client
 
-// InitialiseBD initialises the data base
-func InitialiseBD() {
+func init() {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
 			slog.Error("supabase: failed to load .env", "error", err)
@@ -66,34 +80,14 @@ func InitialiseBD() {
  =========================================================
 */
 
-// GetUserByID returns the User associated with the userID or an error if it occurred
-func GetUserByID(userID string) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var users []User
-	_, err := client.From("Users").Select("*", "exact", false).Eq("id", userID).ExecuteTo(&users)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with ID %s", userID)
-	}
-
-	return &users[0], nil
-}
-
 // GetUserByEmail returns the User associated with the userEmail or an error if it occurred
 func GetUserByEmail(userEmail string) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var users []User
-	_, err := client.From("Users").Select("*", "exact", false).Eq("Email", userEmail).ExecuteTo(&users)
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("Email", userEmail).
+		ExecuteTo(&users)
 
 	if err != nil {
 		return nil, err
@@ -107,20 +101,40 @@ func GetUserByEmail(userEmail string) (*User, error) {
 }
 
 // GetUserByUserName returns the User associated with the username or an error if it occurred
-func GetUserByUserName(username string) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
+func GetUserByUserName(userName string) (*User, error) {
 
 	var users []User
-	_, err := client.From("Users").Select("*", "exact", false).Eq("UserName", username).ExecuteTo(&users)
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("UserName", userName).
+		ExecuteTo(&users)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with username %s", username)
+		return nil, fmt.Errorf("not found user with userName %s", userName)
+	}
+
+	return &users[0], nil
+}
+
+// GetUserByID returns the User associated with the userId or an error if it occurred
+func GetUserByID(userID int) (*User, error) {
+
+	var users []User
+	_, err := client.From("Users").
+		Select("*", "exact", false).
+		Eq("ID", strconv.Itoa(userID)).
+		ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("not found user with id %d", userID)
 	}
 
 	return &users[0], nil
@@ -130,9 +144,6 @@ func GetUserByUserName(username string) (*User, error) {
 //
 // Returns the added User or nil and an error if it was not added
 func AddUser(newUser User) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	hashedPassword, err := HashPassword(newUser.Password)
 
@@ -144,7 +155,9 @@ func AddUser(newUser User) (*User, error) {
 
 	var insertedUsers []User
 
-	_, err = client.From("Users").Insert(newUser, false, "", "", "").ExecuteTo(&insertedUsers)
+	_, err = client.From("Users").
+		Insert(newUser, false, "", "", "").
+		ExecuteTo(&insertedUsers)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting user:\n%w", err)
@@ -153,40 +166,17 @@ func AddUser(newUser User) (*User, error) {
 	return &insertedUsers[0], nil
 }
 
-// DeleteUserByID deletes the User associated with the userID
-//
-// Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
-func DeleteUserByID(userID string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var deletedUsers []User
-
-	_, err := client.From("Users").Delete("exact", "").Eq("id", userID).ExecuteTo(&deletedUsers)
-
-	if err != nil {
-		return false, fmt.Errorf("error deleting user:\n%w", err)
-	}
-
-	if len(deletedUsers) == 0 {
-		return false, fmt.Errorf("not found any user with the ID %s to delete", userID)
-	}
-
-	return true, nil
-}
-
 // DeleteUserByEmail deletes the User associated with the userEmail
 //
 // Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
 func DeleteUserByEmail(userEmail string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	var deletedUsers []User
 
-	_, err := client.From("Users").Delete("exact", "").Eq("Email", userEmail).ExecuteTo(&deletedUsers)
+	_, err := client.From("Users").
+		Delete("", "representation").
+		Eq("Email", userEmail).
+		ExecuteTo(&deletedUsers)
 
 	if err != nil {
 		return false, fmt.Errorf("error deleting user:\n%w", err)
@@ -201,20 +191,19 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 
 // UpdateUserInfo updates 1 or more parameters from the selected User
 //
-// Receives the id or email from the user to edit and a User with the new information
+// Recibes the email from the User to edit and an User with the new information
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited User if the info was edited or nil and an error if it could not be edited
 func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
-	if client == nil {
-		InitialiseBD()
-	}
 
 	newUserInfo.Email = userEmail
 	if newUserInfo.Password != "" {
 		hashedPassword, err := HashPassword(newUserInfo.Password)
-		if err != nil {
-			return nil, fmt.Errorf("error hashing password: %w", err)
+		if err == nil {
+			newUserInfo.Password = hashedPassword
+		} else {
+			return nil, err
 		}
 		newUserInfo.Password = hashedPassword
 	}
@@ -231,7 +220,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 	}
 
 	if len(updatedUsers) == 0 {
-		return nil, fmt.Errorf("not found any user with the ID %s to update", userEmail)
+		return nil, fmt.Errorf("not foud any user with the email %s to update", userEmail)
 	}
 
 	return &updatedUsers[0], nil
@@ -239,142 +228,204 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 
 /*
  =========================================================
- Content functions
+ Product functions
  =========================================================
 */
 
-// GetContentByID returns the Content associated with the contentID or an error if it occurred
-func GetContentByID(contentID string) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
+// GetProductByName returns the Product associated with the productName or an error if it occurred
+func GetProductByName(productName string) (*Product, error) {
 
-	var contents []Content
-	_, err := client.From("Content").Select("*", "exact", false).Eq("id", contentID).ExecuteTo(&contents)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(contents) == 0 {
-		return nil, fmt.Errorf("not found content with ID %s", contentID)
-	}
-
-	return &contents[0], nil
-}
-
-// GetContentByName returns the Content associated with the contentName or an error if it occurred
-func GetContentByName(contentName string) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var contents []Content
-	_, err := client.From("Content").Select("*", "exact", false).Eq("Name", contentName).ExecuteTo(&contents)
+	var products []Product
+	_, err := client.From("Product").
+		Select("*", "exact", false).
+		Eq("Name", productName).
+		ExecuteTo(&products)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if len(contents) == 0 {
-		return nil, fmt.Errorf("not found content with name %s", contentName)
+	if len(products) == 0 {
+		return nil, fmt.Errorf("not found product with name %s", productName)
 	}
 
-	return &contents[0], nil
+	return &products[0], nil
 }
 
-// AddContent adds a new Content to the database
+// AddProduct adds a new Product to the database
 //
-// Returns the added Content or nil and an error if it was not added
-func AddContent(newContent Content) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
+// Returns the added Product or nil and an error if it was not added
+func AddProduct(newProduct Product) (*Product, error) {
 
-	var insertedContent []Content
+	var insertedProduct []Product
 
-	_, err := client.From("Content").Insert(newContent, false, "", "", "").ExecuteTo(&insertedContent)
+	_, err := client.From("Product").
+		Insert(newProduct, false, "", "", "").
+		ExecuteTo(&insertedProduct)
 
 	if err != nil {
-		return nil, fmt.Errorf("error inserting content:\n%w", err)
+		return nil, fmt.Errorf("error inserting product:\n%w", err)
 	}
 
-	return &insertedContent[0], nil
+	return &insertedProduct[0], nil
 }
 
-// DeleteContentByID deletes the Content associated with the contentID
+// DeleteProductByName deletes the Product associated with the productName
 //
-// Returns true if the Content was deleted, false if it could not be deleted, or an error if it occurred
-func DeleteContentByID(contentID string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
+// Returns true if the Product was deleted, false y it could not be deleted or an error if it occurred
+func DeleteProductByName(productName string) (bool, error) {
 
-	var deletedContents []Content
+	var deletedProduct []Product
 
-	_, err := client.From("Content").Delete("exact", "").Eq("id", contentID).ExecuteTo(&deletedContents)
+	_, err := client.From("Product").
+		Delete("", "representation").
+		Eq("Name", productName).
+		ExecuteTo(&deletedProduct)
 
 	if err != nil {
-		return false, fmt.Errorf("error deleting content:\n%w", err)
+		return false, fmt.Errorf("error deleting product:\n%w", err)
 	}
 
-	if len(deletedContents) == 0 {
-		return false, fmt.Errorf("not found any content with the ID %s to delete", contentID)
+	if len(deletedProduct) == 0 {
+		return false, fmt.Errorf("not foud any product with the name %s to delete", productName)
 	}
 
 	return true, nil
 }
 
-// DeleteContentByName deletes the Content associated with the contentName
+// UpdateProductInfo updates 1 or more parameters from the selected Product
 //
-// Returns true if the Content was deleted, false if it could not be deleted, or an error if it occurred
-func DeleteContentByName(contentName string) (bool, error) {
-	if client == nil {
-		InitialiseBD()
-	}
-
-	var deletedContent []Content
-
-	_, err := client.From("Content").Delete("exact", "").Eq("Name", contentName).ExecuteTo(&deletedContent)
-
-	if err != nil {
-		return false, fmt.Errorf("error deleting content:\n%w", err)
-	}
-
-	if len(deletedContent) == 0 {
-		return false, fmt.Errorf("not found any content with the name %s to delete", contentName)
-	}
-
-	return true, nil
-}
-
-// UpdateContentInfo updates 1 or more parameters from the selected Content
-//
-// Receives the name from the content to edit and a Content with the new information
+// Recibes the name from the Product to edit and a Product with the new information
 // (if any parameter is empty, it wont be edited)
 //
-// Returns the edited Content if the info was edited or nil and an error if it could not be edited
-func UpdateContentInfo(contentName string, newContentInfo Content) (*Content, error) {
-	if client == nil {
-		InitialiseBD()
-	}
+// Returns the edited Product if the info was edited or nil and an error if it could not be edited
+func UpdateProductInfo(productName string, newProductInfo Product) (*Product, error) {
 
-	var updatedContents []Content
+	var updatedProducts []Product
 
-	_, err := client.From("Content").
-		Update(newContentInfo, "", "").
-		Eq("Name", contentName).
-		ExecuteTo(&updatedContents)
+	_, err := client.From("Product").
+		Update(newProductInfo, "", "").
+		Eq("Name", productName).
+		ExecuteTo(&updatedProducts)
 
 	if err != nil {
-		return nil, fmt.Errorf("error updating the content: %w", err)
+		return nil, fmt.Errorf("error updating the product: %w", err)
 	}
 
-	if len(updatedContents) == 0 {
-		return nil, fmt.Errorf("not found any content with the Name %s to update", contentName)
+	if len(updatedProducts) == 0 {
+		return nil, fmt.Errorf("not foud any product with the Name %s to update", productName)
 	}
 
-	return &updatedContents[0], nil
+	return &updatedProducts[0], nil
+}
+
+/*
+ =========================================================
+ Review functions
+ =========================================================
+*/
+
+// GetReviewByName returns the Review associated with the reviewName or an error if it occurred
+func GetReviewByName(reviewName string) (*Review, error) {
+	var reviews []Review
+
+	_, err := client.From("Review").
+		Select("*", "exact", false).
+		Eq("Name", reviewName).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(reviews) == 0 {
+		return nil, fmt.Errorf("not found review with name %s", reviewName)
+	}
+
+	return &reviews[0], nil
+}
+
+// AddReview adds a new Review to the database
+//
+// Returns the added Review or nil and an error if it was not added
+func AddReview(newReview Review) (*Review, error) {
+
+	var insertedReview []Review
+
+	_, err := client.From("Review").
+		Insert(newReview, false, "", "", "").
+		ExecuteTo(&insertedReview)
+
+	if err != nil {
+		return nil, fmt.Errorf("error inserting review:\n%w", err)
+	}
+
+	return &insertedReview[0], nil
+}
+
+// DeleteReviewByName deletes the Review associated with the reviewName
+//
+// Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
+func DeleteReviewByName(reviewName string) (bool, error) {
+
+	var deletedReview []Review
+
+	_, err := client.From("Review").
+		Delete("", "representation").
+		Eq("Name", reviewName).
+		ExecuteTo(&deletedReview)
+
+	if err != nil {
+		return false, fmt.Errorf("error deleting review:\n%w", err)
+	}
+
+	if len(deletedReview) == 0 {
+		return false, fmt.Errorf("not foud any review with the name %s to delete", reviewName)
+	}
+
+	return true, nil
+}
+
+// GetReviewsByUserEmail gets an array of Review associated to an User
+func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
+	user, err := GetUserByEmail(userEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = client.From("Review").
+		Select("*", "exact", false).
+		Eq("UserId", fmt.Sprintf("%d", user.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
+}
+
+// GetReviewsByProductName gets an array of Review associated to Product
+func GetReviewsByProductName(productName string) ([]Review, error) {
+	product, err := GetProductByName(productName)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = client.From("Review").
+		Select("*", "exact", false).
+		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
 }
 
 /*

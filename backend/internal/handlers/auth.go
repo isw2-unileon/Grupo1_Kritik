@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"cloud.google.com/go/civil"
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/bd"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
@@ -12,12 +13,12 @@ import (
 
 // RegisterRequest represents the payload for user registration.
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-	Name     string `json:"name" binding:"required"`
-	Surname  string `json:"surname"`
-	UserName string `json:"user_name"`
-	Birth    string `json:"birth"`
+	Email    string      `json:"email" binding:"required,email"`
+	Password string      `json:"password" binding:"required"`
+	Name     string      `json:"name" binding:"required"`
+	Surname  string      `json:"surname"`
+	UserName string      `json:"user_name"`
+	Birth    *civil.Date `json:"birth"`
 }
 
 // LoginRequest represents the payload for user login.
@@ -57,7 +58,6 @@ func RegisterHandler(c *gin.Context) {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Surname = strings.TrimSpace(req.Surname)
 	req.UserName = strings.TrimSpace(req.UserName)
-	req.Birth = strings.TrimSpace(req.Birth)
 
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "email, password, and name cannot be empty"})
