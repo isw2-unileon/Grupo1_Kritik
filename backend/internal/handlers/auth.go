@@ -43,8 +43,17 @@ type UserResponse struct {
 	UserName string `json:"user_name"`
 }
 
+type AuthHandler struct {
+	DB bd.Database
+}
+
+// NewAuthHandler initialices the authentication handler
+func NewAuthHandler(db bd.Database) *AuthHandler {
+	return &AuthHandler{DB: db}
+}
+
 // RegisterHandler handles user registration.
-func RegisterHandler(c *gin.Context) {
+func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,7 +73,7 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	existingUser, err := bd.GetUserByEmail(req.Email)
+	existingUser, err := h.DB.GetUserByEmail(req.Email)
 	if err != nil {
 		slog.Warn("register: email lookup failed", "email", req.Email, "error", err)
 	}
@@ -75,7 +84,7 @@ func RegisterHandler(c *gin.Context) {
 	}
 
 	if req.UserName != "" {
-		existingUsername, err := bd.GetUserByUserName(req.UserName)
+		existingUsername, err := h.DB.GetUserByUserName(req.UserName)
 		if err != nil {
 			slog.Warn("register: username lookup failed", "user_name", req.UserName, "error", err)
 		}
@@ -95,7 +104,7 @@ func RegisterHandler(c *gin.Context) {
 		Birth:    req.Birth,
 	}
 
-	addedUser, err := bd.AddUser(newUser)
+	addedUser, err := h.DB.AddUser(newUser)
 	if err != nil {
 		slog.Error("register: failed to create user", "email", req.Email, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
@@ -116,7 +125,7 @@ func RegisterHandler(c *gin.Context) {
 }
 
 // LoginHandler handles user login and returns a JWT token.
-func LoginHandler(c *gin.Context) {
+func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	var req LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -138,12 +147,12 @@ func LoginHandler(c *gin.Context) {
 	var err error
 
 	if req.Email != "" {
-		user, err = bd.GetUserByEmail(req.Email)
+		user, err = h.DB.GetUserByEmail(req.Email)
 		if err != nil {
 			slog.Warn("login: user not found by email", "email", req.Email, "error", err)
 		}
 	} else {
-		user, err = bd.GetUserByUserName(req.UserName)
+		user, err = h.DB.GetUserByUserName(req.UserName)
 		if err != nil {
 			slog.Warn("login: user not found by username", "user_name", req.UserName, "error", err)
 		}

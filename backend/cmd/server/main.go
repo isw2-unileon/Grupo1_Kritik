@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/bd"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
@@ -22,6 +24,11 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level:
 
 // main
 func main() {
+	database, err := bd.NewSupabaseDB()
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
 	ctx := context.Background()
 
 	cfg := config.Load()

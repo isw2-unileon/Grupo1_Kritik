@@ -69,7 +69,7 @@ type SupabaseDB struct {
 	client *supabase.Client
 }
 
-// NewSupabaseDB reemplaza al init() y devuelve la base de datos lista
+// NewSupabaseDB
 func NewSupabaseDB() (*SupabaseDB, error) {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
