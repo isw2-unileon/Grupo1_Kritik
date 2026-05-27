@@ -31,7 +31,7 @@ export interface NewReview {
   recommended: boolean;
 }
 
-const BASE = "";
+const BASE = import.meta.env.VITE_API_URL ?? "";
 
 // fetch wrapper that attaches the stored JWT to authenticated requests.
 function authedFetch(url: string, options: RequestInit = {}) {
