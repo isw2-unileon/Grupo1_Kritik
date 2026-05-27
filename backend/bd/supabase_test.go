@@ -102,9 +102,9 @@ func TestGetUserByUserNameNotFound(t *testing.T) {
 
 func TestGetUserByID(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetUserByID: func(ID int) (*User, error) {
+		MockGetUserByID: func(id int) (*User, error) {
 			return &User{
-				ID:       ID,
+				ID:       id,
 				Email:    "testusertoget@gmail.com",
 				Name:     "testuser",
 				Surname:  "toget",
@@ -128,7 +128,7 @@ func TestGetUserByID(t *testing.T) {
 
 func TestGetUserByIDNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetUserByID: func(ID int) (*User, error) {
+		MockGetUserByID: func(id int) (*User, error) {
 			return nil, errors.New("not found user with id 0")
 		},
 	}

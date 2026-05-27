@@ -65,6 +65,7 @@ type Database interface {
 	GetReviewsByProductName(productName string) ([]Review, error)
 }
 
+// SupabaseDB client struct
 type SupabaseDB struct {
 	client *supabase.Client
 }

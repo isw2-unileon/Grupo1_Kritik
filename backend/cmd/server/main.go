@@ -29,7 +29,7 @@ func main() {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
-	//Handlers
+	// Handlers
 	authH := handlers.NewAuthHandler(database)
 	reviewH := handlers.NewReviewHandler(database)
 
