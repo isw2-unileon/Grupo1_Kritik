@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError("");
 
     if (isEmpty(username)) {
-      setError("El usuario o correo es obligatorio.");
+      setError("El usuario o correo es obligatorio");
       return;
     }
 
