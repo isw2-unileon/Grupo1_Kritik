@@ -29,6 +29,10 @@ func main() {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
+	//Handlers
+	authH := handlers.NewAuthHandler(database)
+	reviewH := handlers.NewReviewHandler(database)
+
 	ctx := context.Background()
 
 	cfg := config.Load()
@@ -61,13 +65,13 @@ func main() {
 
 	// Auth endpoints
 	authGroup := r.Group("/auth")
-	authGroup.POST("/register", handlers.RegisterHandler)
-	authGroup.POST("/login", handlers.LoginHandler)
+	authGroup.POST("/register", authH.RegisterHandler)
+	authGroup.POST("/login", authH.LoginHandler)
 
 	// Review endpoints (protected: require a valid JWT)
-	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
-	api.GET("/reviews", middleware.RequireAuth(), handlers.GetUserReviewsHandler)
-	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
+	api.POST("/reviews", middleware.RequireAuth(), reviewH.CreateReviewHandler)
+	api.GET("/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsHandler)
+	api.GET("/products", middleware.RequireAuth(), reviewH.SearchProductHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
