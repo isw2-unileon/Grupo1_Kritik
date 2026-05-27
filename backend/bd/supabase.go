@@ -77,7 +77,7 @@ type SupabaseDB struct {
 func NewSupabaseDB() (*SupabaseDB, error) {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
-			slog.Error("supabase: failed to load .env", "error", err)
+			slog.Warn("supabase: failed to load .env from standard paths, checking environment variables", "error", err)
 		}
 	}
 
@@ -85,17 +85,16 @@ func NewSupabaseDB() (*SupabaseDB, error) {
 	key := os.Getenv("SUPABASE_KEY")
 
 	if url == "" || key == "" {
-		slog.Error("supabase: SUPABASE_URL or SUPABASE_KEY not set")
+		return nil, fmt.Errorf("supabase: SUPABASE_URL or SUPABASE_KEY not set in environment")
 	}
 
-	var errClient error
-	client, errClient := supabase.NewClient(url, key, &supabase.ClientOptions{})
-
-	if errClient != nil {
-		slog.Error("supabase: failed to create client", "error", errClient)
+	// Inicializamos el cliente de forma directa y limpia
+	client, err := supabase.NewClient(url, key, &supabase.ClientOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("supabase: failed to create client: %w", err)
 	}
 
-	slog.Info("supabase: client initialised")
+	slog.Info("supabase: client initialised successfully")
 	return &SupabaseDB{client: client}, nil
 }
 
