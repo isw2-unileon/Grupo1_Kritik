@@ -60,7 +60,7 @@ func main() {
 
 	api := r.Group("/api")
 	api.GET("/hello", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!"})
+		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!!"})
 	})
 
 	// Auth endpoints
