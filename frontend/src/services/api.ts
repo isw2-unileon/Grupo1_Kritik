@@ -31,7 +31,7 @@ export interface NewReview {
   recommended: boolean;
 }
 
-const BASE = import.meta.env.VITE_API_URL ?? "";
+const BASE = "https://grupo1-kritik-backend.onrender.com/" ?? "";
 
 // fetch wrapper that attaches the stored JWT to authenticated requests.
 function authedFetch(url: string, options: RequestInit = {}) {
