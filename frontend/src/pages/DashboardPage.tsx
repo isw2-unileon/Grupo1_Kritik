@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
+import Card from "@/components/Card";
 
 const navigation = [
   { name: "Home", href: "#home" },
@@ -61,7 +62,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+      <Card as="section" className="p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-slate-300">
@@ -90,11 +91,11 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
-      </section>
+      </Card>
 
       <main className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
         <section id="home" className="space-y-6">
-          <article className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+          <Card as="article" className="p-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Recomendaciones</p>
@@ -135,13 +136,13 @@ export default function DashboardPage() {
                 </article>
               ))}
             </div>
-          </article>
+          </Card>
 
           <ReviewsSection />
         </section>
 
         <aside className="space-y-6">
-          <article id="friends-liked" className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+          <Card as="article" id="friends-liked" className="p-6">
             <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Tus amigos lo recomendaron</p>
             <h2 className="mt-3 text-2xl font-semibold text-white">A tus amigos les gustó esto</h2>
             <div className="mt-6 space-y-4">
@@ -155,9 +156,9 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </article>
+          </Card>
 
-          <article id="friends-disliked" className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+          <Card as="article" id="friends-disliked" className="p-6">
             <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">A tus amigos no les gustó</p>
             <h2 className="mt-3 text-2xl font-semibold text-white">Lo que no les encantó</h2>
             <div className="mt-6 space-y-4">
@@ -171,20 +172,20 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </article>
+          </Card>
 
-          <article id="profile" className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+          <Card as="article" id="profile" className="p-6">
             <h2 className="text-xl font-semibold text-white">Resumen rápido</h2>
             <div className="mt-4 space-y-3 text-slate-300">
               <p>Perfil: Usuario crítico</p>
               <p>Actividad semanal: 4 reseñas</p>
             </div>
-          </article>
+          </Card>
 
-          <article id="settings" className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
+          <Card as="article" id="settings" className="p-6">
             <h2 className="text-xl font-semibold text-white">Accesos rápidos</h2>
             <p className="mt-3 text-slate-400">Ajustes de cuenta y preferencias de notificaciones aparecerán aquí.</p>
-          </article>
+          </Card>
         </aside>
       </main>
     </div>

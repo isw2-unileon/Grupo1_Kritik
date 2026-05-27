@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isEmpty, isValidEmail } from "@/utils/validation";
+import Card from "@/components/Card";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -85,7 +86,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-white/5 p-10 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+    <Card className="mx-auto max-w-3xl p-10">
       <div className="mb-8 space-y-3">
         <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">
           Crear cuenta
@@ -224,6 +225,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </form>
-    </div>
+    </Card>
   );
 }
