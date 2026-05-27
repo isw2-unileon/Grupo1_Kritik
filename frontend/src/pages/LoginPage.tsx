@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isEmpty, isValidEmail } from "@/utils/validation";
 
+
+//Comment to be able to do the merge
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
