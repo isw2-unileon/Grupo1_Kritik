@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/bd"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/auth"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/config"
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/handlers"
@@ -22,6 +24,15 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level:
 
 // main
 func main() {
+	database, err := bd.NewSupabaseDB()
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
+	// Handlers
+	authH := handlers.NewAuthHandler(database)
+	reviewH := handlers.NewReviewHandler(database)
+
 	ctx := context.Background()
 
 	cfg := config.Load()
@@ -54,13 +65,13 @@ func main() {
 
 	// Auth endpoints
 	authGroup := r.Group("/auth")
-	authGroup.POST("/register", handlers.RegisterHandler)
-	authGroup.POST("/login", handlers.LoginHandler)
+	authGroup.POST("/register", authH.RegisterHandler)
+	authGroup.POST("/login", authH.LoginHandler)
 
 	// Review endpoints (protected: require a valid JWT)
-	api.POST("/reviews", middleware.RequireAuth(), handlers.CreateReviewHandler)
-	api.GET("/reviews", middleware.RequireAuth(), handlers.GetUserReviewsHandler)
-	api.GET("/products", middleware.RequireAuth(), handlers.SearchProductHandler)
+	api.POST("/reviews", middleware.RequireAuth(), reviewH.CreateReviewHandler)
+	api.GET("/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsHandler)
+	api.GET("/products", middleware.RequireAuth(), reviewH.SearchProductHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

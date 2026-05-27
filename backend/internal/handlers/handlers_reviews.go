@@ -17,9 +17,19 @@ type CreateReviewRequest struct {
 	Recommended bool   `json:"recommended"`
 }
 
+// ReviewHandler struct
+type ReviewHandler struct {
+	DB bd.Database
+}
+
+// NewReviewHandler initialices the handler with any bd.Database implementation
+func NewReviewHandler(db bd.Database) *ReviewHandler {
+	return &ReviewHandler{DB: db}
+}
+
 // CreateReviewHandler creates a review for an existing product on behalf of the
 // authenticated user.
-func CreateReviewHandler(c *gin.Context) {
+func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	userID := c.GetInt("UserID")
 	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
@@ -38,14 +48,14 @@ func CreateReviewHandler(c *gin.Context) {
 
 	// The Review table stores the author by username, but the JWT only carries
 	// the user ID, so we look the user up to get their username.
-	user, err := bd.GetUserByID(userID)
+	user, err := h.DB.GetUserByID(userID)
 	if err != nil {
 		slog.Error("create review: user lookup failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})
 		return
 	}
 
-	review, err := bd.AddReview(bd.Review{
+	review, err := h.DB.AddReview(bd.Review{
 		Name:        req.Title,
 		Description: req.Description,
 		Recommended: req.Recommended,
@@ -63,14 +73,14 @@ func CreateReviewHandler(c *gin.Context) {
 }
 
 // SearchProductHandler returns Products matching the ?q= query string.
-func SearchProductHandler(c *gin.Context) {
+func (h *ReviewHandler) SearchProductHandler(c *gin.Context) {
 	query := strings.TrimSpace(c.Query("q"))
 	if query == "" {
 		c.JSON(http.StatusOK, []bd.Product{})
 		return
 	}
 
-	products, err := bd.GetProductByName(query)
+	products, err := h.DB.GetProductByName(query)
 	if err != nil {
 		slog.Error("search product: failed", "q", query, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
@@ -81,21 +91,21 @@ func SearchProductHandler(c *gin.Context) {
 }
 
 // GetUserReviewsHandler returns the reviews written by the authenticated user.
-func GetUserReviewsHandler(c *gin.Context) {
+func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
 		return
 	}
 
-	user, err := bd.GetUserByID(userID)
+	user, err := h.DB.GetUserByID(userID)
 	if err != nil {
 		slog.Error("get reviews: user lookup failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})
 		return
 	}
 
-	reviews, err := bd.GetReviewsByUserEmail(user.Email)
+	reviews, err := h.DB.GetReviewsByUserEmail(user.Email)
 	if err != nil {
 		slog.Error("get reviews: query failed", "user", user.UserName, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})

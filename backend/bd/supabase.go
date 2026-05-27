@@ -45,13 +45,39 @@ type Review struct {
 	UserID    int `json:"UserId,omitempty"`
 }
 
-var client *supabase.Client
+// Database interface
+//
+//nolint:dupl // DO NOT remove this
+type Database interface {
+	GetUserByEmail(userEmail string) (*User, error)
+	GetUserByUserName(userName string) (*User, error)
+	GetUserByID(userID int) (*User, error)
+	AddUser(newUser User) (*User, error)
+	DeleteUserByEmail(userEmail string) (bool, error)
+	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
 
-func init() {
+	GetProductByName(productName string) (*Product, error)
+	AddProduct(newProduct Product) (*Product, error)
+	DeleteProductByName(productName string) (bool, error)
+	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
+
+	GetReviewByName(reviewName string) (*Review, error)
+	AddReview(newReview Review) (*Review, error)
+	DeleteReviewByName(reviewName string) (bool, error)
+	GetReviewsByUserEmail(userEmail string) ([]Review, error)
+	GetReviewsByProductName(productName string) ([]Review, error)
+}
+
+// SupabaseDB client struct
+type SupabaseDB struct {
+	client *supabase.Client
+}
+
+// NewSupabaseDB creates the supabase client
+func NewSupabaseDB() (*SupabaseDB, error) {
 	if err := godotenv.Load(); err != nil {
 		if err = godotenv.Load("../../.env"); err != nil {
 			slog.Error("supabase: failed to load .env", "error", err)
-			os.Exit(1)
 		}
 	}
 
@@ -60,18 +86,17 @@ func init() {
 
 	if url == "" || key == "" {
 		slog.Error("supabase: SUPABASE_URL or SUPABASE_KEY not set")
-		os.Exit(1)
 	}
 
 	var errClient error
-	client, errClient = supabase.NewClient(url, key, &supabase.ClientOptions{})
+	client, errClient := supabase.NewClient(url, key, &supabase.ClientOptions{})
 
 	if errClient != nil {
 		slog.Error("supabase: failed to create client", "error", errClient)
-		os.Exit(1)
 	}
 
 	slog.Info("supabase: client initialised")
+	return &SupabaseDB{client: client}, nil
 }
 
 /*
@@ -81,10 +106,10 @@ func init() {
 */
 
 // GetUserByEmail returns the User associated with the userEmail or an error if it occurred
-func GetUserByEmail(userEmail string) (*User, error) {
+func (db *SupabaseDB) GetUserByEmail(userEmail string) (*User, error) {
 
 	var users []User
-	_, err := client.From("Users").
+	_, err := db.client.From("Users").
 		Select("*", "exact", false).
 		Eq("Email", userEmail).
 		ExecuteTo(&users)
@@ -101,10 +126,10 @@ func GetUserByEmail(userEmail string) (*User, error) {
 }
 
 // GetUserByUserName returns the User associated with the username or an error if it occurred
-func GetUserByUserName(userName string) (*User, error) {
+func (db *SupabaseDB) GetUserByUserName(userName string) (*User, error) {
 
 	var users []User
-	_, err := client.From("Users").
+	_, err := db.client.From("Users").
 		Select("*", "exact", false).
 		Eq("UserName", userName).
 		ExecuteTo(&users)
@@ -121,12 +146,12 @@ func GetUserByUserName(userName string) (*User, error) {
 }
 
 // GetUserByID returns the User associated with the userId or an error if it occurred
-func GetUserByID(userID int) (*User, error) {
+func (db *SupabaseDB) GetUserByID(userID int) (*User, error) {
 
 	var users []User
-	_, err := client.From("Users").
+	_, err := db.client.From("Users").
 		Select("*", "exact", false).
-		Eq("ID", strconv.Itoa(userID)).
+		Eq("id", strconv.Itoa(userID)).
 		ExecuteTo(&users)
 
 	if err != nil {
@@ -143,7 +168,7 @@ func GetUserByID(userID int) (*User, error) {
 // AddUser adds a new User to the database
 //
 // Returns the added User or nil and an error if it was not added
-func AddUser(newUser User) (*User, error) {
+func (db *SupabaseDB) AddUser(newUser User) (*User, error) {
 
 	hashedPassword, err := HashPassword(newUser.Password)
 
@@ -155,7 +180,7 @@ func AddUser(newUser User) (*User, error) {
 
 	var insertedUsers []User
 
-	_, err = client.From("Users").
+	_, err = db.client.From("Users").
 		Insert(newUser, false, "", "", "").
 		ExecuteTo(&insertedUsers)
 
@@ -169,11 +194,11 @@ func AddUser(newUser User) (*User, error) {
 // DeleteUserByEmail deletes the User associated with the userEmail
 //
 // Returns true if the User was deleted, false if it could not be deleted, or an error if it occurred
-func DeleteUserByEmail(userEmail string) (bool, error) {
+func (db *SupabaseDB) DeleteUserByEmail(userEmail string) (bool, error) {
 
 	var deletedUsers []User
 
-	_, err := client.From("Users").
+	_, err := db.client.From("Users").
 		Delete("", "representation").
 		Eq("Email", userEmail).
 		ExecuteTo(&deletedUsers)
@@ -195,7 +220,7 @@ func DeleteUserByEmail(userEmail string) (bool, error) {
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited User if the info was edited or nil and an error if it could not be edited
-func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
+func (db *SupabaseDB) UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 
 	newUserInfo.Email = userEmail
 	if newUserInfo.Password != "" {
@@ -210,7 +235,7 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 
 	var updatedUsers []User
 
-	_, err := client.From("Users").
+	_, err := db.client.From("Users").
 		Update(newUserInfo, "", "").
 		Eq("Email", userEmail).
 		ExecuteTo(&updatedUsers)
@@ -233,10 +258,10 @@ func UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
 */
 
 // GetProductByName returns the Product associated with the productName or an error if it occurred
-func GetProductByName(productName string) (*Product, error) {
+func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
 
 	var products []Product
-	_, err := client.From("Product").
+	_, err := db.client.From("Product").
 		Select("*", "exact", false).
 		Eq("Name", productName).
 		ExecuteTo(&products)
@@ -255,11 +280,11 @@ func GetProductByName(productName string) (*Product, error) {
 // AddProduct adds a new Product to the database
 //
 // Returns the added Product or nil and an error if it was not added
-func AddProduct(newProduct Product) (*Product, error) {
+func (db *SupabaseDB) AddProduct(newProduct Product) (*Product, error) {
 
 	var insertedProduct []Product
 
-	_, err := client.From("Product").
+	_, err := db.client.From("Product").
 		Insert(newProduct, false, "", "", "").
 		ExecuteTo(&insertedProduct)
 
@@ -273,11 +298,11 @@ func AddProduct(newProduct Product) (*Product, error) {
 // DeleteProductByName deletes the Product associated with the productName
 //
 // Returns true if the Product was deleted, false y it could not be deleted or an error if it occurred
-func DeleteProductByName(productName string) (bool, error) {
+func (db *SupabaseDB) DeleteProductByName(productName string) (bool, error) {
 
 	var deletedProduct []Product
 
-	_, err := client.From("Product").
+	_, err := db.client.From("Product").
 		Delete("", "representation").
 		Eq("Name", productName).
 		ExecuteTo(&deletedProduct)
@@ -299,11 +324,11 @@ func DeleteProductByName(productName string) (bool, error) {
 // (if any parameter is empty, it wont be edited)
 //
 // Returns the edited Product if the info was edited or nil and an error if it could not be edited
-func UpdateProductInfo(productName string, newProductInfo Product) (*Product, error) {
+func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Product) (*Product, error) {
 
 	var updatedProducts []Product
 
-	_, err := client.From("Product").
+	_, err := db.client.From("Product").
 		Update(newProductInfo, "", "").
 		Eq("Name", productName).
 		ExecuteTo(&updatedProducts)
@@ -326,10 +351,10 @@ func UpdateProductInfo(productName string, newProductInfo Product) (*Product, er
 */
 
 // GetReviewByName returns the Review associated with the reviewName or an error if it occurred
-func GetReviewByName(reviewName string) (*Review, error) {
+func (db *SupabaseDB) GetReviewByName(reviewName string) (*Review, error) {
 	var reviews []Review
 
-	_, err := client.From("Review").
+	_, err := db.client.From("Review").
 		Select("*", "exact", false).
 		Eq("Name", reviewName).
 		ExecuteTo(&reviews)
@@ -348,11 +373,11 @@ func GetReviewByName(reviewName string) (*Review, error) {
 // AddReview adds a new Review to the database
 //
 // Returns the added Review or nil and an error if it was not added
-func AddReview(newReview Review) (*Review, error) {
+func (db *SupabaseDB) AddReview(newReview Review) (*Review, error) {
 
 	var insertedReview []Review
 
-	_, err := client.From("Review").
+	_, err := db.client.From("Review").
 		Insert(newReview, false, "", "", "").
 		ExecuteTo(&insertedReview)
 
@@ -366,11 +391,11 @@ func AddReview(newReview Review) (*Review, error) {
 // DeleteReviewByName deletes the Review associated with the reviewName
 //
 // Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
-func DeleteReviewByName(reviewName string) (bool, error) {
+func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 
 	var deletedReview []Review
 
-	_, err := client.From("Review").
+	_, err := db.client.From("Review").
 		Delete("", "representation").
 		Eq("Name", reviewName).
 		ExecuteTo(&deletedReview)
@@ -387,15 +412,15 @@ func DeleteReviewByName(reviewName string) (bool, error) {
 }
 
 // GetReviewsByUserEmail gets an array of Review associated to an User
-func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
-	user, err := GetUserByEmail(userEmail)
+func (db *SupabaseDB) GetReviewsByUserEmail(userEmail string) ([]Review, error) {
+	user, err := db.GetUserByEmail(userEmail)
 	if err != nil {
 		return nil, err
 	}
 
 	var reviews []Review
 
-	_, err = client.From("Review").
+	_, err = db.client.From("Review").
 		Select("*", "exact", false).
 		Eq("UserId", fmt.Sprintf("%d", user.ID)).
 		ExecuteTo(&reviews)
@@ -408,15 +433,15 @@ func GetReviewsByUserEmail(userEmail string) ([]Review, error) {
 }
 
 // GetReviewsByProductName gets an array of Review associated to Product
-func GetReviewsByProductName(productName string) ([]Review, error) {
-	product, err := GetProductByName(productName)
+func (db *SupabaseDB) GetReviewsByProductName(productName string) ([]Review, error) {
+	product, err := db.GetProductByName(productName)
 	if err != nil {
 		return nil, err
 	}
 
 	var reviews []Review
 
-	_, err = client.From("Review").
+	_, err = db.client.From("Review").
 		Select("*", "exact", false).
 		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
 		ExecuteTo(&reviews)
