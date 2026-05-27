@@ -1,5 +1,6 @@
 package bd
 
+//nolint:dupl
 type MockDatabase struct {
 	MockGetUserByEmail    func(userEmail string) (*User, error)
 	MockGetUserByUserName func(userName string) (*User, error)

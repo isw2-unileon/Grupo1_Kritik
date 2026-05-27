@@ -45,6 +45,7 @@ type Review struct {
 	UserID    int `json:"UserId,omitempty"`
 }
 
+//nolint:dupl
 type Database interface {
 	GetUserByEmail(userEmail string) (*User, error)
 	GetUserByUserName(userName string) (*User, error)
