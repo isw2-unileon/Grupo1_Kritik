@@ -17,6 +17,7 @@ type CreateReviewRequest struct {
 	Recommended bool   `json:"recommended"`
 }
 
+// ReviewHandler struct
 type ReviewHandler struct {
 	DB bd.Database
 }

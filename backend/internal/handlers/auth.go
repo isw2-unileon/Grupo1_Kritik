@@ -43,6 +43,7 @@ type UserResponse struct {
 	UserName string `json:"user_name"`
 }
 
+// AuthHandler struct
 type AuthHandler struct {
 	DB bd.Database
 }
