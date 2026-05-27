@@ -1,6 +1,8 @@
 package bd
 
-//nolint:dupl
+// MockDatabase struct
+//
+//nolint:dupl // DO NOT remove this
 type MockDatabase struct {
 	MockGetUserByEmail    func(userEmail string) (*User, error)
 	MockGetUserByUserName func(userName string) (*User, error)
