@@ -20,34 +20,77 @@ type MockDatabase struct {
 	MockGetReviewsByProductName func(productName string) ([]Review, error)
 }
 
+// GetUserByEmail mock
 func (m *MockDatabase) GetUserByEmail(userEmail string) (*User, error) {
 	return m.MockGetUserByEmail(userEmail)
 }
 
+// GetUserByUserName mock
+func (m *MockDatabase) GetUserByUserName(n string) (*User, error) {
+	return m.MockGetUserByUserName(n)
+}
+
+// GetUserByID mock
+func (m *MockDatabase) GetUserByID(id int) (*User, error) {
+	return m.MockGetUserByID(id)
+}
+
+// AddUser mock
 func (m *MockDatabase) AddUser(newUser User) (*User, error) {
 	return m.MockAddUser(newUser)
 }
 
-func (m *MockDatabase) GetUserByUserName(n string) (*User, error) { return m.MockGetUserByUserName(n) }
-func (m *MockDatabase) GetUserByID(id int) (*User, error)         { return m.MockGetUserByID(id) }
-func (m *MockDatabase) DeleteUserByEmail(e string) (bool, error)  { return m.MockDeleteUserByEmail(e) }
+// DeleteUserByEmail mock
+func (m *MockDatabase) DeleteUserByEmail(e string) (bool, error) {
+	return m.MockDeleteUserByEmail(e)
+}
+
+// UpdateUserInfo mock
 func (m *MockDatabase) UpdateUserInfo(e string, u User) (*User, error) {
 	return m.MockUpdateUserInfo(e, u)
 }
-func (m *MockDatabase) GetProductByName(n string) (*Product, error) { return m.MockGetProductByName(n) }
-func (m *MockDatabase) AddProduct(p Product) (*Product, error)      { return m.MockAddProduct(p) }
+
+// GetProductByName mock
+func (m *MockDatabase) GetProductByName(n string) (*Product, error) {
+	return m.MockGetProductByName(n)
+}
+
+// AddProduct mock
+func (m *MockDatabase) AddProduct(p Product) (*Product, error) {
+	return m.MockAddProduct(p)
+}
+
+// DeleteProductByName mock
 func (m *MockDatabase) DeleteProductByName(n string) (bool, error) {
 	return m.MockDeleteProductByName(n)
 }
+
+// UpdateProductInfo mock
 func (m *MockDatabase) UpdateProductInfo(n string, p Product) (*Product, error) {
 	return m.MockUpdateProductInfo(n, p)
 }
-func (m *MockDatabase) GetReviewByName(n string) (*Review, error) { return m.MockGetReviewByName(n) }
-func (m *MockDatabase) AddReview(r Review) (*Review, error)       { return m.MockAddReview(r) }
-func (m *MockDatabase) DeleteReviewByName(n string) (bool, error) { return m.MockDeleteReviewByName(n) }
+
+// GetReviewByName mock
+func (m *MockDatabase) GetReviewByName(n string) (*Review, error) {
+	return m.MockGetReviewByName(n)
+}
+
+// AddReview mock
+func (m *MockDatabase) AddReview(r Review) (*Review, error) {
+	return m.MockAddReview(r)
+}
+
+// DeleteReviewByName mock
+func (m *MockDatabase) DeleteReviewByName(n string) (bool, error) {
+	return m.MockDeleteReviewByName(n)
+}
+
+// GetReviewsByUserEmail mock
 func (m *MockDatabase) GetReviewsByUserEmail(e string) ([]Review, error) {
 	return m.MockGetReviewsByUserEmail(e)
 }
+
+// GetReviewsByProductName mock
 func (m *MockDatabase) GetReviewsByProductName(n string) ([]Review, error) {
 	return m.MockGetReviewsByProductName(n)
 }
