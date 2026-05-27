@@ -2,9 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isEmpty, isValidEmail } from "@/utils/validation";
+import Card from "@/components/Card";
 
-
-//Comment to be able to do the merge x2
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -45,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl rounded-[2rem] border border-white/10 bg-white/5 p-10 shadow-[0_40px_120px_rgba(15,23,42,0.25)]">
+    <Card className="mx-auto max-w-2xl p-10">
       <div className="mb-8 space-y-3">
         <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">
           Iniciar sesión
@@ -104,6 +103,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
-    </div>
+    </Card>
   );
 }

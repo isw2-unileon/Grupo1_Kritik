@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getReviews, type Review } from "@/services/api";
+import Card from "@/components/Card";
 
 // Small pill showing whether the review recommends the product.
 function RecommendedBadge({ recommended }: { recommended: boolean }) {
@@ -42,10 +43,7 @@ export default function ReviewsSection() {
   const count = reviews.length;
 
   return (
-    <article
-      id="reviews"
-      className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(15,23,42,0.25)]"
-    >
+    <Card as="article" id="reviews" className="p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">
@@ -100,6 +98,6 @@ export default function ReviewsSection() {
           ))}
         </div>
       )}
-    </article>
+    </Card>
   );
 }

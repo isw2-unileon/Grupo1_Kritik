@@ -30,7 +30,7 @@ func NewReviewHandler(db bd.Database) *ReviewHandler {
 // CreateReviewHandler creates a review for an existing product on behalf of the
 // authenticated user.
 func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
-	userID := c.GetInt("UserID")
+	userID := c.GetInt("userID")
 	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
 		return
