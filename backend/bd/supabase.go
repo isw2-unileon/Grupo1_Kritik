@@ -41,7 +41,7 @@ type Review struct {
 	Recommended bool   `json:"Recommended,omitempty"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductID,omitempty"`
+	ProductID int `json:"ProductId,omitempty"`
 	UserID    int `json:"UserId,omitempty"`
 }
 
