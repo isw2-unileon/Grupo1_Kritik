@@ -2,7 +2,6 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   type ReactNode,
 } from "react";
@@ -19,20 +18,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+function getInitialAuth() {
+  const storedToken = localStorage.getItem("token");
+  const storedUser = localStorage.getItem("user");
+  if (storedToken && storedUser) {
+    return { token: storedToken, user: JSON.parse(storedUser) as UserData };
+  }
+  return { token: null, user: null };
+}
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
-  }, []);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const initial = getInitialAuth();
+  const [user, setUser] = useState<UserData | null>(initial.user);
+  const [token, setToken] = useState<string | null>(initial.token);
+  const [isAuthenticated, setIsAuthenticated] = useState(initial.token !== null);
 
   const login = useCallback(async (username: string, password: string) => {
     const res = await apiLogin(username, password);
