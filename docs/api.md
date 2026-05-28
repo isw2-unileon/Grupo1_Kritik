@@ -86,7 +86,7 @@ Request:
 ```json
 {
   "title": "Plataformas y atmósfera al máximo",
-  "product_name": "Hollow Knight",
+  "product_id": 42,
   "description": "Una experiencia preciosa, controles impecables.",
   "recommended": true
 }
@@ -104,7 +104,7 @@ Responses:
     "UserName": "ana"
   }
   ```
-- `400 Bad Request` — missing/empty `title`, `product_name`, or `description`.
+- `400 Bad Request` — missing/empty `title`, `product_id`, or `description`.
 - `401 Unauthorized` — missing/invalid token.
 - `500 Internal Server Error` — duplicate title, unknown product, or DB failure.
 

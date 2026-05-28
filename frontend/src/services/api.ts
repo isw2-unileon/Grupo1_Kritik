@@ -21,12 +21,13 @@ export interface RegisterPayload {
 }
 
 export interface Product {
+  id: number;
   Name: string;
 }
 
 export interface NewReview {
   title: string;
-  product_name: string;
+  product_id: number;
   description: string;
   recommended: boolean;
 }
