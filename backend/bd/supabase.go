@@ -370,12 +370,12 @@ func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Produ
 */
 
 // GetReviewByID returns the Review associated with the reviewID or an error if it occurred
-func (db *SupabaseDB) GetReviewByID(reviewID string) (*Review, error) {
+func (db *SupabaseDB) GetReviewByID(reviewID int) (*Review, error) {
 	var reviews []Review
 
 	_, err := db.client.From("Review").
 		Select("*", "exact", false).
-		Eq("id", reviewID).
+		Eq("id", strconv.Itoa(reviewID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
