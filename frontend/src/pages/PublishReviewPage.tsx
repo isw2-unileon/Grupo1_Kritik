@@ -78,7 +78,7 @@ export default function PublishReviewPage() {
     try {
       await createReview({
         title: title.trim(),
-        product_name: selected.Name,
+        product_id: selected.id,
         description: description.trim(),
         recommended,
       });
@@ -127,7 +127,7 @@ export default function PublishReviewPage() {
           {showDropdown && productQuery.trim().length >= 2 && (
             <ul className="absolute z-10 mt-2 w-full overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
               {results.map((product) => (
-                <li key={product.Name}>
+                <li key={product.id}>
                   <button
                     type="button"
                     onClick={() => handlePick(product)}
