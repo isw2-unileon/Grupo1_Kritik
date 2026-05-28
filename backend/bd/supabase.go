@@ -57,6 +57,7 @@ type Database interface {
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
 
 	GetProductByName(productName string) (*Product, error)
+	GetProductByID(productID int) (*Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
@@ -271,6 +272,26 @@ func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
 
 	if len(products) == 0 {
 		return nil, fmt.Errorf("not found product with name %s", productName)
+	}
+
+	return &products[0], nil
+}
+
+// GetProductByID returns the Product associated with the productID or an error if it occurred
+func (db *SupabaseDB) GetProductByID(productID int) (*Product, error) {
+
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(products) == 0 {
+		return nil, fmt.Errorf("not found product with id %d", productID)
 	}
 
 	return &products[0], nil

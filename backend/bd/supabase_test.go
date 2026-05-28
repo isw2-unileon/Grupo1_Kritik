@@ -319,6 +319,50 @@ func TestGetProductByNameNotFound(t *testing.T) {
 	}
 }
 
+func TestGetProductByID(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetProductByID: func(id int) (*Product, error) {
+			return &Product{
+				ID:           -2,
+				Name:         "testproduct",
+				Type:         "Film",
+				AverageGrade: 5,
+				Description:  "testdescription",
+				Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+				Genre:        []string{"Drama", "Comedy"},
+			}, nil
+		},
+	}
+
+	product, err := mockDB.GetProductByID(-2)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if product == nil {
+		t.Errorf("Product is nil")
+	}
+}
+
+func TestGetProductByIDNotFound(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetProductByID: func(id int) (*Product, error) {
+			return nil, errors.New("not found product with id 0")
+		},
+	}
+
+	product, err := mockDB.GetProductByID(-1)
+
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+
+	if product != nil {
+		t.Errorf("Product should be nil")
+	}
+}
+
 // ADD PRODUCT
 func TestAddProduct(t *testing.T) {
 	testProductToAdd := Product{
