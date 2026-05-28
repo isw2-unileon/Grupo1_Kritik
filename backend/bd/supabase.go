@@ -61,7 +61,7 @@ type Database interface {
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
 
-	GetReviewByName(reviewName string) (*Review, error)
+	GetReviewByID(reviewID int) (*Review, error)
 	AddReview(newReview Review) (*Review, error)
 	DeleteReviewByName(reviewName string) (bool, error)
 	GetReviewsByUserEmail(userEmail string) ([]Review, error)
@@ -369,13 +369,13 @@ func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Produ
  =========================================================
 */
 
-// GetReviewByName returns the Review associated with the reviewName or an error if it occurred
-func (db *SupabaseDB) GetReviewByName(reviewName string) (*Review, error) {
+// GetReviewByID returns the Review associated with the reviewID or an error if it occurred
+func (db *SupabaseDB) GetReviewByID(reviewID string) (*Review, error) {
 	var reviews []Review
 
 	_, err := db.client.From("Review").
 		Select("*", "exact", false).
-		Eq("Name", reviewName).
+		Eq("id", reviewID).
 		ExecuteTo(&reviews)
 
 	if err != nil {
@@ -383,7 +383,7 @@ func (db *SupabaseDB) GetReviewByName(reviewName string) (*Review, error) {
 	}
 
 	if len(reviews) == 0 {
-		return nil, fmt.Errorf("not found review with name %s", reviewName)
+		return nil, fmt.Errorf("not found review with id %s", reviewID)
 	}
 
 	return &reviews[0], nil
