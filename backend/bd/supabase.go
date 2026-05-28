@@ -32,6 +32,7 @@ type Product struct {
 	Description  string      `json:"Description,omitempty"`
 	Release      *civil.Date `json:"Release,omitempty"`
 	Genre        []string    `json:"Genre,omitempty"`
+	Image        string      `json:"Image,omitempty"`
 }
 
 // Review struct
