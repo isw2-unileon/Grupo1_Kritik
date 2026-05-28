@@ -25,8 +25,6 @@ func setupAuthRouter(db bd.Database) *gin.Engine {
 	return r
 }
 
-func ptr[T any](v T) *T { return &v }
-
 func TestRegisterHandler_Success(t *testing.T) {
 	mock := &bd.MockDatabase{
 		MockGetUserByEmail: func(email string) (*bd.User, error) {

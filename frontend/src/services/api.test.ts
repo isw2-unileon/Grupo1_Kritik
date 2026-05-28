@@ -26,9 +26,9 @@ describe("login", () => {
     const result = await login("a@b.com", "pwd");
     expect(result).toEqual(fake);
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toContain("/auth/login");
-    expect(JSON.parse(callArgs[1].body)).toEqual({ email: "a@b.com", password: "pwd" });
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/auth/login");
+    expect(JSON.parse(callArgs[1]!.body)).toEqual({ email: "a@b.com", password: "pwd" });
   });
 
   it("sends POST with user_name when username has no @", async () => {
@@ -38,8 +38,8 @@ describe("login", () => {
     const result = await login("myuser", "pass");
     expect(result).toEqual(fake);
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(JSON.parse(callArgs[1].body)).toEqual({ user_name: "myuser", password: "pass" });
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(JSON.parse(callArgs[1]!.body)).toEqual({ user_name: "myuser", password: "pass" });
   });
 
   it("throws on non-ok response", async () => {
@@ -67,9 +67,9 @@ describe("register", () => {
     const result = await register({ email: "c@d.com", password: "pw", name: "C", surname: "D" });
     expect(result).toEqual(fake);
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toContain("/auth/register");
-    expect(JSON.parse(callArgs[1].body)).toEqual({ email: "c@d.com", password: "pw", name: "C", surname: "D" });
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/auth/register");
+    expect(JSON.parse(callArgs[1]!.body)).toEqual({ email: "c@d.com", password: "pw", name: "C", surname: "D" });
   });
 
   it("throws on non-ok response", async () => {
@@ -86,9 +86,9 @@ describe("searchProducts", () => {
     const result = await searchProducts("Game");
     expect(result).toEqual([{ id: 1, Name: "Game" }]);
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toContain("/api/products?q=Game");
-    expect(callArgs[1].headers.Authorization).toBe("Bearer my-token");
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/api/products?q=Game");
+    expect(callArgs[1]!.headers.Authorization).toBe("Bearer my-token");
   });
 
   it("throws on non-ok", async () => {
@@ -106,11 +106,11 @@ describe("createReview", () => {
     const result = await createReview(review);
     expect(result).toEqual({ id: 1 });
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toContain("/api/reviews");
-    expect(callArgs[1].method).toBe("POST");
-    expect(JSON.parse(callArgs[1].body)).toEqual(review);
-    expect(callArgs[1].headers.Authorization).toBe("Bearer t");
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/api/reviews");
+    expect(callArgs[1]!.method).toBe("POST");
+    expect(JSON.parse(callArgs[1]!.body)).toEqual(review);
+    expect(callArgs[1]!.headers.Authorization).toBe("Bearer t");
   });
 
   it("throws on non-ok", async () => {
@@ -127,9 +127,9 @@ describe("getReviews", () => {
     const result = await getReviews();
     expect(result).toEqual([{ id: 1, Name: "R" }]);
 
-    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(callArgs[0]).toContain("/api/reviews");
-    expect(callArgs[1].headers.Authorization).toBe("Bearer t2");
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/api/reviews");
+    expect(callArgs[1]!.headers.Authorization).toBe("Bearer t2");
   });
 
   it("throws on non-ok", async () => {
