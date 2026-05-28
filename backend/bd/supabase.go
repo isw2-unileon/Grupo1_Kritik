@@ -383,7 +383,7 @@ func (db *SupabaseDB) GetReviewByID(reviewID int) (*Review, error) {
 	}
 
 	if len(reviews) == 0 {
-		return nil, fmt.Errorf("not found review with id %s", reviewID)
+		return nil, fmt.Errorf("not found review with id %d", reviewID)
 	}
 
 	return &reviews[0], nil
