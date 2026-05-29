@@ -274,21 +274,23 @@ func TestEditUserInfoError(t *testing.T) {
 */
 
 // GET PRODUCT
-func TestGetProductByName(t *testing.T) {
+func TestGetProductsByName(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetProductsByName: func(name string) (*Product, error) {
-			return &Product{
-				Name:         "testproduct",
-				Type:         "Film",
-				AverageGrade: 5,
-				Description:  "testdescription",
-				Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
-				Genre:        []string{"Drama", "Comedy"},
+		MockGetProductsByName: func(name string) ([]Product, error) {
+			return []Product{
+				{
+					Name:         "testproduct",
+					Type:         "Film",
+					AverageGrade: 5,
+					Description:  "testdescription",
+					Release:      &civil.Date{Year: 2009, Month: 11, Day: 10},
+					Genre:        []string{"Drama", "Comedy"},
+				},
 			}, nil
 		},
 	}
 
-	product, err := mockDB.GetProductByName("testproduct")
+	product, err := mockDB.GetProductsByName("testproduct")
 
 	if err != nil {
 		t.Error(err)
@@ -296,19 +298,19 @@ func TestGetProductByName(t *testing.T) {
 
 	if product == nil {
 		t.Errorf("Product is nil")
-	} else if product.Name != "testproduct" {
-		t.Errorf("Expected product name 'testproduct', got '%s'", product.Name)
+	} else if product[0].Name != "testproduct" {
+		t.Errorf("Expected product name 'testproduct', got '%s'", product[0].Name)
 	}
 }
 
 func TestGetProductByNameNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetProductsByName: func(name string) (*Product, error) {
+		MockGetProductsByName: func(name string) ([]Product, error) {
 			return nil, errors.New("not found product with name skjvnlkjhvs")
 		},
 	}
 
-	product, err := mockDB.GetProductByName("skjvnlkjhvs")
+	product, err := mockDB.GetProductsByName("skjvnlkjhvs")
 
 	if err == nil {
 		t.Errorf("Expected error")
@@ -754,10 +756,12 @@ func TestGetReviewsByProductID(t *testing.T) {
 	productNameToSearch := 1
 
 	mockDB := &MockDatabase{
-		MockGetProductsByName: func(name string) (*Product, error) {
-			return &Product{
-				ID:   55,
-				Name: name,
+		MockGetProductsByName: func(name string) ([]Product, error) {
+			return []Product{
+				{
+					ID:   55,
+					Name: name,
+				},
 			}, nil
 		},
 		MockGetReviewsByProductID: func(id int) ([]Review, error) {
