@@ -1,16 +1,27 @@
-import type { ReactNode } from "react";
+import type { ElementType, ComponentPropsWithoutRef, ReactNode } from "react";
 
-interface CardProps {
-  children: ReactNode;
+/**
+ * Card — superficie base del tema Kritik.
+ * Misma API que antes: `as` para elegir la etiqueta, `className` se fusiona
+ * (puedes seguir pasando padding, id, etc.). Al migrarlo aquí, todas las
+ * páginas que usan <Card> adoptan el estilo nuevo automáticamente.
+ */
+type CardOwnProps = {
+  as?: ElementType;
   className?: string;
-  as?: "div" | "section" | "article" | "aside" | "main";
-  id?: string;
-}
+  children?: ReactNode;
+};
 
-export default function Card({ children, className = "", as: Tag = "div", id }: CardProps) {
+type CardProps = CardOwnProps & Omit<ComponentPropsWithoutRef<"div">, keyof CardOwnProps>;
+
+export default function Card({ as: Tag = "div", className = "", children, ...rest }: CardProps) {
+  const Component = Tag as ElementType;
   return (
-    <Tag id={id} className={`rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_40px_120px_rgba(15,23,42,0.25)] ${className}`}>
+    <Component
+      className={`rounded-[2rem] border border-line bg-surface ${className}`}
+      {...rest}
+    >
       {children}
-    </Tag>
+    </Component>
   );
 }
