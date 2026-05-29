@@ -49,7 +49,8 @@ function authedFetch(url: string, options: RequestInit = {}) {
 
 export async function login(
   username: string,
-  password: string
+  password: string,
+  signal?: AbortSignal,
 ): Promise<LoginResponse> {
   const isEmail = username.includes("@");
   const body = isEmail
@@ -60,6 +61,7 @@ export async function login(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!res.ok) {
@@ -70,11 +72,15 @@ export async function login(
   return res.json();
 }
 
-export async function register(data: RegisterPayload): Promise<UserData> {
+export async function register(
+  data: RegisterPayload,
+  signal?: AbortSignal,
+): Promise<UserData> {
   const res = await fetch(`${BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    signal,
   });
 
   if (!res.ok) {
@@ -85,18 +91,28 @@ export async function register(data: RegisterPayload): Promise<UserData> {
   return res.json();
 }
 
-export async function searchProducts(query: string): Promise<Product[]> {
-  const res = await authedFetch(`${BASE}/api/products?q=${encodeURIComponent(query)}`);
+export async function searchProducts(
+  query: string,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const res = await authedFetch(
+    `${BASE}/api/products?q=${encodeURIComponent(query)}`,
+    { signal },
+  );
   if (!res.ok) {
     throw new Error("product search failed");
   }
   return res.json();
 }
 
-export async function createReview(review: NewReview): Promise<unknown> {
+export async function createReview(
+  review: NewReview,
+  signal?: AbortSignal,
+): Promise<unknown> {
   const res = await authedFetch(`${BASE}/api/reviews`, {
     method: "POST",
     body: JSON.stringify(review),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "could not create review" }));
@@ -114,8 +130,8 @@ export interface Review {
   UserName: string;
 }
 
-export async function getReviews(): Promise<Review[]> {
-  const res = await authedFetch(`${BASE}/api/reviews`);
+export async function getReviews(signal?: AbortSignal): Promise<Review[]> {
+  const res = await authedFetch(`${BASE}/api/reviews`, { signal });
   if (!res.ok) {
     throw new Error("could not load reviews");
   }
