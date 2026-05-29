@@ -102,7 +102,14 @@ export async function searchProducts(
   if (!res.ok) {
     throw new Error("product search failed");
   }
-  return res.json();
+
+  // El backend devuelve un array cuando hay varias coincidencias, pero un único
+  // objeto cuando encuentra un producto por nombre exacto (y null/{} si no hay
+  // nada). Normalizamos siempre a Product[] para que el resto de la app no se rompa.
+  const data: unknown = await res.json();
+  if (Array.isArray(data)) return data as Product[];
+  if (data && typeof data === "object" && "id" in data) return [data as Product];
+  return [];
 }
 
 export async function createReview(
