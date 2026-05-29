@@ -102,7 +102,7 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 		return
 	}
 
-	reviews, err := h.DB.GetReviewsByUserID(user.Email)
+	reviews, err := h.DB.GetReviewsByUserID(user.ID)
 	if err != nil {
 		slog.Error("get reviews: query failed", "user", user.UserName, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
