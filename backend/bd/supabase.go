@@ -21,6 +21,7 @@ type User struct {
 	UserName string      `json:"UserName,omitempty"`
 	Password string      `json:"Password,omitempty"`
 	Birth    *civil.Date `json:"Birth,omitempty"`
+	Image    string      `json:"Image,omitempty"`
 }
 
 // Product struct
