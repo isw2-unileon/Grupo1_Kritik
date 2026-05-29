@@ -163,20 +163,6 @@ function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
   );
 }
 
-function Reviews() {
-  return (
-    <Card as="section" className="p-7 sm:p-8">
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu actividad</p>
-          <h2 className="mt-2 font-display text-3xl font-semibold">Reseñas hechas</h2>
-        </div>
-      </div>
-      <ReviewsSection />
-    </Card>
-  );
-}
-
 function FriendsYes() {
   return (
     <Card as="article" className="p-6">
@@ -285,7 +271,7 @@ export default function DashboardPage() {
           <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
             <div className="space-y-6">
               <Recommendations onSeeAll={() => setActiveTab("recomendaciones")} />
-              <Reviews />
+              <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
             </div>
             <aside className="space-y-6">
               <FriendsYes />
@@ -297,7 +283,7 @@ export default function DashboardPage() {
       case "recomendaciones":
         return <Recommendations />;
       case "resenas":
-        return <Reviews />;
+        return <ReviewsSection />;
       case "circulo":
         return (
           <div className="grid gap-6 md:grid-cols-2">
