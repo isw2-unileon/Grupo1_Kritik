@@ -60,8 +60,13 @@ func TestSearchProductHandler_EmptyQuery(t *testing.T) {
 
 func TestSearchProductHandler_Found(t *testing.T) {
 	mock := &bd.MockDatabase{
-		MockGetProductsByName: func(name string) (*bd.Product, error) {
-			return &bd.Product{ID: 1, Name: name}, nil
+		MockGetProductsByName: func(name string) ([]bd.Product, error) {
+			return []bd.Product{
+				{
+					ID:   1,
+					Name: name,
+				},
+			}, nil
 		},
 	}
 	r := setupReviewsRouter(mock, false)
@@ -149,9 +154,9 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 		MockGetUserByID: func(id int) (*bd.User, error) {
 			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
 		},
-		MockGetReviewsByUserID: func(email string) ([]bd.Review, error) {
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
 			return []bd.Review{
-				{ID: 1, Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
+				{ID: id, Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
 			}, nil
 		},
 	}
