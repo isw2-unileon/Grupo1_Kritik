@@ -54,8 +54,8 @@ func (m *MockDatabase) UpdateUserInfo(e string, u User) (*User, error) {
 	return m.MockUpdateUserInfo(e, u)
 }
 
-// GetProductByName mock
-func (m *MockDatabase) GetProductByName(n string) (*Product, error) {
+// GetProductsByName mock
+func (m *MockDatabase) GetProductsByName(n string) ([]Product, error) {
 	return m.MockGetProductsByName(n)
 }
 
