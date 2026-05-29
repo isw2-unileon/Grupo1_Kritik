@@ -531,14 +531,13 @@ func TestEditProductInfoError(t *testing.T) {
 */
 
 // GET REVIEW
-func TestGetReviewByName(t *testing.T) {
-	reviewName := "testreview"
+func TestGetReviewByID(t *testing.T) {
+	reviewID := -1
 
 	mockDB := &MockDatabase{
-		MockGetReviewByName: func(name string) (*Review, error) {
+		MockGetReviewByID: func(id int) (*Review, error) {
 			return &Review{
-				ID:          1,
-				Name:        name,
+				ID:          -1,
 				Recommended: true,
 				Description: "testdescription",
 				UserID:      99,
@@ -547,7 +546,7 @@ func TestGetReviewByName(t *testing.T) {
 		},
 	}
 
-	review, err := mockDB.GetReviewByName(reviewName)
+	review, err := mockDB.GetReviewByID(-1)
 
 	if err != nil {
 		t.Error(err)
@@ -555,19 +554,19 @@ func TestGetReviewByName(t *testing.T) {
 
 	if review == nil {
 		t.Errorf("Review is nil")
-	} else if review.Name != reviewName {
-		t.Errorf("Expected review name '%s', got '%s'", reviewName, review.Name)
+	} else if review.ID != reviewID {
+		t.Errorf("Expected review id '%d', got '%d'", reviewID, review.ID)
 	}
 }
 
 func TestGetReviewByNameNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetReviewByName: func(name string) (*Review, error) {
-			return nil, errors.New("not found review with name dsgfsgffgdgfdsg")
+		MockGetReviewByID: func(id int) (*Review, error) {
+			return nil, errors.New("not found review with id -1")
 		},
 	}
 
-	review, err := mockDB.GetReviewByName("dsgfsgffgdgfdsg")
+	review, err := mockDB.GetReviewByID(-1)
 
 	if err == nil {
 		t.Errorf("Expected error")
@@ -581,7 +580,6 @@ func TestGetReviewByNameNotFound(t *testing.T) {
 // ADD REVIEW
 func TestAddReview(t *testing.T) {
 	testReviewToAdd := Review{
-		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
 		UserID:      99,
@@ -610,7 +608,6 @@ func TestAddReview(t *testing.T) {
 
 func TestAddReviewMissingData(t *testing.T) {
 	testReviewToAdd := Review{
-		Name:        "testreview",
 		Recommended: true,
 		Description: "Good film",
 	}
@@ -634,7 +631,6 @@ func TestAddReviewMissingData(t *testing.T) {
 
 func TestAddReviewNotUserInBD(t *testing.T) {
 	testReviewToAdd := Review{
-		Name:        "testreview",
 		Recommended: true,
 		Description: "testdescription",
 		UserID:      -1,
@@ -714,7 +710,6 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 			return []Review{
 				{
 					ID:          1,
-					Name:        "testreview",
 					Recommended: true,
 					Description: "testdescription",
 					UserID:      99,
@@ -769,7 +764,6 @@ func TestGetReviewsByProductName(t *testing.T) {
 			return []Review{
 				{
 					ID:          1,
-					Name:        "testreview",
 					Recommended: true,
 					Description: "testdescription",
 					UserID:      99,

@@ -11,7 +11,6 @@ import (
 
 // CreateReviewRequest is the payload for publishing a review.
 type CreateReviewRequest struct {
-	Title       string `json:"title"`        // stored as Review.Name (unique)
 	ProductID   int    `json:"product_id"` // must be an existing Product
 	Description string `json:"description"`
 	Recommended bool   `json:"recommended"`
@@ -43,7 +42,6 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		return
 	}
 
-	req.Title = strings.TrimSpace(req.Title)
 	req.Description = strings.TrimSpace(req.Description)
 
 	// The Review table stores the author by username, but the JWT only carries
@@ -56,7 +54,6 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	}
 
 	review, err := h.DB.AddReview(bd.Review{
-		Name:        req.Title,
 		Description: req.Description,
 		Recommended: req.Recommended,
 		ProductID:   req.ProductID,
@@ -64,11 +61,11 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	})
 	if err != nil {
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review (the title may already exist, or the product is not registered)"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review"})
 		return
 	}
 
-	slog.Info("create review: success", "review", review.Name, "user", user.UserName, "product", review.ProductID)
+	slog.Info("create review: success", "user", user.UserName, "product", review.ProductID)
 	c.JSON(http.StatusCreated, review)
 }
 

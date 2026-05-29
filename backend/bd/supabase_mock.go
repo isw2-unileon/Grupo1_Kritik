@@ -17,7 +17,7 @@ type MockDatabase struct {
 	MockDeleteProductByName func(productName string) (bool, error)
 	MockUpdateProductInfo   func(productName string, newProductInfo Product) (*Product, error)
 
-	MockGetReviewByName         func(reviewName string) (*Review, error)
+	MockGetReviewByID           func(reviewID int) (*Review, error)
 	MockAddReview               func(newReview Review) (*Review, error)
 	MockDeleteReviewByName      func(reviewName string) (bool, error)
 	MockGetReviewsByUserEmail   func(userEmail string) ([]Review, error)
@@ -79,9 +79,9 @@ func (m *MockDatabase) UpdateProductInfo(n string, p Product) (*Product, error) 
 	return m.MockUpdateProductInfo(n, p)
 }
 
-// GetReviewByName mock
-func (m *MockDatabase) GetReviewByName(n string) (*Review, error) {
-	return m.MockGetReviewByName(n)
+// GetReviewByID mock
+func (m *MockDatabase) GetReviewByID(id int) (*Review, error) {
+	return m.MockGetReviewByID(id)
 }
 
 // AddReview mock
