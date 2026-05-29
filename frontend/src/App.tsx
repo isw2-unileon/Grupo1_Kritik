@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -69,7 +70,9 @@ function Header() {
               <NavLink
                 to="/login"
                 className={({ isActive }) =>
-                  isActive ? "rounded-full bg-acid px-4 py-2 text-sm font-semibold text-ink" : ghost
+                  isActive
+                    ? "rounded-full bg-acid/10 px-4 py-2 text-sm font-semibold text-acid ring-1 ring-acid/30"
+                    : ghost
                 }
               >
                 Iniciar sesión
@@ -113,6 +116,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <PublishReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product/:id"
+            element={
+              <ProtectedRoute>
+                <ProductDetailPage />
               </ProtectedRoute>
             }
           />

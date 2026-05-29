@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
@@ -13,6 +13,14 @@ const CATS = {
   film: { label: "Película", grad: "from-[#6b2d4a] via-[#a32e5e] to-[#3f1b2c]" },
 } as const;
 type CatKey = keyof typeof CATS;
+
+// etiqueta de tipo para las recomendaciones de ejemplo (al abrir su ficha)
+const CAT_TO_TYPE: Record<CatKey, string> = {
+  game: "Videojuego",
+  book: "Libro",
+  series: "Serie",
+  film: "Película",
+};
 
 type Reco = { name: string; cat: CatKey; verdict: boolean; who: string; text: string };
 type Circle = { name: string; cat: CatKey; n: number };
@@ -93,6 +101,21 @@ function VerdictChip({ yes }: { yes: boolean }) {
 
 /* ---------- secciones del panel ---------- */
 function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
+  const navigate = useNavigate();
+  // abre la ficha del título con sus datos (de ejemplo) vía router state
+  const open = (r: Reco) =>
+    navigate(`/product/${encodeURIComponent(r.name)}`, {
+      state: {
+        product: {
+          id: r.name,
+          Name: r.name,
+          Type: CAT_TO_TYPE[r.cat],
+          Genre: [] as string[],
+          Description: r.text,
+        },
+      },
+    });
+
   return (
     <Card as="section" className="p-7 sm:p-8">
       <div className="flex items-end justify-between gap-4">
@@ -114,7 +137,16 @@ function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
         {RECOS.map((r) => (
           <article
             key={r.name}
-            className="overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
+            role="button"
+            tabIndex={0}
+            onClick={() => open(r)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open(r);
+              }
+            }}
+            className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
           >
             <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
             <div className="p-4">
@@ -210,6 +242,7 @@ function Profile() {
 /* ---------- página ---------- */
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("inicio");
 
   // búsqueda en el catálogo (API real: searchProducts)
@@ -363,17 +396,28 @@ export default function DashboardPage() {
               {results.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/product/${p.id}`, { state: { product: p } })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/product/${p.id}`, { state: { product: p } });
+                    }
+                  }}
+                  className="flex cursor-pointer items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 transition hover:-translate-y-0.5 hover:border-acid/35"
                 >
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
                     {p.Name.charAt(0).toUpperCase()}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-cream">{p.Name}</p>
-                    <p className="text-xs text-faint">En el catálogo</p>
+                    <p className="text-xs text-faint">Ver ficha →</p>
                   </div>
                   <Link
                     to="/publish-review"
+                    state={{ product: p }}
+                    onClick={(e) => e.stopPropagation()}
                     className="shrink-0 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-cream transition hover:border-acid/35 hover:bg-cream/5"
                   >
                     Reseñar
