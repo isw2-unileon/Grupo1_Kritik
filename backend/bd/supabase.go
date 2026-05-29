@@ -38,11 +38,10 @@ type Product struct {
 type Review struct {
 	ID          int    `json:"id,omitempty"`
 	Name        string `json:"Name,omitempty"`
-	Recommended bool   `json:"Recommended,omitempty"`
+	Recommended bool   `json:"Recommended"`
 	Description string `json:"Description,omitempty"`
-
-	ProductID int `json:"ProductID,omitempty"`
-	UserID    int `json:"UserId,omitempty"`
+	ProductID   int    `json:"ProductId,omitempty"`
+	UserID      int    `json:"UserId,omitempty"`
 }
 
 // Database interface
