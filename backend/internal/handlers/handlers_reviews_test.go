@@ -60,7 +60,7 @@ func TestSearchProductHandler_EmptyQuery(t *testing.T) {
 
 func TestSearchProductHandler_Found(t *testing.T) {
 	mock := &bd.MockDatabase{
-		MockGetProductByName: func(name string) (*bd.Product, error) {
+		MockGetProductsByName: func(name string) (*bd.Product, error) {
 			return &bd.Product{ID: 1, Name: name}, nil
 		},
 	}

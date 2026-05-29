@@ -11,7 +11,7 @@ type MockDatabase struct {
 	MockDeleteUserByEmail func(userEmail string) (bool, error)
 	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
 
-	MockGetProductByName    func(productName string) (*Product, error)
+	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
 	MockAddProduct          func(newProduct Product) (*Product, error)
 	MockDeleteProductByName func(productName string) (bool, error)
@@ -56,7 +56,7 @@ func (m *MockDatabase) UpdateUserInfo(e string, u User) (*User, error) {
 
 // GetProductByName mock
 func (m *MockDatabase) GetProductByName(n string) (*Product, error) {
-	return m.MockGetProductByName(n)
+	return m.MockGetProductsByName(n)
 }
 
 // GetProductByID mock

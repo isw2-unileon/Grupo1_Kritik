@@ -276,7 +276,7 @@ func TestEditUserInfoError(t *testing.T) {
 // GET PRODUCT
 func TestGetProductByName(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetProductByName: func(name string) (*Product, error) {
+		MockGetProductsByName: func(name string) (*Product, error) {
 			return &Product{
 				Name:         "testproduct",
 				Type:         "Film",
@@ -303,7 +303,7 @@ func TestGetProductByName(t *testing.T) {
 
 func TestGetProductByNameNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetProductByName: func(name string) (*Product, error) {
+		MockGetProductsByName: func(name string) (*Product, error) {
 			return nil, errors.New("not found product with name skjvnlkjhvs")
 		},
 	}
@@ -754,7 +754,7 @@ func TestGetReviewsByProductID(t *testing.T) {
 	productNameToSearch := 1
 
 	mockDB := &MockDatabase{
-		MockGetProductByName: func(name string) (*Product, error) {
+		MockGetProductsByName: func(name string) (*Product, error) {
 			return &Product{
 				ID:   55,
 				Name: name,
