@@ -39,7 +39,6 @@ export default function PublishReviewPage() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // estado de la reseña
-  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [recommended, setRecommended] = useState<boolean | null>(null);
   const [error, setError] = useState("");
@@ -104,10 +103,6 @@ export default function PublishReviewPage() {
       setError("Elige un producto de la lista (solo puedes reseñar productos ya registrados)");
       return;
     }
-    if (isEmpty(title)) {
-      setError("El título de la reseña es obligatorio");
-      return;
-    }
     if (isEmpty(description)) {
       setError("Escribe el contenido de la reseña");
       return;
@@ -129,7 +124,6 @@ export default function PublishReviewPage() {
     try {
       await createReview(
         {
-          title: title.trim(),
           product_id: selected.id,
           description: description.trim(),
           recommended,
@@ -238,19 +232,6 @@ export default function PublishReviewPage() {
             Solo puedes reseñar productos ya registrados en el catálogo.
           </p>
         </div>
-
-        {/* título */}
-        <label className="block">
-          <span className="text-sm font-medium text-cream">Título de la reseña</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Un resumen corto de tu opinión"
-            disabled={loading}
-            className={`mt-2 ${inputClass}`}
-          />
-        </label>
 
         {/* veredicto */}
         <div className="block">
