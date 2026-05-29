@@ -34,27 +34,32 @@ afterEach(() => {
 });
 
 describe("DashboardPage", () => {
-  it("renders the header with navigation", () => {
+  it("renders the tab navigation", () => {
     mockGetReviews.mockResolvedValue([]);
     renderDashboard();
-    expect(screen.getByText("Home")).toBeInTheDocument();
-    expect(screen.getByText("Cerrar sesión")).toBeInTheDocument();
+    expect(screen.getByText("Inicio")).toBeInTheDocument();
+    expect(screen.getByText("Reseñas hechas")).toBeInTheDocument();
   });
 
   it("renders welcome section", () => {
     mockGetReviews.mockResolvedValue([]);
     renderDashboard();
-    expect(screen.getByText("Tu espacio de reseñas ya está listo")).toBeInTheDocument();
-    expect(screen.getByText("Publicar nueva reseña")).toBeInTheDocument();
+    expect(screen.getByText("Tu espacio de veredictos está listo")).toBeInTheDocument();
+    expect(screen.getByText("Publicar reseña")).toBeInTheDocument();
   });
 
   it("renders suggestions and sidebar sections", () => {
     mockGetReviews.mockResolvedValue([]);
     renderDashboard();
     expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
-    expect(screen.getByText("A tus amigos les gustó esto")).toBeInTheDocument();
-    expect(screen.getByText("Lo que no les encantó")).toBeInTheDocument();
+    expect(screen.getByText("A tus amigos les gustó")).toBeInTheDocument();
+    expect(screen.getByText("No les convenció")).toBeInTheDocument();
     expect(screen.getByText("Resumen rápido")).toBeInTheDocument();
-    expect(screen.getByText("Accesos rápidos")).toBeInTheDocument();
+  });
+
+  it("renders the latest reviews preview", () => {
+    mockGetReviews.mockResolvedValue([]);
+    renderDashboard();
+    expect(screen.getByText("Tus últimas reseñas")).toBeInTheDocument();
   });
 });
