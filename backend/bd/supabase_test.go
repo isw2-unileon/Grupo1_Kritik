@@ -696,8 +696,8 @@ func TestDeleteReviewByNameError(t *testing.T) {
 	}
 }
 
-func TestGetReviewsByUserEmail(t *testing.T) {
-	emailToSearch := "testusertoReview@gmail.com"
+func TestGetReviewsByUserID(t *testing.T) {
+	idToSearch := 1
 
 	mockDB := &MockDatabase{
 		MockGetUserByEmail: func(email string) (*User, error) {
@@ -706,7 +706,7 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 				Email: email,
 			}, nil
 		},
-		MockGetReviewsByUserEmail: func(email string) ([]Review, error) {
+		MockGetReviewsByUserID: func(id int) ([]Review, error) {
 			return []Review{
 				{
 					ID:          1,
@@ -719,7 +719,7 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 		},
 	}
 
-	reviews, err := mockDB.GetReviewsByUserEmail(emailToSearch)
+	reviews, err := mockDB.GetReviewsByUserID(idToSearch)
 
 	if err != nil {
 		t.Error(err)
@@ -732,14 +732,14 @@ func TestGetReviewsByUserEmail(t *testing.T) {
 	}
 }
 
-func TestGetReviewsByUserEmailInvalidUser(t *testing.T) {
+func TestGetReviewsByUserIDInvalidUser(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetReviewsByUserEmail: func(email string) ([]Review, error) {
+		MockGetReviewsByUserID: func(id int) ([]Review, error) {
 			return nil, errors.New("not found user with email -1")
 		},
 	}
 
-	reviews, err := mockDB.GetReviewsByUserEmail("-1")
+	reviews, err := mockDB.GetReviewsByUserID(-1)
 
 	if err == nil {
 		t.Error("An error was expected but got nil")
@@ -750,8 +750,8 @@ func TestGetReviewsByUserEmailInvalidUser(t *testing.T) {
 	}
 }
 
-func TestGetReviewsByProductName(t *testing.T) {
-	productNameToSearch := "testproduct"
+func TestGetReviewsByProductID(t *testing.T) {
+	productNameToSearch := 1
 
 	mockDB := &MockDatabase{
 		MockGetProductByName: func(name string) (*Product, error) {
@@ -760,7 +760,7 @@ func TestGetReviewsByProductName(t *testing.T) {
 				Name: name,
 			}, nil
 		},
-		MockGetReviewsByProductName: func(name string) ([]Review, error) {
+		MockGetReviewsByProductID: func(id int) ([]Review, error) {
 			return []Review{
 				{
 					ID:          1,
@@ -773,7 +773,7 @@ func TestGetReviewsByProductName(t *testing.T) {
 		},
 	}
 
-	reviews, err := mockDB.GetReviewsByProductName(productNameToSearch)
+	reviews, err := mockDB.GetReviewsByProductID(productNameToSearch)
 
 	if err != nil {
 		t.Error(err)
@@ -786,14 +786,14 @@ func TestGetReviewsByProductName(t *testing.T) {
 	}
 }
 
-func TestGetReviewsByProductNameInvalidProduct(t *testing.T) {
+func TestGetReviewsByProductIDInvalidProduct(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetReviewsByProductName: func(name string) ([]Review, error) {
-			return nil, errors.New("not found product with name -1")
+		MockGetReviewsByProductID: func(id int) ([]Review, error) {
+			return nil, errors.New("not found product with id = -1")
 		},
 	}
 
-	reviews, err := mockDB.GetReviewsByProductName("-1")
+	reviews, err := mockDB.GetReviewsByProductID(-1)
 
 	if err == nil {
 		t.Error("An error was expected but got nil")

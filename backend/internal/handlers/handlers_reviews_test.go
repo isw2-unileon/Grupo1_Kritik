@@ -149,7 +149,7 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 		MockGetUserByID: func(id int) (*bd.User, error) {
 			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
 		},
-		MockGetReviewsByUserEmail: func(email string) ([]bd.Review, error) {
+		MockGetReviewsByUserID: func(email string) ([]bd.Review, error) {
 			return []bd.Review{
 				{ID: 1, Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
 			}, nil
