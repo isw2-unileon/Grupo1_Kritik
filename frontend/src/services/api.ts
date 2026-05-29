@@ -26,7 +26,6 @@ export interface Product {
 }
 
 export interface NewReview {
-  title: string;
   product_id: number;
   description: string;
   recommended: boolean;
@@ -130,7 +129,6 @@ export async function createReview(
 
 export interface Review {
   id: number;
-  Name: string;
   Description: string;
   Recommended: boolean;
   ProductName: string;
