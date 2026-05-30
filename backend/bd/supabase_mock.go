@@ -11,17 +11,17 @@ type MockDatabase struct {
 	MockDeleteUserByEmail func(userEmail string) (bool, error)
 	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
 
-	MockGetProductByName    func(productName string) (*Product, error)
+	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
 	MockAddProduct          func(newProduct Product) (*Product, error)
 	MockDeleteProductByName func(productName string) (bool, error)
 	MockUpdateProductInfo   func(productName string, newProductInfo Product) (*Product, error)
 
-	MockGetReviewByID           func(reviewID int) (*Review, error)
-	MockAddReview               func(newReview Review) (*Review, error)
-	MockDeleteReviewByName      func(reviewName string) (bool, error)
-	MockGetReviewsByUserEmail   func(userEmail string) ([]Review, error)
-	MockGetReviewsByProductName func(productName string) ([]Review, error)
+	MockGetReviewByID         func(reviewID int) (*Review, error)
+	MockAddReview             func(newReview Review) (*Review, error)
+	MockDeleteReviewByName    func(reviewName string) (bool, error)
+	MockGetReviewsByUserID    func(userID int) ([]Review, error)
+	MockGetReviewsByProductID func(productID int) ([]Review, error)
 }
 
 // GetUserByEmail mock
@@ -54,9 +54,9 @@ func (m *MockDatabase) UpdateUserInfo(e string, u User) (*User, error) {
 	return m.MockUpdateUserInfo(e, u)
 }
 
-// GetProductByName mock
-func (m *MockDatabase) GetProductByName(n string) (*Product, error) {
-	return m.MockGetProductByName(n)
+// GetProductsByName mock
+func (m *MockDatabase) GetProductsByName(n string) ([]Product, error) {
+	return m.MockGetProductsByName(n)
 }
 
 // GetProductByID mock
@@ -94,12 +94,12 @@ func (m *MockDatabase) DeleteReviewByName(n string) (bool, error) {
 	return m.MockDeleteReviewByName(n)
 }
 
-// GetReviewsByUserEmail mock
-func (m *MockDatabase) GetReviewsByUserEmail(e string) ([]Review, error) {
-	return m.MockGetReviewsByUserEmail(e)
+// GetReviewsByUserID mock
+func (m *MockDatabase) GetReviewsByUserID(id int) ([]Review, error) {
+	return m.MockGetReviewsByUserID(id)
 }
 
-// GetReviewsByProductName mock
-func (m *MockDatabase) GetReviewsByProductName(n string) ([]Review, error) {
-	return m.MockGetReviewsByProductName(n)
+// GetReviewsByProductID mock
+func (m *MockDatabase) GetReviewsByProductID(id int) ([]Review, error) {
+	return m.MockGetReviewsByProductID(id)
 }
