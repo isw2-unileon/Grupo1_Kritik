@@ -1,193 +1,452 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
+import { searchProducts, type Product } from "@/services/api";
 
-const navigation = [
-  { name: "Home", href: "#home" },
-  { name: "Filtros", href: "#filters" },
-  { name: "Reseñas hechas", href: "#reviews" },
-  { name: "Perfil", href: "#profile" },
-  { name: "Configuración", href: "#settings" },
+/* ---------- datos de ejemplo (recomendaciones y círculo: aún no hay API) ---------- */
+const CATS = {
+  game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
+  book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
+  series: { label: "Serie", grad: "from-[#2d5b6b] via-[#2e88a3] to-[#1b333f]" },
+  film: { label: "Película", grad: "from-[#6b2d4a] via-[#a32e5e] to-[#3f1b2c]" },
+} as const;
+type CatKey = keyof typeof CATS;
+
+// etiqueta de tipo para las recomendaciones de ejemplo (al abrir su ficha)
+const CAT_TO_TYPE: Record<CatKey, string> = {
+  game: "Videojuego",
+  book: "Libro",
+  series: "Serie",
+  film: "Película",
+};
+
+type Reco = { name: string; cat: CatKey; verdict: boolean; who: string; text: string };
+type Circle = { name: string; cat: CatKey; n: number };
+
+const RECOS: Reco[] = [
+  { name: "Severance", cat: "series", verdict: true, who: "@lucia", text: "Tensión perfecta, dirección impecable." },
+  { name: "Tunic", cat: "game", verdict: true, who: "@dani", text: "Un secreto detrás de cada esquina." },
+  { name: "Poor Things", cat: "film", verdict: false, who: "@sara", text: "Visualmente bella, narrativamente fría." },
+  { name: "Pachinko", cat: "book", verdict: true, who: "@marco", text: "Generaciones que se te quedan dentro." },
+];
+const FRIENDS_YES: Circle[] = [
+  { name: "Shogun", cat: "series", n: 4 },
+  { name: "Klara y el Sol", cat: "book", n: 3 },
+];
+const FRIENDS_NO: Circle[] = [
+  { name: "Starfall VII", cat: "game", n: 3 },
+  { name: "Oppenheimer", cat: "film", n: 2 },
 ];
 
-export default function DashboardPage() {
+const TABS = [
+  { id: "inicio", label: "Inicio" },
+  { id: "recomendaciones", label: "Recomendaciones" },
+  { id: "resenas", label: "Reseñas hechas" },
+  { id: "circulo", label: "Tu círculo" },
+  { id: "perfil", label: "Perfil" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
+/* ---------- piezas reutilizables ---------- */
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; className?: string }) {
+  const c = CATS[cat];
+  return (
+    <div className={`relative overflow-hidden bg-gradient-to-br ${c.grad} ${className}`}>
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-35"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
+          backgroundSize: "14px 14px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg,transparent 35%,rgba(0,0,0,.55))" }}
+      />
+      {name && (
+        <div className="absolute bottom-3 left-3 z-10">
+          <p className="text-[9px] uppercase tracking-[0.34em] text-cream/70">{c.label}</p>
+          <p className="font-display text-lg font-semibold leading-tight text-cream">{name}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VerdictChip({ yes }: { yes: boolean }) {
+  return yes ? (
+    <span className="rounded-full border-[1.5px] border-acid bg-acid/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-acid">
+      Sí
+    </span>
+  ) : (
+    <span className="rounded-full border-[1.5px] border-coral bg-coral/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-coral">
+      No
+    </span>
+  );
+}
+
+/* ---------- secciones del panel ---------- */
+function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const [isNavOpen, setIsNavOpen] = useState(false);
+  // abre la ficha del título con sus datos (de ejemplo) vía router state
+  const open = (r: Reco) =>
+    navigate(`/product/${encodeURIComponent(r.name)}`, {
+      state: {
+        product: {
+          id: r.name,
+          Name: r.name,
+          Type: CAT_TO_TYPE[r.cat],
+          Genre: [] as string[],
+          Description: r.text,
+        },
+      },
+    });
 
   return (
-    <div className="space-y-8">
-      <header className="-mt-10 border-b border-white/10 bg-slate-950/80">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-5 sm:px-8 md:flex-row md:items-center md:justify-between">
+    <Card as="section" className="p-7 sm:p-8">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Recomendaciones</p>
+          <h2 className="mt-2 font-display text-3xl font-semibold">Sugerencias para ti</h2>
+        </div>
+        {onSeeAll && (
           <button
             type="button"
-            className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-slate-950/90 text-slate-100 hover:border-white/20 md:hidden"
-            aria-controls="main-navigation"
-            aria-expanded={isNavOpen}
-            aria-label={isNavOpen ? "Cerrar menú" : "Abrir menú"}
-            onClick={() => setIsNavOpen((open) => !open)}
+            onClick={onSeeAll}
+            className="hidden text-sm text-faint transition hover:text-cream sm:block"
           >
-            <span className="text-2xl">{isNavOpen ? "×" : "☰"}</span>
+            Ver todo →
           </button>
-
-          <nav
-            id="main-navigation"
-            className={`${isNavOpen ? "block" : "hidden"} w-full md:block md:w-auto`}
-            aria-label="Navegación principal"
+        )}
+      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {RECOS.map((r) => (
+          <article
+            key={r.name}
+            role="button"
+            tabIndex={0}
+            onClick={() => open(r)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                open(r);
+              }
+            }}
+            className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
           >
-            <ul className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-              {navigation.map((item) => (
-                <li key={item.name}>
-                  <a
-                    href={item.href}
-                    className="block rounded-full px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/5 hover:text-white"
-                  >
-                    {item.name}
-                  </a>
-                </li>
-              ))}
-              <li>
-                <button
-                  type="button"
-                  onClick={() => { logout(); navigate("/"); }}
-                  className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/10 md:w-auto"
-                >
-                  Cerrar sesión
-                </button>
-              </li>
-            </ul>
-          </nav>
+            <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
+            <div className="p-4">
+              <div className="flex items-center justify-between gap-2">
+                <VerdictChip yes={r.verdict} />
+                <span className="text-xs text-faint">{r.who}</span>
+              </div>
+              <p className="mt-3 text-sm text-dim">"{r.text}"</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function FriendsYes() {
+  return (
+    <Card as="article" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu círculo · Sí</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">A tus amigos les gustó</h2>
+      <div className="mt-5 space-y-3">
+        {FRIENDS_YES.map((f) => (
+          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
+            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{f.name}</p>
+              <p className="text-xs text-faint">Recomendado por {f.n} amigos</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function FriendsNo() {
+  return (
+    <Card as="article" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-coral">Tu círculo · No</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">No les convenció</h2>
+      <div className="mt-5 space-y-3">
+        {FRIENDS_NO.map((f) => (
+          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
+            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{f.name}</p>
+              <p className="text-xs text-faint">Descartado por {f.n} amigos</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function Profile() {
+  return (
+    <Card as="article" className="p-6">
+      <h2 className="font-display text-xl font-semibold">Resumen rápido</h2>
+      <dl className="mt-4 space-y-3 text-sm">
+        <div className="flex items-center justify-between">
+          <dt className="text-dim">Perfil</dt>
+          <dd className="font-semibold">Crítica activa</dd>
         </div>
-      </header>
+        <div className="flex items-center justify-between">
+          <dt className="text-dim">Veredictos totales</dt>
+          <dd className="font-display text-lg font-bold text-acid">47</dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-dim">% recomendado</dt>
+          <dd className="font-display text-lg font-bold">72%</dd>
+        </div>
+      </dl>
+    </Card>
+  );
+}
 
-      <Card as="section" className="p-6">
+/* ---------- página ---------- */
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabId>("inicio");
+
+  // búsqueda en el catálogo (API real: searchProducts)
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const items = await searchProducts(q, controller.signal);
+        setResults(items);
+        setSearching(false);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return; // superseado
+        setResults([]);
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  const isSearching = query.trim().length >= 2;
+
+  const renderTab = () => {
+    switch (activeTab) {
+      case "inicio":
+        return (
+          <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+            <div className="space-y-6">
+              <Recommendations onSeeAll={() => setActiveTab("recomendaciones")} />
+              <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
+            </div>
+            <aside className="space-y-6">
+              <FriendsYes />
+              <FriendsNo />
+              <Profile />
+            </aside>
+          </div>
+        );
+      case "recomendaciones":
+        return <Recommendations />;
+      case "resenas":
+        return <ReviewsSection />;
+      case "circulo":
+        return (
+          <div className="grid gap-6 md:grid-cols-2">
+            <FriendsYes />
+            <FriendsNo />
+          </div>
+        );
+      case "perfil":
+        return <div className="max-w-md"><Profile /></div>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* bienvenida */}
+      <Card as="section" className="p-7 sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-slate-300">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-300/20">
-                H
-              </span>
-              <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">hola</p>
-            </div>
-            <div className="max-w-3xl space-y-3">
-              <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Tu espacio de reseñas ya está listo
-              </h1>
-              <p className="text-slate-300 sm:text-lg">
-                Bienvenido a tu panel principal. Aquí encontrarás recomendaciones, lo que tus amigos han
-                valorado y una forma rápida de publicar nuevas reseñas.
-              </p>
-            </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
+              Hola{user?.name ? `, ${user.name}` : ""}
+            </p>
+            <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl">
+              Tu espacio de veredictos está listo
+            </h1>
+            <p className="mt-3 max-w-xl text-dim">
+              Recomendaciones para ti, lo que valora tu círculo y un atajo para publicar.
+            </p>
           </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <Link
-              to="/publish-review"
-              className="inline-flex items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-            >
-              Publicar nueva reseña
-            </Link>
-          </div>
+          <Link
+            to="/publish-review"
+            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-acid px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e] lg:self-auto"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Publicar reseña
+          </Link>
         </div>
       </Card>
 
-      <main className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-        <section id="home" className="space-y-6">
-          <Card as="article" className="p-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Recomendaciones</p>
-                <h2 className="mt-3 text-3xl font-semibold text-white">Sugerencias para ti</h2>
-              </div>
-              <p className="max-w-xl text-slate-400">
-                Explora una selección de reseñas destacadas que te ayudarán a descubrir nuevos lugares y experiencias.
+      {/* buscador del catálogo */}
+      <div className="relative">
+        <svg
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
+          width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Busca una serie, película, videojuego o libro…"
+          autoComplete="off"
+          aria-label="Buscar en el catálogo"
+          className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-11 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)]"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {isSearching ? (
+        /* ---------- resultados de búsqueda ---------- */
+        <Card as="section" className="p-7 sm:p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
+                Búsqueda en el catálogo
               </p>
+              <h2 className="mt-2 font-display text-3xl font-semibold">
+                Resultados para “{query.trim()}”
+              </h2>
             </div>
+            {searching && (
+              <span className="text-acid">
+                <Spinner />
+              </span>
+            )}
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                {
-                  title: "Café La Brisa",
-                  category: "Café",
-                  summary: "Ambiente cómodo y reseñas muy positivas de otros usuarios.",
-                },
-                {
-                  title: "Cine Urbano",
-                  category: "Entretenimiento",
-                  summary: "Películas recomendadas para una noche con amigos.",
-                },
-              ].map((item) => (
-                <article
-                  key={item.title}
-                  className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-5 transition hover:border-cyan-400/40 hover:bg-slate-950"
+          {results.length > 0 ? (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {results.map((p) => (
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/product/${p.id}`, { state: { product: p } })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/product/${p.id}`, { state: { product: p } });
+                    }
+                  }}
+                  className="flex cursor-pointer items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 transition hover:-translate-y-0.5 hover:border-acid/35"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">{item.title}</h3>
-                      <p className="text-sm text-cyan-300">{item.category}</p>
-                    </div>
-                    <span className="rounded-2xl bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">
-                      Nuevo
-                    </span>
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
+                    {p.Name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-cream">{p.Name}</p>
+                    <p className="text-xs text-faint">Ver ficha →</p>
                   </div>
-                  <p className="mt-4 text-slate-400">{item.summary}</p>
-                </article>
-              ))}
-            </div>
-          </Card>
-
-          <ReviewsSection />
-        </section>
-
-        <aside className="space-y-6">
-          <Card as="article" id="friends-liked" className="p-6">
-            <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Tus amigos lo recomendaron</p>
-            <h2 className="mt-3 text-2xl font-semibold text-white">A tus amigos les gustó esto</h2>
-            <div className="mt-6 space-y-4">
-              {[
-                "Restaurante Solar",
-                "Galería Verde",
-              ].map((item) => (
-                <div key={item} className="rounded-[1.5rem] bg-slate-950/80 p-4">
-                  <p className="text-lg font-semibold text-white">{item}</p>
-                  <p className="mt-2 text-slate-400">Recomendado por 3 amigos cercanos.</p>
+                  <Link
+                    to="/publish-review"
+                    state={{ product: p }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-cream transition hover:border-acid/35 hover:bg-cream/5"
+                  >
+                    Reseñar
+                  </Link>
                 </div>
               ))}
             </div>
-          </Card>
+          ) : searching ? (
+            <p className="mt-6 text-dim">Buscando…</p>
+          ) : (
+            <p className="mt-6 text-dim">
+              No se encontró ningún título con ese nombre. Solo aparecen productos ya
+              registrados en el catálogo.
+            </p>
+          )}
+        </Card>
+      ) : (
+        /* ---------- vista normal con pestañas ---------- */
+        <>
+          <nav
+            aria-label="Secciones del panel"
+            className="flex flex-wrap items-center gap-2 border-b border-line pb-4"
+          >
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                aria-current={activeTab === t.id ? "page" : undefined}
+                className={
+                  activeTab === t.id
+                    ? "rounded-full bg-acid px-4 py-1.5 text-sm font-semibold text-ink"
+                    : "rounded-full px-4 py-1.5 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream"
+                }
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
 
-          <Card as="article" id="friends-disliked" className="p-6">
-            <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">A tus amigos no les gustó</p>
-            <h2 className="mt-3 text-2xl font-semibold text-white">Lo que no les encantó</h2>
-            <div className="mt-6 space-y-4">
-              {[
-                "Bar Noche Estelar",
-                "Centro Comercial Luna",
-              ].map((item) => (
-                <div key={item} className="rounded-[1.5rem] bg-slate-950/80 p-4">
-                  <p className="text-lg font-semibold text-white">{item}</p>
-                  <p className="mt-2 text-slate-400">Comentarios negativos de tu círculo cercano.</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card as="article" id="profile" className="p-6">
-            <h2 className="text-xl font-semibold text-white">Resumen rápido</h2>
-            <div className="mt-4 space-y-3 text-slate-300">
-              <p>Perfil: Usuario crítico</p>
-              <p>Actividad semanal: 4 reseñas</p>
-            </div>
-          </Card>
-
-          <Card as="article" id="settings" className="p-6">
-            <h2 className="text-xl font-semibold text-white">Accesos rápidos</h2>
-            <p className="mt-3 text-slate-400">Ajustes de cuenta y preferencias de notificaciones aparecerán aquí.</p>
-          </Card>
-        </aside>
-      </main>
+          {renderTab()}
+        </>
+      )}
     </div>
   );
 }

@@ -6,30 +6,61 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
 
+  // clases reutilizables del nuevo tema
+  const ghost =
+    "rounded-full px-4 py-2 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream";
+  const primary =
+    "rounded-full bg-acid px-4 py-2 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]";
+
   return (
-    <header className="border-b border-white/10 bg-slate-950/80">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-8">
-        <Link
-          to="/"
-          className="text-xl font-semibold tracking-[0.24em] text-cyan-300 transition hover:text-cyan-200"
-        >
-          Kritik
+    <header className="sticky top-0 z-40 border-b border-line bg-ink/85 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4 sm:px-8">
+        <Link to="/" className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-acid font-display text-xl font-black leading-none text-ink">
+            K
+          </span>
+          <span className="font-display text-2xl font-semibold tracking-tight text-cream">
+            Kritik
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-3">
+        <nav className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
-              <span className="text-sm text-slate-300">
-                {user?.name}
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
+                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  }`
+                }
+              >
+                Inicio
+              </NavLink>
+              <NavLink
+                to="/publish-review"
+                className={({ isActive }) =>
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
+                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  }`
+                }
+              >
+                Publicar
+              </NavLink>
+
+              <span className="hidden text-sm text-dim sm:block">{user?.name}</span>
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
+                {user?.name?.charAt(0).toUpperCase() ?? "K"}
               </span>
               <button
                 type="button"
                 onClick={logout}
-                className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:border-white/25 hover:bg-white/10"
+                className="rounded-full border border-line px-4 py-2 text-sm text-cream transition hover:border-cream/35 hover:bg-cream/5"
               >
                 Cerrar sesión
               </button>
@@ -39,24 +70,15 @@ function Header() {
               <NavLink
                 to="/login"
                 className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm transition ${isActive
-                    ? "bg-cyan-400 text-slate-950"
-                    : "text-slate-200 hover:bg-white/5"
-                  }`
+                  isActive
+                    ? "rounded-full bg-acid/10 px-4 py-2 text-sm font-semibold text-acid ring-1 ring-acid/30"
+                    : ghost
                 }
               >
-                Login
+                Iniciar sesión
               </NavLink>
-              <NavLink
-                to="/register"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm transition ${isActive
-                    ? "bg-cyan-400 text-slate-950"
-                    : "text-slate-200 hover:bg-white/5"
-                  }`
-                }
-              >
-                Register
+              <NavLink to="/register" className={primary}>
+                Crear cuenta
               </NavLink>
             </>
           )}
@@ -70,7 +92,7 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="relative z-10 min-h-dvh text-cream">
       <Header />
 
       <main className="mx-auto max-w-6xl px-6 py-10 sm:px-8">
@@ -94,6 +116,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <PublishReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/product/:id"
+            element={
+              <ProtectedRoute>
+                <ProductDetailPage />
               </ProtectedRoute>
             }
           />

@@ -1,8 +1,35 @@
-import { useState, type FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isEmpty, isValidEmail } from "@/utils/validation";
 import Card from "@/components/Card";
+
+/**
+ * RegisterPage — tema nuevo + feedback de carga + timeout.
+ *
+ * Como `useAuth().register` no acepta AbortSignal (AuthContext.tsx no
+ * propaga uno aún), el timeout se gestiona a nivel de UI: tras
+ * TIMEOUT_MS marcamos la operación como abandonada y damos error;
+ * la petición de fondo puede seguir, pero ya no afectará al usuario.
+ *
+ * Cuando me pases AuthContext.tsx, esto se convierte en timeout real
+ * (cancela el fetch) en una iteración.
+ */
+
+const SLOW_HINT_MS = 4500;
+const TIMEOUT_MS = 12000;
+
+const inputClass =
+  "mt-2 w-full rounded-2xl border border-line bg-ink px-4 py-3 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)] disabled:cursor-not-allowed disabled:opacity-60";
+
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -17,57 +44,75 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [slow, setSlow] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const slowTimer = useRef<number | null>(null);
+  const failTimer = useRef<number | null>(null);
+  const abandoned = useRef(false);
+
+  // limpiar timers al desmontar
+  useEffect(() => {
+    return () => {
+      if (slowTimer.current !== null) window.clearTimeout(slowTimer.current);
+      if (failTimer.current !== null) window.clearTimeout(failTimer.current);
+    };
+  }, []);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setSlow(false);
+    abandoned.current = false;
 
     if (isEmpty(name)) {
       setError("El nombre es obligatorio");
       return;
     }
-
     if (isEmpty(email)) {
       setError("El correo electrónico es obligatorio");
       return;
     }
-
     if (!isValidEmail(email)) {
       setError("El correo electrónico no tiene un formato válido");
       return;
     }
-
     if (isEmpty(password)) {
       setError("La contraseña es obligatoria");
       return;
     }
-
     if (isEmpty(confirmPassword)) {
       setError("Debes confirmar la contraseña");
       return;
     }
-
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-
     if (isEmpty(surname)) {
       setError("Los apellidos son obligatorios");
       return;
     }
-
     if (isEmpty(userName)) {
       setError("El nombre de usuario es obligatorio");
       return;
     }
-
     if (isEmpty(birth)) {
       setError("La fecha de nacimiento es obligatoria");
       return;
     }
 
     setLoading(true);
+
+    slowTimer.current = window.setTimeout(() => setSlow(true), SLOW_HINT_MS);
+    failTimer.current = window.setTimeout(() => {
+      abandoned.current = true;
+      setError(
+        "El servidor está tardando demasiado en responder. Comprueba tu conexión e inténtalo de nuevo.",
+      );
+      setLoading(false);
+      setSlow(false);
+    }, TIMEOUT_MS);
+
     try {
       await register({
         email,
@@ -77,118 +122,135 @@ export default function RegisterPage() {
         user_name: userName,
         birth,
       });
+      if (abandoned.current) return;
+      if (slowTimer.current !== null) window.clearTimeout(slowTimer.current);
+      if (failTimer.current !== null) window.clearTimeout(failTimer.current);
       navigate("/dashboard");
     } catch (err) {
+      if (abandoned.current) return;
+      if (slowTimer.current !== null) window.clearTimeout(slowTimer.current);
+      if (failTimer.current !== null) window.clearTimeout(failTimer.current);
       setError(err instanceof Error ? err.message : "Error al registrarse");
-    } finally {
       setLoading(false);
+      setSlow(false);
     }
   };
 
   return (
     <Card className="mx-auto max-w-3xl p-10">
       <div className="mb-8 space-y-3">
-        <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">
+        <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
           Crear cuenta
         </p>
-        <h1 className="text-3xl font-semibold text-white">Únete a Kritik</h1>
-        <p className="text-slate-400">
-          Completa tus datos para empezar a compartir reseñas y descubrir opiniones.
+        <h1 className="font-display text-4xl font-semibold tracking-tight text-cream">
+          Únete a Kritik
+        </h1>
+        <p className="text-dim">
+          Completa tus datos para empezar a compartir veredictos.
         </p>
       </div>
 
       {error && (
-        <div className="mb-6 rounded-2xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm text-red-300">
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-coral/30 bg-coral/10 px-5 py-3 text-sm text-coral"
+        >
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid gap-6">
+      <form onSubmit={handleSubmit} className="grid gap-6" noValidate>
         <div className="grid gap-6 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Nombre</span>
+            <span className="text-sm font-medium text-cream">Nombre</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nicol"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              autoComplete="given-name"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Apellidos</span>
+            <span className="text-sm font-medium text-cream">Apellidos</span>
             <input
               type="text"
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               placeholder="González Pérez"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              autoComplete="family-name"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-200">Nombre de usuario</span>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="usuario123"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-            />
+          <span className="text-sm font-medium text-cream">Nombre de usuario</span>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="usuario123"
+            autoComplete="username"
+            disabled={loading}
+            className={inputClass}
+          />
         </label>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Contraseña</span>
+            <span className="text-sm font-medium text-cream">Contraseña</span>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              autoComplete="new-password"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Confirmar contraseña</span>
+            <span className="text-sm font-medium text-cream">Confirmar contraseña</span>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              autoComplete="new-password"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Fecha de nacimiento</span>
+            <span className="text-sm font-medium text-cream">Fecha de nacimiento</span>
             <input
               type="date"
               value={birth}
               onChange={(e) => setBirth(e.target.value)}
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-200">Correo electrónico</span>
+            <span className="text-sm font-medium text-cream">Correo electrónico</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="correo@ejemplo.com"
-              required
-              className="mt-2 w-full rounded-3xl border border-white/10 bg-slate-950/80 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              autoComplete="email"
+              disabled={loading}
+              className={inputClass}
             />
           </label>
         </div>
@@ -196,31 +258,44 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-full bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-50"
+          aria-busy={loading}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-acid px-5 py-3.5 text-sm font-semibold text-ink transition hover:bg-[#d7f56e] disabled:cursor-not-allowed disabled:opacity-80"
         >
-          {loading ? "Registrando..." : "Registrarme"}
+          {loading && <Spinner />}
+          <span>{loading ? "Registrando…" : "Registrarme"}</span>
         </button>
+
+        <p
+          aria-live="polite"
+          className={`min-h-[1.25rem] text-center text-xs transition-opacity duration-300 ${
+            slow && loading ? "text-faint opacity-100" : "opacity-0"
+          }`}
+        >
+          Esto está tardando más de lo normal…
+        </p>
 
         <div className="relative my-2">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/10" />
+            <div className="w-full border-t border-line" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-slate-950 px-3 text-slate-500">O continúa con</span>
+          <div className="relative flex justify-center">
+            <span className="bg-surface px-3 text-[10px] font-medium uppercase tracking-[0.34em] text-faint">
+              O continúa con
+            </span>
           </div>
         </div>
 
         <button
           type="button"
           disabled
-          className="w-full rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm text-white transition hover:border-white/25 hover:bg-white/10 disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-ink px-5 py-3 text-sm text-cream opacity-50"
         >
           Registrarse con Google
         </button>
 
-        <p className="text-center text-sm text-slate-400">
+        <p className="text-center text-sm text-dim">
           ¿Ya tienes cuenta?{" "}
-          <Link to="/login" className="text-cyan-300 hover:underline">
+          <Link to="/login" className="font-semibold text-acid hover:underline">
             Inicia sesión
           </Link>
         </p>

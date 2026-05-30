@@ -115,7 +115,7 @@ describe("createReview", () => {
 
   it("throws on non-ok", async () => {
     mockFetch({ error: "title exists" }, false);
-    await expect(createReview({ title: "G", product_id: 1, description: "D", recommended: true })).rejects.toThrow("title exists");
+    await expect(createReview({ product_id: 1, description: "D", recommended: true })).rejects.toThrow("title exists");
   });
 });
 

@@ -25,21 +25,23 @@ afterEach(() => {
 });
 
 describe("LandingPage", () => {
-  it("renders welcome message", () => {
+  it("renders the hero", () => {
     renderLanding();
-    expect(screen.getByText("Bienvenido a Kritik")).toBeInTheDocument();
+    expect(
+      screen.getByText("Reseñas honestas · Veredictos claros"),
+    ).toBeInTheDocument();
   });
 
   it("renders create account link", () => {
     renderLanding();
-    const link = screen.getByText("Crear cuenta");
+    const link = screen.getByText("Crear cuenta gratis");
     expect(link).toBeInTheDocument();
     expect(link.closest("a")).toHaveAttribute("href", "/register");
   });
 
   it("renders login link", () => {
     renderLanding();
-    const link = screen.getByText("Iniciar sesión");
+    const link = screen.getByText("Ya tengo cuenta");
     expect(link).toBeInTheDocument();
     expect(link.closest("a")).toHaveAttribute("href", "/login");
   });
@@ -47,6 +49,6 @@ describe("LandingPage", () => {
   it("renders info sections", () => {
     renderLanding();
     expect(screen.getByText("Qué hacemos")).toBeInTheDocument();
-    expect(screen.getByText("Acerca de nosotros")).toBeInTheDocument();
+    expect(screen.getByText("Quiénes somos")).toBeInTheDocument();
   });
 });

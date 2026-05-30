@@ -51,14 +51,16 @@ describe("ReviewsSection", () => {
 
   it("renders list of reviews", async () => {
     mockGetReviews.mockResolvedValue([
-      { id: 1, Name: "Great game", Description: "Loved it", Recommended: true, ProductName: "Game1", UserName: "user1" },
-      { id: 2, Name: "Not bad", Description: "Meh", Recommended: false, ProductName: "Game2", UserName: "user2" },
+      { id: 1, Description: "Loved it", Recommended: true, ProductName: "Game1", UserName: "user1" },
+      { id: 2, Description: "Meh", Recommended: false, ProductName: "Game2", UserName: "user2" },
     ]);
     renderReviews();
 
+    // El nombre del producto se muestra como "sobre {ProductName}", así que
+    // usamos una expresión regular en vez de coincidencia exacta.
     await waitFor(() => {
-      expect(screen.getByText("Game1")).toBeInTheDocument();
-      expect(screen.getByText("Game2")).toBeInTheDocument();
+      expect(screen.getByText(/Game1/)).toBeInTheDocument();
+      expect(screen.getByText(/Game2/)).toBeInTheDocument();
     });
 
     expect(screen.getByText("Recomendado")).toBeInTheDocument();
@@ -67,12 +69,12 @@ describe("ReviewsSection", () => {
 
   it("shows review count", async () => {
     mockGetReviews.mockResolvedValue([
-      { id: 1, Name: "R1", Description: "D1", Recommended: true, ProductName: "P1", UserName: "u1" },
+      { id: 1, Description: "D1", Recommended: true, ProductName: "P1", UserName: "u1" },
     ]);
     renderReviews();
 
     await waitFor(() => {
-      expect(screen.getByText("1 reseña creada")).toBeInTheDocument();
+      expect(screen.getByText("1 reseña")).toBeInTheDocument();
     });
   });
 });

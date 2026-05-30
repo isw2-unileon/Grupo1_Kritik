@@ -53,9 +53,10 @@ describe("PublishReviewPage", () => {
     mockCreateReview.mockResolvedValue({});
     renderPublish();
 
-    expect(screen.getByText("Publicar una nueva reseña")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Busca un juego, libro, serie o película…")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Un resumen corto de tu opinión")).toBeInTheDocument();
+    expect(screen.getByText("Publica tu veredicto")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Busca un juego, libro, serie o película…"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Publicar reseña" })).toBeInTheDocument();
   });
 
@@ -67,25 +68,36 @@ describe("PublishReviewPage", () => {
     submitForm();
 
     await waitFor(() => {
-      expect(screen.getByText("Elige un producto de la lista (solo puedes reseñar productos ya registrados)")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Elige un producto de la lista (solo puedes reseñar productos ya registrados)",
+        ),
+      ).toBeInTheDocument();
     });
   });
 
-  it("shows error when submitting without title", async () => {
+  it("shows error when submitting without a verdict", async () => {
     mockSearchProducts.mockResolvedValue([{ id: 1, Name: "Game" }]);
     mockCreateReview.mockResolvedValue({});
     renderPublish();
 
     const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText("Busca un juego, libro, serie o película…"), "Game");
+    await user.type(
+      screen.getByPlaceholderText("Busca un juego, libro, serie o película…"),
+      "Game",
+    );
     await waitFor(() => expect(mockSearchProducts).toHaveBeenCalled());
 
     const pickButton = await screen.findByText("Game");
     await user.click(pickButton);
+    await user.type(
+      screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."),
+      "Desc",
+    );
     submitForm();
 
     await waitFor(() => {
-      expect(screen.getByText("El título de la reseña es obligatorio")).toBeInTheDocument();
+      expect(screen.getByText("Indica si recomiendas el producto o no")).toBeInTheDocument();
     });
   });
 
@@ -96,24 +108,32 @@ describe("PublishReviewPage", () => {
 
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText("Busca un juego, libro, serie o película…"), "Game");
+    await user.type(
+      screen.getByPlaceholderText("Busca un juego, libro, serie o película…"),
+      "Game",
+    );
     await waitFor(() => expect(mockSearchProducts).toHaveBeenCalled());
 
     const pickButton = await screen.findByText("Game");
     await user.click(pickButton);
-    await user.type(screen.getByPlaceholderText("Un resumen corto de tu opinión"), "Great game");
-    await user.click(screen.getByText("Sí, lo recomiendo"));
-    await user.type(screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."), "Really enjoyed it");
+    await user.click(screen.getByText("Lo recomiendo"));
+    await user.type(
+      screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."),
+      "Really enjoyed it",
+    );
 
     submitForm();
 
     await waitFor(() => {
-      expect(mockCreateReview).toHaveBeenCalledWith({
-        title: "Great game",
-        product_id: 1,
-        description: "Really enjoyed it",
-        recommended: true,
-      });
+      // createReview recibe un segundo argumento (AbortSignal del timeout)
+      expect(mockCreateReview).toHaveBeenCalledWith(
+        {
+          product_id: 1,
+          description: "Really enjoyed it",
+          recommended: true,
+        },
+        expect.any(AbortSignal),
+      );
     });
 
     await waitFor(() => {
@@ -128,42 +148,52 @@ describe("PublishReviewPage", () => {
     renderPublish();
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText("Busca un juego, libro, serie o película…"), "Game");
+    await user.type(
+      screen.getByPlaceholderText("Busca un juego, libro, serie o película…"),
+      "Game",
+    );
     await waitFor(() => expect(mockSearchProducts).toHaveBeenCalled());
 
     const pickButton = await screen.findByText("Game");
     await user.click(pickButton);
-    await user.type(screen.getByPlaceholderText("Un resumen corto de tu opinión"), "Title");
-    await user.click(screen.getByText("Sí, lo recomiendo"));
-    await user.type(screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."), "Desc");
+    await user.click(screen.getByText("Lo recomiendo"));
+    await user.type(
+      screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."),
+      "Desc",
+    );
 
     submitForm();
 
     await waitFor(() => {
-      expect(screen.getByText("Publicando...")).toBeInTheDocument();
+      expect(screen.getByText("Publicando…")).toBeInTheDocument();
     });
   });
 
   it("shows error from API on failure", async () => {
     mockSearchProducts.mockResolvedValue([{ id: 1, Name: "Game" }]);
-    mockCreateReview.mockRejectedValue(new Error("Title already exists"));
+    mockCreateReview.mockRejectedValue(new Error("Error del servidor"));
 
     renderPublish();
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText("Busca un juego, libro, serie o película…"), "Game");
+    await user.type(
+      screen.getByPlaceholderText("Busca un juego, libro, serie o película…"),
+      "Game",
+    );
     await waitFor(() => expect(mockSearchProducts).toHaveBeenCalled());
 
     const pickButton = await screen.findByText("Game");
     await user.click(pickButton);
-    await user.type(screen.getByPlaceholderText("Un resumen corto de tu opinión"), "Title");
-    await user.click(screen.getByText("Sí, lo recomiendo"));
-    await user.type(screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."), "Desc");
+    await user.click(screen.getByText("Lo recomiendo"));
+    await user.type(
+      screen.getByPlaceholderText("Cuenta cómo fue tu experiencia, qué te gustó y qué mejorarías."),
+      "Desc",
+    );
 
     submitForm();
 
     await waitFor(() => {
-      expect(screen.getByText("Title already exists")).toBeInTheDocument();
+      expect(screen.getByText("Error del servidor")).toBeInTheDocument();
     });
   });
 });
