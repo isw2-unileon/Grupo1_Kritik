@@ -21,6 +21,7 @@ type User struct {
 	UserName string      `json:"UserName,omitempty"`
 	Password string      `json:"Password,omitempty"`
 	Birth    *civil.Date `json:"Birth,omitempty"`
+	Image    string      `json:"Image,omitempty"`
 }
 
 // Product struct
@@ -32,6 +33,7 @@ type Product struct {
 	Description  string      `json:"Description,omitempty"`
 	Release      *civil.Date `json:"Release,omitempty"`
 	Genre        []string    `json:"Genre,omitempty"`
+	Image        string      `json:"Image,omitempty"`
 }
 
 // Review struct
@@ -55,7 +57,7 @@ type Database interface {
 	DeleteUserByEmail(userEmail string) (bool, error)
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
 
-	GetProductByName(productName string) (*Product, error)
+	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
@@ -64,8 +66,8 @@ type Database interface {
 	GetReviewByID(reviewID int) (*Review, error)
 	AddReview(newReview Review) (*Review, error)
 	DeleteReviewByName(reviewName string) (bool, error)
-	GetReviewsByUserEmail(userEmail string) ([]Review, error)
-	GetReviewsByProductName(productName string) ([]Review, error)
+	GetReviewsByUserID(userID int) ([]Review, error)
+	GetReviewsByProductID(productID int) ([]Review, error)
 }
 
 // SupabaseDB client struct
@@ -256,8 +258,8 @@ func (db *SupabaseDB) UpdateUserInfo(userEmail string, newUserInfo User) (*User,
  =========================================================
 */
 
-// GetProductByName returns the Product associated with the productName or an error if it occurred
-func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
+// GetProductsByName returns the Product associated with the productName or an error if it occurred
+func (db *SupabaseDB) GetProductsByName(productName string) ([]Product, error) {
 
 	var products []Product
 	_, err := db.client.From("Product").
@@ -273,7 +275,7 @@ func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
 		return nil, fmt.Errorf("not found product with name %s", productName)
 	}
 
-	return &products[0], nil
+	return products, nil
 }
 
 // GetProductByID returns the Product associated with the productID or an error if it occurred
@@ -389,6 +391,48 @@ func (db *SupabaseDB) GetReviewByID(reviewID int) (*Review, error) {
 	return &reviews[0], nil
 }
 
+// GetReviewsByUserID gets an array of Review associated to an User
+func (db *SupabaseDB) GetReviewsByUserID(userID int) ([]Review, error) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = db.client.From("Review").
+		Select("*", "exact", false).
+		Eq("UserId", fmt.Sprintf("%d", user.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
+}
+
+// GetReviewsByProductID gets an array of Review associated to Product
+func (db *SupabaseDB) GetReviewsByProductID(productID int) ([]Review, error) {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = db.client.From("Review").
+		Select("*", "exact", false).
+		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
+}
+
 // AddReview adds a new Review to the database
 //
 // Returns the added Review or nil and an error if it was not added
@@ -428,48 +472,6 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// GetReviewsByUserEmail gets an array of Review associated to an User
-func (db *SupabaseDB) GetReviewsByUserEmail(userEmail string) ([]Review, error) {
-	user, err := db.GetUserByEmail(userEmail)
-	if err != nil {
-		return nil, err
-	}
-
-	var reviews []Review
-
-	_, err = db.client.From("Review").
-		Select("*", "exact", false).
-		Eq("UserId", fmt.Sprintf("%d", user.ID)).
-		ExecuteTo(&reviews)
-
-	if err != nil {
-		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
-	}
-
-	return reviews, nil
-}
-
-// GetReviewsByProductName gets an array of Review associated to Product
-func (db *SupabaseDB) GetReviewsByProductName(productName string) ([]Review, error) {
-	product, err := db.GetProductByName(productName)
-	if err != nil {
-		return nil, err
-	}
-
-	var reviews []Review
-
-	_, err = db.client.From("Review").
-		Select("*", "exact", false).
-		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
-		ExecuteTo(&reviews)
-
-	if err != nil {
-		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
-	}
-
-	return reviews, nil
 }
 
 /*

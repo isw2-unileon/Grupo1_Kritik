@@ -77,7 +77,7 @@ func (h *ReviewHandler) SearchProductHandler(c *gin.Context) {
 		return
 	}
 
-	products, err := h.DB.GetProductByName(query)
+	products, err := h.DB.GetProductsByName(query)
 	if err != nil {
 		slog.Error("search product: failed", "q", query, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
@@ -102,7 +102,7 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 		return
 	}
 
-	reviews, err := h.DB.GetReviewsByUserEmail(user.Email)
+	reviews, err := h.DB.GetReviewsByUserID(user.ID)
 	if err != nil {
 		slog.Error("get reviews: query failed", "user", user.UserName, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
