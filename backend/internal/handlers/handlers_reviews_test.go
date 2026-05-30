@@ -79,12 +79,17 @@ func TestSearchProductHandler_Found(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 
-	var product bd.Product
-	if err := json.Unmarshal(w.Body.Bytes(), &product); err != nil {
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if product.Name != "Game" {
-		t.Errorf("expected product with Name Game, got %+v", product)
+
+	if len(products) == 0 {
+		t.Fatalf("expected at least one product, got 0")
+	}
+
+	if products[0].Name != "Game" {
+		t.Errorf("expected product with Name Game, got %+v", products[0])
 	}
 }
 
