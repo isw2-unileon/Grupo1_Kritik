@@ -46,6 +46,13 @@ type Review struct {
 	UserID    int `json:"UserId,omitempty"`
 }
 
+// FriendRelation struct
+type FriendRelation struct {
+	ID      int `json:"id,omitempty"`
+	Friend1 int `json:"Friend1,omitempty"`
+	Friend2 int `json:"Friend2,omitempty"`
+}
+
 // Database interface
 //
 //nolint:dupl // DO NOT remove this
