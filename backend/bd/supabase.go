@@ -75,6 +75,8 @@ type Database interface {
 	DeleteReviewByName(reviewName string) (bool, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
+
+	GetRelationByUserID(userID int) (*FriendRelation, error)
 }
 
 // SupabaseDB client struct
@@ -479,6 +481,36 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+/*
+ =========================================================
+ Relation functions
+ =========================================================
+*/
+
+// GetRelationByUserID returns the relation between two users or an error if ocurred
+func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
+
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
+		Delete("", "representation").
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
+
+	if err != nil {
+		_, err2 := db.client.From("Friend_Relations").
+			Delete("", "representation").
+			Eq("Friend2", strconv.Itoa(userID)).
+			ExecuteTo(&relations)
+
+		if err2 != nil {
+			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+		}
+	}
+
+	return &relations[0], nil
 }
 
 /*
