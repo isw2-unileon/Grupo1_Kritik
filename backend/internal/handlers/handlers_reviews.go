@@ -112,7 +112,8 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, reviews)
 }
 
-func (h *ReviewHandler) GetFriendRelation(c *gin.Context) {
+// GetFriendRelationHandler returns the relation between two users
+func (h *ReviewHandler) GetFriendRelationHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
