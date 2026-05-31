@@ -489,7 +489,7 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
  =========================================================
 */
 
-// GetRelationByUserID returns the relation between two users or an error if ocurred
+// GetRelationByUserID returns the relation between two users or an error if it occurred
 func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
 
 	var relations []FriendRelation
