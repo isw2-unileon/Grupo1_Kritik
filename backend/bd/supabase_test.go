@@ -810,6 +810,56 @@ func TestGetReviewsByProductIDInvalidProduct(t *testing.T) {
 
 /*
  =========================================================
+ Relation functions
+ =========================================================
+*/
+
+func TestGetRelationByUserID(t *testing.T) {
+	idToSearch := 1
+
+	mockDB := &MockDatabase{
+		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
+			return &FriendRelation{
+				ID:      1,
+				Friend1: id,
+				Friend2: 2,
+			}, nil
+		},
+	}
+
+	relation, err := mockDB.GetRelationByUserID(idToSearch)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if relation == nil {
+		t.Errorf("Relation is nil")
+	} else if relation.Friend1 != idToSearch {
+		t.Errorf("Expected Friend1 %d, got %d", idToSearch, relation.Friend1)
+	}
+}
+
+func TestGetRelationByUserIDNotFound(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
+			return nil, errors.New("not found relation with user id -1")
+		},
+	}
+
+	relation, err := mockDB.GetRelationByUserID(-1)
+
+	if err == nil {
+		t.Errorf("Expected error")
+	}
+
+	if relation != nil {
+		t.Errorf("Relation should be nil")
+	}
+}
+
+/*
+ =========================================================
  Hash functions
  =========================================================
 */
