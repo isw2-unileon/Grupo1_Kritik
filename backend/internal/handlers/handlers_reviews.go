@@ -111,3 +111,20 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, reviews)
 }
+
+func (h *ReviewHandler) GetFriendRelation(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	relation, err := h.DB.GetRelationByUserID(userID)
+	if err != nil {
+		slog.Error("get reviews: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	c.JSON(http.StatusOK, relation)
+}
