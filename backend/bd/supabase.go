@@ -79,6 +79,8 @@ type Database interface {
 	GetRelationByUserID(userID int) (*FriendRelation, error)
 	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
 	DeleteRelationByUserID(userID int) (bool, error)
+
+	GetFriendsByUserID(userID int) ([]User, error)
 }
 
 // SupabaseDB client struct
@@ -552,6 +554,57 @@ func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// GetFriendsByUserID returns an array of User that are friends with the given user, or an error if it occurred
+func (db *SupabaseDB) GetFriendsByUserID(userID int) ([]User, error) {
+
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
+		Select("*", "exact", false).
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
+	if err != nil {
+		return nil, fmt.Errorf("error getting relations where user is Friend1: %w", err)
+	}
+
+	var relations2 []FriendRelation
+	_, err = db.client.From("Friend_Relations").
+		Select("*", "exact", false).
+		Eq("Friend2", strconv.Itoa(userID)).
+		ExecuteTo(&relations2)
+	if err != nil {
+		return nil, fmt.Errorf("error getting relations where user is Friend2: %w", err)
+	}
+
+	relations = append(relations, relations2...)
+
+	seen := make(map[int]bool)
+	var friendIDs []int
+	for _, r := range relations {
+		var otherID int
+		if r.Friend1 == userID {
+			otherID = r.Friend2
+		} else {
+			otherID = r.Friend1
+		}
+		if !seen[otherID] {
+			seen[otherID] = true
+			friendIDs = append(friendIDs, otherID)
+		}
+	}
+
+	var friends []User
+	for _, id := range friendIDs {
+		user, err := db.GetUserByID(id)
+		if err != nil {
+			return nil, fmt.Errorf("error getting friend user with id %d: %w", id, err)
+		}
+		friends = append(friends, *user)
+	}
+
+	return friends, nil
 }
 
 /*
