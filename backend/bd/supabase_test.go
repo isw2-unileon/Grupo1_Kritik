@@ -544,11 +544,12 @@ func TestGetFriendsByUserID(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(friends) != 2 {
+	switch {
+	case len(friends) != 2:
 		t.Errorf("Expected 2 friends, got %d", len(friends))
-	} else if friends[0].ID != 2 {
+	case friends[0].ID != 2:
 		t.Errorf("Expected first friend ID 2, got %d", friends[0].ID)
-	} else if friends[1].ID != 3 {
+	case friends[1].ID != 3:
 		t.Errorf("Expected second friend ID 3, got %d", friends[1].ID)
 	}
 }
