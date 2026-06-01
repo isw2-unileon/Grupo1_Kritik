@@ -78,7 +78,7 @@ type Database interface {
 
 	GetRelationByUserID(userID int) (*FriendRelation, error)
 	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
-	DeleteRelationByName(newRelationName string) (bool, error)
+	DeleteRelationByUserID(userID int) (bool, error)
 }
 
 // SupabaseDB client struct
