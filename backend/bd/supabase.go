@@ -77,6 +77,8 @@ type Database interface {
 	GetReviewsByProductID(productID int) ([]Review, error)
 
 	GetRelationByUserID(userID int) (*FriendRelation, error)
+	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
+	DeleteRelationByName(newRelationName string) (bool, error)
 }
 
 // SupabaseDB client struct
