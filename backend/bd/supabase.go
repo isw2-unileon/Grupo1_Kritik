@@ -495,6 +495,45 @@ func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
 	var relations []FriendRelation
 
 	_, err := db.client.From("Friend_Relations").
+		Select("*", "exact", false).
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
+
+	if err != nil {
+		_, err2 := db.client.From("Friend_Relations").
+			Select("*", "exact", false).
+			Eq("Friend2", strconv.Itoa(userID)).
+			ExecuteTo(&relations)
+
+		if err2 != nil {
+			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+		}
+	}
+
+	return &relations[0], nil
+}
+
+// AddRelation adds a friend relation between two User
+func (db *SupabaseDB) AddRelation(newRelation FriendRelation) (*FriendRelation, error) {
+	var insertedRelation []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
+		Insert(newRelation, false, "", "", "").
+		ExecuteTo(&insertedRelation)
+
+	if err != nil {
+		return nil, fmt.Errorf("error inserting review:\n%w", err)
+	}
+
+	return &insertedRelation[0], nil
+}
+
+// DeleteRelationByUserID deletes a friend relation between two User using a userID
+func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
+
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
 		Delete("", "representation").
 		Eq("Friend1", strconv.Itoa(userID)).
 		ExecuteTo(&relations)
@@ -506,11 +545,11 @@ func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
 			ExecuteTo(&relations)
 
 		if err2 != nil {
-			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+			return false, fmt.Errorf("error getting the relation:\n%w", err2)
 		}
 	}
 
-	return &relations[0], nil
+	return true, nil
 }
 
 /*
