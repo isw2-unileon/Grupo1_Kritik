@@ -526,6 +526,51 @@ func TestEditProductInfoError(t *testing.T) {
 	}
 }
 
+func TestGetFriendsByUserID(t *testing.T) {
+	idToSearch := 1
+
+	mockDB := &MockDatabase{
+		MockGetFriendsByUserID: func(id int) ([]User, error) {
+			return []User{
+				{ID: 2, UserName: "friend1", Email: "friend1@test.com"},
+				{ID: 3, UserName: "friend2", Email: "friend2@test.com"},
+			}, nil
+		},
+	}
+
+	friends, err := mockDB.GetFriendsByUserID(idToSearch)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(friends) != 2 {
+		t.Errorf("Expected 2 friends, got %d", len(friends))
+	} else if friends[0].ID != 2 {
+		t.Errorf("Expected first friend ID 2, got %d", friends[0].ID)
+	} else if friends[1].ID != 3 {
+		t.Errorf("Expected second friend ID 3, got %d", friends[1].ID)
+	}
+}
+
+func TestGetFriendsByUserIDNotFound(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetFriendsByUserID: func(id int) ([]User, error) {
+			return nil, errors.New("not found any relation with user id -1")
+		},
+	}
+
+	friends, err := mockDB.GetFriendsByUserID(-1)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(friends) != 0 {
+		t.Errorf("Expected 0 friends, got %d", len(friends))
+	}
+}
+
 /*
  =========================================================
  Review functions
