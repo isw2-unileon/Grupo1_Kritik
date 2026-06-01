@@ -858,6 +858,95 @@ func TestGetRelationByUserIDNotFound(t *testing.T) {
 	}
 }
 
+// ADD RELATION
+func TestAddRelation(t *testing.T) {
+	testRelationToAdd := FriendRelation{
+		Friend1: 1,
+		Friend2: 2,
+	}
+
+	mockDB := &MockDatabase{
+		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
+			newRelation.ID = 1
+			return &newRelation, nil
+		},
+	}
+
+	addedRelation, err := mockDB.AddRelation(testRelationToAdd)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if addedRelation == nil {
+		t.Errorf("Added relation is nil")
+	} else if addedRelation.ID != 1 {
+		t.Errorf("Expected relation ID 1, got %d", addedRelation.ID)
+	}
+}
+
+func TestAddRelationMissingData(t *testing.T) {
+	testRelationToAdd := FriendRelation{}
+
+	mockDB := &MockDatabase{
+		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
+			return nil, errors.New("error inserting relation: null value violates not-null constraint")
+		},
+	}
+
+	addedRelation, err := mockDB.AddRelation(testRelationToAdd)
+
+	if err == nil {
+		t.Error("Should have returned an error")
+	}
+
+	if addedRelation != nil {
+		t.Errorf("Added relation should be nil, but its not")
+	}
+}
+
+// DELETE RELATION
+func TestDeleteRelationByUserID(t *testing.T) {
+	userIDToDelete := 1
+
+	mockDB := &MockDatabase{
+		MockDeleteRelationByUserID: func(id int) (bool, error) {
+			if id != userIDToDelete {
+				return false, errors.New("wrong user id passed to mock")
+			}
+			return true, nil
+		},
+	}
+
+	isDeleted, err := mockDB.DeleteRelationByUserID(userIDToDelete)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !isDeleted {
+		t.Errorf("Function returned false, should be true")
+	}
+}
+
+func TestDeleteRelationByUserIDError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockDeleteRelationByUserID: func(id int) (bool, error) {
+			return false, errors.New("not found any relation with the user id -1 to delete")
+		},
+	}
+
+	isDeleted, err := mockDB.DeleteRelationByUserID(-1)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if isDeleted {
+		t.Errorf("Function returned true, should be false")
+	}
+}
+
 /*
  =========================================================
  Hash functions

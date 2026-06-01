@@ -23,7 +23,9 @@ type MockDatabase struct {
 	MockGetReviewsByUserID    func(userID int) ([]Review, error)
 	MockGetReviewsByProductID func(productID int) ([]Review, error)
 
-	MockGetRelationByUserID func(userID int) (*FriendRelation, error)
+	MockGetRelationByUserID    func(userID int) (*FriendRelation, error)
+	MockAddRelation            func(newRelation FriendRelation) (*FriendRelation, error)
+	MockDeleteRelationByUserID func(userID int) (bool, error)
 }
 
 // GetUserByEmail mock
@@ -109,4 +111,14 @@ func (m *MockDatabase) GetReviewsByProductID(id int) ([]Review, error) {
 // GetRelationByUserID mock
 func (m *MockDatabase) GetRelationByUserID(id int) (*FriendRelation, error) {
 	return m.MockGetRelationByUserID(id)
+}
+
+// AddRelation mock
+func (m *MockDatabase) AddRelation(f FriendRelation) (*FriendRelation, error) {
+	return m.MockAddRelation(f)
+}
+
+// DeleteRelationByUserID mock
+func (m *MockDatabase) DeleteRelationByUserID(userID int) (bool, error) {
+	return m.MockDeleteRelationByUserID(userID)
 }
