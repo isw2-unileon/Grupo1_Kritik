@@ -60,8 +60,13 @@ func TestSearchProductHandler_EmptyQuery(t *testing.T) {
 
 func TestSearchProductHandler_Found(t *testing.T) {
 	mock := &bd.MockDatabase{
-		MockGetProductByName: func(name string) (*bd.Product, error) {
-			return &bd.Product{ID: 1, Name: name}, nil
+		MockGetProductsByName: func(name string) ([]bd.Product, error) {
+			return []bd.Product{
+				{
+					ID:   1,
+					Name: name,
+				},
+			}, nil
 		},
 	}
 	r := setupReviewsRouter(mock, false)
@@ -74,12 +79,17 @@ func TestSearchProductHandler_Found(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 
-	var product bd.Product
-	if err := json.Unmarshal(w.Body.Bytes(), &product); err != nil {
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if product.Name != "Game" {
-		t.Errorf("expected product with Name Game, got %+v", product)
+
+	if len(products) == 0 {
+		t.Fatalf("expected at least one product, got 0")
+	}
+
+	if products[0].Name != "Game" {
+		t.Errorf("expected product with Name Game, got %+v", products[0])
 	}
 }
 
@@ -89,16 +99,16 @@ func TestCreateReviewHandler_Success(t *testing.T) {
 			return &bd.User{ID: id, Email: "reviewer@test.com", UserName: "reviewer"}, nil
 		},
 		MockAddReview: func(r bd.Review) (*bd.Review, error) {
-			return &bd.Review{ID: 1, Name: r.Name, Description: r.Description, Recommended: r.Recommended, ProductID: r.ProductID, UserID: r.UserID}, nil
+			return &bd.Review{ID: 1, Description: r.Description, Recommended: r.Recommended, ProductID: r.ProductID, UserID: r.UserID}, nil
 		},
 	}
 	r := setupReviewsRouter(mock, true)
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"title":        "Great Game",
-		"product_id":   5,
-		"description":  "Really enjoyed it",
-		"recommended":  true,
+		"title":       "Great Game",
+		"product_id":  5,
+		"description": "Really enjoyed it",
+		"recommended": true,
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/api/reviews", bytes.NewReader(body))
@@ -149,9 +159,9 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 		MockGetUserByID: func(id int) (*bd.User, error) {
 			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
 		},
-		MockGetReviewsByUserEmail: func(email string) ([]bd.Review, error) {
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
 			return []bd.Review{
-				{ID: 1, Name: "Rev1", Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
+				{ID: id, Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
 			}, nil
 		},
 	}
@@ -169,8 +179,8 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &reviews); err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if len(reviews) != 1 || reviews[0].Name != "Rev1" {
-		t.Errorf("expected 1 review named Rev1, got %+v", reviews)
+	if len(reviews) != 1 || reviews[0].ID != 1 {
+		t.Errorf("expected 1 review with id = 1, got %+v", reviews)
 	}
 }
 

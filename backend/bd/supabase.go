@@ -21,6 +21,7 @@ type User struct {
 	UserName string      `json:"UserName,omitempty"`
 	Password string      `json:"Password,omitempty"`
 	Birth    *civil.Date `json:"Birth,omitempty"`
+	Image    string      `json:"Image,omitempty"`
 }
 
 // Product struct
@@ -38,12 +39,18 @@ type Product struct {
 // Review struct
 type Review struct {
 	ID          int    `json:"id,omitempty"`
-	Name        string `json:"Name,omitempty"`
-	Recommended bool   `json:"Recommended,omitempty"`
+	Recommended bool   `json:"Recommended"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductID,omitempty"`
+	ProductID int `json:"ProductId,omitempty"`
 	UserID    int `json:"UserId,omitempty"`
+}
+
+// FriendRelation struct
+type FriendRelation struct {
+	ID      int `json:"id,omitempty"`
+	Friend1 int `json:"Friend1,omitempty"`
+	Friend2 int `json:"Friend2,omitempty"`
 }
 
 // Database interface
@@ -57,17 +64,23 @@ type Database interface {
 	DeleteUserByEmail(userEmail string) (bool, error)
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
 
-	GetProductByName(productName string) (*Product, error)
+	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
 
-	GetReviewByName(reviewName string) (*Review, error)
+	GetReviewByID(reviewID int) (*Review, error)
 	AddReview(newReview Review) (*Review, error)
 	DeleteReviewByName(reviewName string) (bool, error)
-	GetReviewsByUserEmail(userEmail string) ([]Review, error)
-	GetReviewsByProductName(productName string) ([]Review, error)
+	GetReviewsByUserID(userID int) ([]Review, error)
+	GetReviewsByProductID(productID int) ([]Review, error)
+
+	GetRelationByUserID(userID int) (*FriendRelation, error)
+	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
+	DeleteRelationByUserID(userID int) (bool, error)
+
+	GetFriendsByUserID(userID int) ([]User, error)
 }
 
 // SupabaseDB client struct
@@ -258,8 +271,8 @@ func (db *SupabaseDB) UpdateUserInfo(userEmail string, newUserInfo User) (*User,
  =========================================================
 */
 
-// GetProductByName returns the Product associated with the productName or an error if it occurred
-func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
+// GetProductsByName returns the Product associated with the productName or an error if it occurred
+func (db *SupabaseDB) GetProductsByName(productName string) ([]Product, error) {
 
 	var products []Product
 	_, err := db.client.From("Product").
@@ -275,7 +288,7 @@ func (db *SupabaseDB) GetProductByName(productName string) (*Product, error) {
 		return nil, fmt.Errorf("not found product with name %s", productName)
 	}
 
-	return &products[0], nil
+	return products, nil
 }
 
 // GetProductByID returns the Product associated with the productID or an error if it occurred
@@ -371,13 +384,13 @@ func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Produ
  =========================================================
 */
 
-// GetReviewByName returns the Review associated with the reviewName or an error if it occurred
-func (db *SupabaseDB) GetReviewByName(reviewName string) (*Review, error) {
+// GetReviewByID returns the Review associated with the reviewID or an error if it occurred
+func (db *SupabaseDB) GetReviewByID(reviewID int) (*Review, error) {
 	var reviews []Review
 
 	_, err := db.client.From("Review").
 		Select("*", "exact", false).
-		Eq("Name", reviewName).
+		Eq("id", strconv.Itoa(reviewID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
@@ -385,10 +398,52 @@ func (db *SupabaseDB) GetReviewByName(reviewName string) (*Review, error) {
 	}
 
 	if len(reviews) == 0 {
-		return nil, fmt.Errorf("not found review with name %s", reviewName)
+		return nil, fmt.Errorf("not found review with id %d", reviewID)
 	}
 
 	return &reviews[0], nil
+}
+
+// GetReviewsByUserID gets an array of Review associated to an User
+func (db *SupabaseDB) GetReviewsByUserID(userID int) ([]Review, error) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = db.client.From("Review").
+		Select("*", "exact", false).
+		Eq("UserId", fmt.Sprintf("%d", user.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
+}
+
+// GetReviewsByProductID gets an array of Review associated to Product
+func (db *SupabaseDB) GetReviewsByProductID(productID int) ([]Review, error) {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return nil, err
+	}
+
+	var reviews []Review
+
+	_, err = db.client.From("Review").
+		Select("*", "exact", false).
+		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
+		ExecuteTo(&reviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+	}
+
+	return reviews, nil
 }
 
 // AddReview adds a new Review to the database
@@ -432,46 +487,124 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	return true, nil
 }
 
-// GetReviewsByUserEmail gets an array of Review associated to an User
-func (db *SupabaseDB) GetReviewsByUserEmail(userEmail string) ([]Review, error) {
-	user, err := db.GetUserByEmail(userEmail)
-	if err != nil {
-		return nil, err
-	}
+/*
+ =========================================================
+ Relation functions
+ =========================================================
+*/
 
-	var reviews []Review
+// GetRelationByUserID returns the relation between two users or an error if it occurred
+func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
 
-	_, err = db.client.From("Review").
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
 		Select("*", "exact", false).
-		Eq("UserId", fmt.Sprintf("%d", user.ID)).
-		ExecuteTo(&reviews)
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+		_, err2 := db.client.From("Friend_Relations").
+			Select("*", "exact", false).
+			Eq("Friend2", strconv.Itoa(userID)).
+			ExecuteTo(&relations)
+
+		if err2 != nil {
+			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+		}
 	}
 
-	return reviews, nil
+	return &relations[0], nil
 }
 
-// GetReviewsByProductName gets an array of Review associated to Product
-func (db *SupabaseDB) GetReviewsByProductName(productName string) ([]Review, error) {
-	product, err := db.GetProductByName(productName)
+// AddRelation adds a friend relation between two User
+func (db *SupabaseDB) AddRelation(newRelation FriendRelation) (*FriendRelation, error) {
+	var insertedRelation []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
+		Insert(newRelation, false, "", "", "").
+		ExecuteTo(&insertedRelation)
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error inserting review:\n%w", err)
 	}
 
-	var reviews []Review
+	return &insertedRelation[0], nil
+}
 
-	_, err = db.client.From("Review").
+// DeleteRelationByUserID deletes a friend relation between two User using a userID
+func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
+
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
+		Delete("", "representation").
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
+
+	if err != nil {
+		_, err2 := db.client.From("Friend_Relations").
+			Delete("", "representation").
+			Eq("Friend2", strconv.Itoa(userID)).
+			ExecuteTo(&relations)
+
+		if err2 != nil {
+			return false, fmt.Errorf("error getting the relation:\n%w", err2)
+		}
+	}
+
+	return true, nil
+}
+
+// GetFriendsByUserID returns an array of User that are friends with the given user, or an error if it occurred
+func (db *SupabaseDB) GetFriendsByUserID(userID int) ([]User, error) {
+
+	var relations []FriendRelation
+
+	_, err := db.client.From("Friend_Relations").
 		Select("*", "exact", false).
-		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
-		ExecuteTo(&reviews)
-
+		Eq("Friend1", strconv.Itoa(userID)).
+		ExecuteTo(&relations)
 	if err != nil {
-		return nil, fmt.Errorf("error getting reviews from the bd: %w", err)
+		return nil, fmt.Errorf("error getting relations where user is Friend1: %w", err)
 	}
 
-	return reviews, nil
+	var relations2 []FriendRelation
+	_, err = db.client.From("Friend_Relations").
+		Select("*", "exact", false).
+		Eq("Friend2", strconv.Itoa(userID)).
+		ExecuteTo(&relations2)
+	if err != nil {
+		return nil, fmt.Errorf("error getting relations where user is Friend2: %w", err)
+	}
+
+	relations = append(relations, relations2...)
+
+	seen := make(map[int]bool)
+	var friendIDs []int
+	for _, r := range relations {
+		var otherID int
+		if r.Friend1 == userID {
+			otherID = r.Friend2
+		} else {
+			otherID = r.Friend1
+		}
+		if !seen[otherID] {
+			seen[otherID] = true
+			friendIDs = append(friendIDs, otherID)
+		}
+	}
+
+	var friends []User
+	for _, id := range friendIDs {
+		user, err := db.GetUserByID(id)
+		if err != nil {
+			return nil, fmt.Errorf("error getting friend user with id %d: %w", id, err)
+		}
+		friends = append(friends, *user)
+	}
+
+	return friends, nil
 }
 
 /*

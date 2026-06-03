@@ -70,7 +70,9 @@ function Header() {
               <NavLink
                 to="/login"
                 className={({ isActive }) =>
-                  isActive ? "rounded-full bg-acid px-4 py-2 text-sm font-semibold text-ink" : ghost
+                  isActive
+                    ? "rounded-full bg-acid/10 px-4 py-2 text-sm font-semibold text-acid ring-1 ring-acid/30"
+                    : ghost
                 }
               >
                 Iniciar sesión

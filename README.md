@@ -35,7 +35,7 @@ frontend, and a **Supabase** database.
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) 1.24+
+- [Go](https://go.dev/dl/) 1.25+
 - [Node.js](https://nodejs.org/) 22+
 - A Supabase project (URL + API key) configured in `backend/.env`
 
@@ -75,3 +75,4 @@ For the full setup walk-through see [`docs/getting-started.md`](docs/getting-sta
 - [Contributing guide](CONTRIBUTING.md) — project structure, conventions, auth
   pattern, commit style. Read before opening a PR.
 - [Architecture decisions](docs/adr/) — record of important design choices.
+- [Deploy](docs/deploy.md) — deployment to Render, CI/CD, environment variables.

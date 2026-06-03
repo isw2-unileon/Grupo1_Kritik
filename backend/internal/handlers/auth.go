@@ -19,6 +19,7 @@ type RegisterRequest struct {
 	Surname  string      `json:"surname"`
 	UserName string      `json:"user_name"`
 	Birth    *civil.Date `json:"birth"`
+	Image    string      `json:"Image,omitempty"`
 }
 
 // LoginRequest represents the payload for user login.
