@@ -1,7 +1,6 @@
 # Database Schema
 
-The backend talks to Supabase. There are three tables in active use plus one
-(`Content`) defined in code but not wired to any current handler.
+The backend talks to Supabase. There are four tables in active use:
 
 ## `Users`
 Stores account data. Passwords are bcrypt-hashed before insert.
@@ -15,37 +14,43 @@ Stores account data. Passwords are bcrypt-hashed before insert.
 | `Surname`  | text    | Optional                               |
 | `UserName` | text    | Unique when present, optional          |
 | `Birth`    | text    | Optional, ISO date string              |
+| `Image`    | text    | Optional, URL to avatar image          |
 
 ## `Product`
-Catalogue of items a review can target. Reviews reference products **by name**,
-so `Name` must be unique.
+Catalogue of items a review can target.
 
-| Column | Type | Notes                       |
-|--------|------|-----------------------------|
-| `Name` | text | Primary identifier (unique) |
-
-> The Go model only maps `Name`; additional columns may exist in Supabase and
-> will simply be ignored during decode.
+| Column        | Type    | Notes                          |
+|---------------|---------|--------------------------------|
+| `id`          | int     | Primary key, auto-increment    |
+| `Name`        | text    | Unique, required               |
+| `Type`        | text    | Category (game, book, film…)   |
+| `AverageGrade`| int     | Average user rating            |
+| `Description` | text    | Product description            |
+| `Release`     | date    | Optional, ISO date             |
+| `Genre`       | text[]  | Array of genres                |
+| `Image`       | text    | Optional, URL to image         |
 
 ## `Review`
-A review written by a `User` about a `Product`. `Name` is the review title and
-is unique across the table — two reviews cannot share a title.
+A review written by a `User` about a `Product`.
 
 | Column        | Type | Notes                                            |
 |---------------|------|--------------------------------------------------|
 | `id`          | int  | Primary key, auto-increment                      |
-| `Name`        | text | Review title, unique                             |
-| `Description` | text | Body of the review                               |
 | `Recommended` | bool | Whether the author recommends the product        |
-| `ProductName` | text | Foreign reference into `Product.Name`            |
-| `UserName`    | text | Foreign reference into `Users.UserName` (author) |
+| `Description` | text | Body of the review                               |
+| `ProductId`   | int  | Foreign reference into `Product.id`              |
+| `UserId`      | int  | Foreign reference into `Users.id` (author)       |
 
 > There is intentionally **no `Rating` column**. The "yes/no" recommendation is
 > the only verdict the product exposes. Do not reintroduce `Rating` without
 > coordinating a schema migration and matching backend/frontend changes.
 
-## `Content` (defined, not used)
-Mapped in [`backend/bd/supabase.go`](../backend/bd/supabase.go) (`GetContentByID`,
-`AddContent`, etc.) but no HTTP handler exposes it today. Treat as reserved for
-future work; revisit before adding new features so we don't grow two parallel
-models.
+## `Friend_Relations`
+Represents a friendship between two users. Each row is a bidirectional relation
+— no separate "friend request" model exists yet.
+
+| Column   | Type | Notes                                      |
+|----------|------|--------------------------------------------|
+| `id`     | int  | Primary key, auto-increment                |
+| `Friend1`| int  | User ID (one side of the relation)         |
+| `Friend2`| int  | User ID (the other side of the relation)   |

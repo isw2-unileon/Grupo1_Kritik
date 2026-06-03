@@ -74,18 +74,26 @@ Searches products by partial name match (case-insensitive). Empty `q` returns
 
 Response `200 OK`:
 ```json
-[ { "Name": "Hollow Knight" }, { "Name": "Hades" } ]
+[
+  {
+    "id": 1,
+    "Name": "Hollow Knight",
+    "Type": "game",
+    "AverageGrade": 0,
+    "Description": "Un metroidvania atmospheric",
+    "Release": "2017-02-24",
+    "Genre": ["action", "adventure", "metroidvania"],
+    "Image": "https://..."
+  }
+]
 ```
 
 ### `POST /api/reviews`
-Publishes a review by the authenticated user about an existing product. The
-review title (`title`) is stored as the unique key — two reviews cannot share a
-title.
+Publishes a review by the authenticated user about an existing product.
 
 Request:
 ```json
 {
-  "title": "Plataformas y atmósfera al máximo",
   "product_id": 42,
   "description": "Una experiencia preciosa, controles impecables.",
   "recommended": true
@@ -97,16 +105,15 @@ Responses:
   ```json
   {
     "id": 42,
-    "Name": "Plataformas y atmósfera al máximo",
-    "Description": "Una experiencia preciosa, controles impecables.",
     "Recommended": true,
-    "ProductName": "Hollow Knight",
-    "UserName": "ana"
+    "Description": "Una experiencia preciosa, controles impecables.",
+    "ProductId": 42,
+    "UserId": 1
   }
   ```
-- `400 Bad Request` — missing/empty `title`, `product_id`, or `description`.
+- `400 Bad Request` — missing/empty `product_id` or `description`.
 - `401 Unauthorized` — missing/invalid token.
-- `500 Internal Server Error` — duplicate title, unknown product, or DB failure.
+- `500 Internal Server Error` — unknown product or DB failure.
 
 ### `GET /api/reviews`
 Returns the reviews written by the authenticated user.
