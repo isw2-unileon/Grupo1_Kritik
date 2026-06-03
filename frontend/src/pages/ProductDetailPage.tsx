@@ -31,6 +31,7 @@ type DetailProduct = {
   Description?: string;
   Release?: string; // civil.Date llega como "YYYY-MM-DD"
   AverageGrade?: number;
+  Image?: string; // única foto del producto (puede venir vacía)
 };
 
 /* paletas de portada por tipo (mismas que el panel, para coherencia) */
@@ -132,36 +133,6 @@ function VerdictStamp({ recommended }: { recommended: boolean }) {
 }
 
 /* ---------- secciones ---------- */
-function GalleryStrip({ cat }: { cat: CatKey }) {
-  const grad = TYPE_STYLES[cat].grad;
-  return (
-    <Card as="section" className="p-6">
-      <div className="flex items-end justify-between">
-        <h2 className="font-display text-xl font-semibold">Galería</h2>
-        <span className="text-xs text-faint">muestras</span>
-      </div>
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className={`relative h-32 w-56 shrink-0 overflow-hidden rounded-2xl border border-line bg-gradient-to-br ${grad}`}
-          >
-            <div
-              aria-hidden
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-                backgroundSize: "14px 14px",
-              }}
-            />
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 function AboutCard({ description }: { description?: string }) {
   return (
     <Card as="section" className="p-7 sm:p-8">
@@ -412,15 +383,28 @@ export default function ProductDetailPage() {
 
       {/* HERO / portada */}
       <section className={`relative overflow-hidden rounded-[2rem] border border-line bg-gradient-to-br ${style.grad}`}>
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-            backgroundSize: "16px 16px",
-          }}
-        />
+        {product.Image ? (
+          // única foto del producto; si la URL falla, la ocultamos y queda el degradado
+          <img
+            src={product.Image}
+            alt={product.Name}
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
+              backgroundSize: "16px 16px",
+            }}
+          />
+        )}
         <div
           aria-hidden
           className="absolute inset-0"
@@ -452,7 +436,6 @@ export default function ProductDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
         {/* columna principal */}
         <div className="space-y-6">
-          <GalleryStrip cat={cat} />
           <AboutCard description={product.Description} />
           <CommunityReviews reviews={reviews} />
         </div>

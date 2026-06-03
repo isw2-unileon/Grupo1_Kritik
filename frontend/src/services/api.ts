@@ -30,6 +30,7 @@ export interface Product {
   Description?: string;
   Release?: string;
   Genre?: string[];
+  Image?: string; // URL de la única foto del producto (columna Image, nullable)
 }
 
 export interface NewReview {
