@@ -55,6 +55,23 @@ Backend uses `slog` with structured key/value pairs:
 - `slog.Warn` — client-caused failures (bad input, wrong password).
 - `slog.Error` — unexpected server failures (DB down, token generation failed).
 
+## Workflow
+
+Seguimos **trunk-based development** ([referencia](https://trunkbaseddevelopment.com/)):
+
+- La rama principal es `main`. Todo el trabajo parte de ella y vuelve a ella.
+- Para cada issue, crea una rama desde `main` con un nombre descriptivo:
+  `fix/login-validation` o `feature/search-products`.
+- Abre un **Pull Request** a `main` tan pronto como tengas algo,
+  aunque sea borrador (draft PR). Así el equipo ve el progreso.
+- Asocia el PR con el issue usando `Closes #<issue>` o `Part of #<issue>`
+  en la descripción.
+- Los PRs disparan automáticamente los workflows de CI (backend + frontend).
+  **No mergees si alguno falla.**
+- Otro miembro del equipo revisa el PR antes de mergear.
+- El merge se hace con squash para mantener el historial limpio.
+- Después del merge, elimina la rama.
+
 ## Commits
 
 Follow the existing convention: `fix #<issue>: …` or `feature #<issue>: …` when
