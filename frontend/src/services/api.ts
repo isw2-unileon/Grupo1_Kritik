@@ -23,10 +23,16 @@ export interface RegisterPayload {
 export interface Product {
   id: number;
   Name: string;
+  // el backend (GetProductByName, vía GET /api/products?q=) devuelve el producto
+  // completo; estos campos son opcionales para no romper otros usos de Product.
+  Type?: string;
+  AverageGrade?: number;
+  Description?: string;
+  Release?: string;
+  Genre?: string[];
 }
 
 export interface NewReview {
-  title: string;
   product_id: number;
   description: string;
   recommended: boolean;
@@ -49,7 +55,8 @@ function authedFetch(url: string, options: RequestInit = {}) {
 
 export async function login(
   username: string,
-  password: string
+  password: string,
+  signal?: AbortSignal,
 ): Promise<LoginResponse> {
   const isEmail = username.includes("@");
   const body = isEmail
@@ -60,6 +67,7 @@ export async function login(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!res.ok) {
@@ -70,11 +78,15 @@ export async function login(
   return res.json();
 }
 
-export async function register(data: RegisterPayload): Promise<UserData> {
+export async function register(
+  data: RegisterPayload,
+  signal?: AbortSignal,
+): Promise<UserData> {
   const res = await fetch(`${BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    signal,
   });
 
   if (!res.ok) {
@@ -85,18 +97,35 @@ export async function register(data: RegisterPayload): Promise<UserData> {
   return res.json();
 }
 
-export async function searchProducts(query: string): Promise<Product[]> {
-  const res = await authedFetch(`${BASE}/api/products?q=${encodeURIComponent(query)}`);
+export async function searchProducts(
+  query: string,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const res = await authedFetch(
+    `${BASE}/api/products?q=${encodeURIComponent(query)}`,
+    { signal },
+  );
   if (!res.ok) {
     throw new Error("product search failed");
   }
-  return res.json();
+
+  // El backend devuelve un array cuando hay varias coincidencias, pero un único
+  // objeto cuando encuentra un producto por nombre exacto (y null/{} si no hay
+  // nada). Normalizamos siempre a Product[] para que el resto de la app no se rompa.
+  const data: unknown = await res.json();
+  if (Array.isArray(data)) return data as Product[];
+  if (data && typeof data === "object" && "id" in data) return [data as Product];
+  return [];
 }
 
-export async function createReview(review: NewReview): Promise<unknown> {
+export async function createReview(
+  review: NewReview,
+  signal?: AbortSignal,
+): Promise<unknown> {
   const res = await authedFetch(`${BASE}/api/reviews`, {
     method: "POST",
     body: JSON.stringify(review),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "could not create review" }));
@@ -107,15 +136,14 @@ export async function createReview(review: NewReview): Promise<unknown> {
 
 export interface Review {
   id: number;
-  Name: string;
   Description: string;
   Recommended: boolean;
   ProductName: string;
   UserName: string;
 }
 
-export async function getReviews(): Promise<Review[]> {
-  const res = await authedFetch(`${BASE}/api/reviews`);
+export async function getReviews(signal?: AbortSignal): Promise<Review[]> {
+  const res = await authedFetch(`${BASE}/api/reviews`, { signal });
   if (!res.ok) {
     throw new Error("could not load reviews");
   }
