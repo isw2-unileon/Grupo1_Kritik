@@ -113,3 +113,21 @@ input:-webkit-autofill:active {
   box-shadow: 0 0 0 1000px var(--color-ink) inset;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* carrusel de portadas del dashboard (desplazamiento horizontal continuo) */
+@keyframes kritik-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* foco visible para navegación con teclado (anillo del tema) */
+:focus-visible {
+  outline: 2px solid var(--color-acid);
+  outline-offset: 2px;
+}
+/* los campos ya muestran su propio foco (borde + halo): evitamos doble anillo */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
