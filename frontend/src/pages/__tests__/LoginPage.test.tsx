@@ -43,7 +43,7 @@ describe("LoginPage", () => {
   it("renders the login form with title, inputs, and submit button", () => {
     renderLoginPage();
 
-    expect(screen.getByText("Bienvenido de nuevo")).toBeInTheDocument();
+    expect(screen.getByText("Hola otra vez")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("usuario123")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("••••••••")).toBeInTheDocument();
     expect(screen.getByText("Entrar")).toBeInTheDocument();

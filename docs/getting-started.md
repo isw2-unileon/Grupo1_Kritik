@@ -1,132 +1,111 @@
 # Getting Started
 
-How to use this template to start a new project.
+Guide to set up the project locally.
 
-## 1. Create Your Repository
+## Prerequisites
 
-Click **Use this template** on GitHub (or clone and re-init):
+- [Go](https://go.dev/dl/) 1.25+
+- [Node.js](https://nodejs.org/) 22+
+- A Supabase account and project
 
-```bash
-git clone https://github.com/isw2-unileon/proyect-scaffolding.git my-project
-cd my-project
-rm -rf .git
-git init
-```
+## Initial setup
 
-## 2. Rename the Go Module
-
-Update the module path in `go.mod` to match your new repository:
+### 1. Clone the repository
 
 ```bash
-# Replace with your actual module path
-go mod edit -module github.com/your-org/my-project
+# SSH (recommended)
+git clone git@github.com:isw2-unileon/Grupo1_Kritik.git
+
+# HTTPS
+git clone https://github.com/isw2-unileon/Grupo1_Kritik.git
+
+cd Grupo1_Kritik
 ```
 
-Then update all import paths in Go files:
+### 2. Set up environment variables
+
+Copy the environment file and fill in the Supabase credentials:
 
 ```bash
-grep -rl "isw2-unileon/proyect-scaffolding" backend/ | xargs sed -i '' 's|isw2-unileon/proyect-scaffolding|your-org/my-project|g'
+cp backend/.env.example backend/.env
 ```
 
-Run `go mod tidy` to verify.
+Edit `backend/.env` with the real project credentials (ask the team if you don't have them):
 
-## 3. Update the Auto-Assign Workflow
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-api-key
+```
 
-Edit `.github/workflows/auto-assign.yml` and replace `jferrl` with your GitHub username.
+> The `.env` file is in `.gitignore` — **it is never committed to the repository**.
 
-## 4. Install Dependencies
+### 3. Install dependencies
 
 ```bash
 make install
 ```
 
-This runs `go mod download`, `npm ci` in `frontend/`, and `npm ci` in `e2e/`.
+This installs:
+- **Air** (hot reload for Go)
+- **golangci-lint** (Go linter)
+- Go dependencies (`go mod download`)
+- Frontend dependencies (`npm ci` in `frontend/`)
+- E2E dependencies (`npm ci` in `e2e/`)
 
-## 5. Run Locally
+### 4. Run locally
 
-Open two terminals:
+Open **two terminals**:
 
 ```bash
-# Terminal 1 - Backend on :8080
+# Terminal 1 — Backend (port 8080)
 make run-backend
 
-# Terminal 2 - Frontend on :5173
+# Terminal 2 — Frontend (port 5173)
 make run-frontend
 ```
 
-Open http://localhost:5173 to see the app. The Vite dev server proxies `/api` and `/health` requests to the Go backend.
+The backend starts with Air (hot reload on changes in `backend/`).
+The frontend starts with Vite and proxies `/api`, `/auth` and `/health` to the backend.
 
-## 6. Build Your Application
+Open [http://localhost:5173](http://localhost:5173).
 
-### Backend
+## Available commands
 
-Add your Go code following the existing layout:
+| Command | Description |
+|---------|-------------|
+| `make install` | Install all dependencies |
+| `make run-backend` | Backend with hot reload on port 8080 |
+| `make run-frontend` | Frontend dev server on port 5173 |
+| `make test` | Run backend and frontend tests |
+| `make lint` | Run backend and frontend linters |
+| `make e2e` | Run Playwright E2E tests (requires backend+frontend running) |
+| `make build-backend` | Compile the backend binary |
+| `make build-frontend` | Compile the frontend for production |
 
-```text
-backend/
-├── cmd/server/main.go          # Entry point - add routes here
-└── internal/
-    ├── config/config.go        # Add env vars here
-    ├── domain/                 # Create: domain models
-    ├── service/                # Create: business logic
-    ├── repository/             # Create: data access
-    └── api/                    # Create: HTTP handlers
-```
-
-The sample `/api/hello` endpoint in `main.go` shows where to start. As the app grows, extract handlers into `internal/api/` and business logic into `internal/service/`.
-
-### Frontend
-
-The frontend is a standard Vite + React + TypeScript + Tailwind project:
-
-```text
-frontend/src/
-├── App.tsx                     # Root component - start here
-├── main.tsx                    # Entry point
-├── index.css                   # Tailwind imports
-├── components/                 # Create: React components
-├── services/                   # Create: API client functions
-└── types/                      # Create: TypeScript types
-```
-
-Path aliases are configured -- use `@/components/Foo` instead of relative imports.
-
-## 7. Available Make Commands
+## Tests
 
 ```bash
-make install         # Install all dependencies
-make run-backend     # Backend with hot reload (Air)
-make run-frontend    # Frontend dev server (Vite)
-make build-backend   # Build Go binary
-make build-frontend  # Build frontend for production
-make test            # Run all tests
-make lint            # Run all linters
-make e2e             # Run Playwright E2E tests
+# All tests
+make test
+
+# Backend only
+cd backend && go test -v -race ./...
+
+# Frontend only (with watcher)
+cd frontend && npm run test
+cd frontend && npm run test:watch
+
+# Typecheck standalone
+cd frontend && npx tsc --noEmit
+
+# E2E with visible browser
+cd e2e && npx playwright test --headed
 ```
 
-## 8. CI/CD
+## Reference docs
 
-The template includes four GitHub Actions workflows:
-
-| Workflow | Trigger | What it does |
-|----------|---------|--------------|
-| `backend.yml` | Push/PR changing `backend/` or `go.mod` | `go vet` + `go test -race` + `go build` |
-| `frontend.yml` | Push/PR changing `frontend/` | ESLint + TypeScript check + Vite build |
-| `e2e.yml` | Manual dispatch | Playwright tests across browsers |
-| `codeql.yml` | Weekly + push/PR | Security analysis for Go and JS/TS |
-
-## 9. Record Decisions
-
-Use Architecture Decision Records to document important choices:
-
-```bash
-cp docs/adr/000-template.md docs/adr/002-your-decision.md
-```
-
-See [docs/adr/](adr/) for the template and existing records.
-
-## Related Docs
-
-- [Why a monorepo](monorepo.md)
-- [Go best practices](golang.md)
-- [ADR template](adr/000-template.md)
+- [API Reference](api.md) — endpoints, request/response, errors
+- [Database Schema](schema.md) — tables, columns, constraints
+- [Deploy](deploy.md) — Render deployment, CI/CD, environment variables
+- [Contributing Guide](../CONTRIBUTING.md) — code conventions, JSON casing, auth pattern, commits
+- [Monorepo architecture](monorepo.md) — structure and rationale

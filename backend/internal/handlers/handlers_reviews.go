@@ -11,7 +11,6 @@ import (
 
 // CreateReviewRequest is the payload for publishing a review.
 type CreateReviewRequest struct {
-	Title       string `json:"title"`        // stored as Review.Name (unique)
 	ProductID   int    `json:"product_id"` // must be an existing Product
 	Description string `json:"description"`
 	Recommended bool   `json:"recommended"`
@@ -43,7 +42,6 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		return
 	}
 
-	req.Title = strings.TrimSpace(req.Title)
 	req.Description = strings.TrimSpace(req.Description)
 
 	// The Review table stores the author by username, but the JWT only carries
@@ -56,7 +54,6 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	}
 
 	review, err := h.DB.AddReview(bd.Review{
-		Name:        req.Title,
 		Description: req.Description,
 		Recommended: req.Recommended,
 		ProductID:   req.ProductID,
@@ -64,11 +61,11 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	})
 	if err != nil {
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review (the title may already exist, or the product is not registered)"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review"})
 		return
 	}
 
-	slog.Info("create review: success", "review", review.Name, "user", user.UserName, "product", review.ProductID)
+	slog.Info("create review: success", "user", user.UserName, "product", review.ProductID)
 	c.JSON(http.StatusCreated, review)
 }
 
@@ -80,7 +77,7 @@ func (h *ReviewHandler) SearchProductHandler(c *gin.Context) {
 		return
 	}
 
-	products, err := h.DB.GetProductByName(query)
+	products, err := h.DB.GetProductsByName(query)
 	if err != nil {
 		slog.Error("search product: failed", "q", query, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search products"})
@@ -105,7 +102,7 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 		return
 	}
 
-	reviews, err := h.DB.GetReviewsByUserEmail(user.Email)
+	reviews, err := h.DB.GetReviewsByUserID(user.ID)
 	if err != nil {
 		slog.Error("get reviews: query failed", "user", user.UserName, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
@@ -113,4 +110,22 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, reviews)
+}
+
+// GetFriendRelationHandler returns the relation between two users
+func (h *ReviewHandler) GetFriendRelationHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	relation, err := h.DB.GetRelationByUserID(userID)
+	if err != nil {
+		slog.Error("get reviews: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	c.JSON(http.StatusOK, relation)
 }
