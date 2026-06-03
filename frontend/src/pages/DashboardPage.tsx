@@ -326,6 +326,44 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
+// fila clicable del círculo: abre la ficha del producto (datos de ejemplo) vía router state
+function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
+  const navigate = useNavigate();
+  const open = () =>
+    navigate(`/product/${encodeURIComponent(f.name)}`, {
+      state: {
+        product: {
+          id: f.name,
+          Name: f.name,
+          Type: CAT_TO_TYPE[f.cat],
+          Genre: [] as string[],
+          Description: "",
+        },
+      },
+    });
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      }}
+      className={`flex cursor-pointer items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line transition hover:-translate-y-0.5 ${accent}`}
+    >
+      <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+      <div className="min-w-0">
+        <p className="truncate font-semibold">{f.name}</p>
+        <p className="text-xs text-faint">{note}</p>
+      </div>
+    </div>
+  );
+}
+
 function FriendsYes() {
   return (
     <Card as="article" className="p-6">
@@ -333,13 +371,12 @@ function FriendsYes() {
       <h2 className="mt-2 font-display text-2xl font-semibold">A tus amigos les gustó</h2>
       <div className="mt-5 space-y-3">
         {FRIENDS_YES.map((f) => (
-          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
-            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{f.name}</p>
-              <p className="text-xs text-faint">Recomendado por {f.n} amigos</p>
-            </div>
-          </div>
+          <CircleRow
+            key={f.name}
+            f={f}
+            accent="hover:ring-acid/35"
+            note={`Recomendado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
+          />
         ))}
       </div>
     </Card>
@@ -353,13 +390,12 @@ function FriendsNo() {
       <h2 className="mt-2 font-display text-2xl font-semibold">No les convenció</h2>
       <div className="mt-5 space-y-3">
         {FRIENDS_NO.map((f) => (
-          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
-            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{f.name}</p>
-              <p className="text-xs text-faint">Descartado por {f.n} amigos</p>
-            </div>
-          </div>
+          <CircleRow
+            key={f.name}
+            f={f}
+            accent="hover:ring-coral/35"
+            note={`Descartado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
+          />
         ))}
       </div>
     </Card>
