@@ -73,7 +73,7 @@ type Database interface {
 
 	GetReviewByID(reviewID int) (*Review, error)
 	AddReview(newReview Review) (*Review, error)
-	DeleteReviewByName(reviewName string) (bool, error)
+	DeleteReviewByID(reviewID int) (bool, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
 
@@ -464,16 +464,16 @@ func (db *SupabaseDB) AddReview(newReview Review) (*Review, error) {
 	return &insertedReview[0], nil
 }
 
-// DeleteReviewByName deletes the Review associated with the reviewName
+// DeleteReviewByID deletes the Review associated with the reviewID
 //
 // Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
-func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
+func (db *SupabaseDB) DeleteReviewByID(reviewID int) (bool, error) {
 
 	var deletedReview []Review
 
 	_, err := db.client.From("Review").
 		Delete("", "representation").
-		Eq("Name", reviewName).
+		Eq("id", strconv.Itoa(reviewID)).
 		ExecuteTo(&deletedReview)
 
 	if err != nil {
@@ -481,7 +481,7 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	}
 
 	if len(deletedReview) == 0 {
-		return false, fmt.Errorf("not foud any review with the name %s to delete", reviewName)
+		return false, fmt.Errorf("not foud any review with the id %d to delete", reviewID)
 	}
 
 	return true, nil

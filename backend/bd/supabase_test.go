@@ -561,7 +561,7 @@ func TestGetReviewByID(t *testing.T) {
 	}
 }
 
-func TestGetReviewByNameNotFound(t *testing.T) {
+func TestGetReviewByIDNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
 		MockGetReviewByID: func(id int) (*Review, error) {
 			return nil, errors.New("not found review with id -1")
@@ -657,19 +657,19 @@ func TestAddReviewNotUserInBD(t *testing.T) {
 }
 
 // DELETE REVIEW
-func TestDeleteReviewByName(t *testing.T) {
-	reviewNameToDelete := "testreview"
+func TestDeleteReviewByID(t *testing.T) {
+	reviewIDToDelete := -1
 
 	mockDB := &MockDatabase{
-		MockDeleteReviewByName: func(name string) (bool, error) {
-			if name != reviewNameToDelete {
-				return false, errors.New("wrong review name passed to mock")
+		MockDeleteReviewByID: func(id int) (bool, error) {
+			if id != reviewIDToDelete {
+				return false, errors.New("wrong review id passed to mock")
 			}
 			return true, nil
 		},
 	}
 
-	isDeleted, err := mockDB.DeleteReviewByName(reviewNameToDelete)
+	isDeleted, err := mockDB.DeleteReviewByID(reviewIDToDelete)
 
 	if err != nil {
 		t.Error(err)
@@ -680,14 +680,14 @@ func TestDeleteReviewByName(t *testing.T) {
 	}
 }
 
-func TestDeleteReviewByNameError(t *testing.T) {
+func TestDeleteReviewByIDError(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockDeleteReviewByName: func(name string) (bool, error) {
-			return false, errors.New("not found any review with the name sdjhbkdsbf to delete")
+		MockDeleteReviewByID: func(id int) (bool, error) {
+			return false, errors.New("not found any review with the id -20 to delete")
 		},
 	}
 
-	isDeleted, err := mockDB.DeleteReviewByName("sdjhbkdsbf")
+	isDeleted, err := mockDB.DeleteReviewByID(-20)
 
 	if err == nil {
 		t.Error("An error was expected but got nil")
