@@ -509,7 +509,7 @@ func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 		return nil, err
 	}
 
-	var usuariosSeguidos []User
+	var followedUsers []User
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Fan)
 		if err2 != nil {
@@ -517,12 +517,12 @@ func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 		}
 
 		if user != nil {
-			usuariosSeguidos = append(usuariosSeguidos, *user)
+			followedUsers = append(followedUsers, *user)
 		}
 
 	}
 
-	return usuariosSeguidos, nil
+	return followedUsers, nil
 }
 
 // GetAllInfluencers returns an array of User that are followed by the given UserID, or an error if it occurred
@@ -540,7 +540,7 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 		return nil, err
 	}
 
-	var usuariosSeguidos []User
+	var followedUsers []User
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Influencer)
 		if err2 != nil {
@@ -548,11 +548,11 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 		}
 
 		if user != nil {
-			usuariosSeguidos = append(usuariosSeguidos, *user)
+			followedUsers = append(followedUsers, *user)
 		}
 	}
 
-	return usuariosSeguidos, nil
+	return followedUsers, nil
 }
 
 // FollowSomeone adds a follow relation between two Users
