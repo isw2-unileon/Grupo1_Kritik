@@ -21,27 +21,9 @@ import (
 	"github.com/isw2-unileon/GRUPO1_KRITIK/backend/internal/middleware"
 )
 
-var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-
-// main
-func main() {
-	database, err := bd.NewSupabaseDB()
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
-
-	// Handlers
-	authH := handlers.NewAuthHandler(database)
-	reviewH := handlers.NewReviewHandler(database)
-
-	ctx := context.Background()
-
-	cfg := config.Load()
-
-	// Initialize auth package with JWT secret
-	auth.Initialize(cfg.JWTSecret)
-
-	gin.SetMode(cfg.GinMode)
+func newRouter(db bd.Database) *gin.Engine {
+	authH := handlers.NewAuthHandler(db)
+	reviewH := handlers.NewReviewHandler(db)
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -64,19 +46,39 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API!!!!"})
 	})
 
-	// Auth endpoints
 	authGroup := r.Group("/auth")
 	authGroup.POST("/register", authH.RegisterHandler)
 	authGroup.POST("/login", authH.LoginHandler)
 
-	// Review endpoints (protected: require a valid JWT)
 	api.POST("/reviews", middleware.RequireAuth(), reviewH.CreateReviewHandler)
 	api.GET("/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsHandler)
 	api.GET("/products", middleware.RequireAuth(), reviewH.SearchProductHandler)
-
 	api.GET("/fans", middleware.RequireAuth(), reviewH.GetAllFansHandler)
 	api.GET("/influencers", middleware.RequireAuth(), reviewH.GetAllInfluencersHandler)
 	api.POST("/follow", middleware.RequireAuth(), reviewH.FollowSomeoneHandler)
+
+	return r
+}
+
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+// main
+func main() {
+	database, err := bd.NewSupabaseDB()
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
+	ctx := context.Background()
+
+	cfg := config.Load()
+
+	// Initialize auth package with JWT secret
+	auth.Initialize(cfg.JWTSecret)
+
+	gin.SetMode(cfg.GinMode)
+
+	r := newRouter(database)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
