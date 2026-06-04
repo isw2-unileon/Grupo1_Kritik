@@ -23,14 +23,14 @@ export interface RegisterPayload {
 export interface Product {
   id: number;
   Name: string;
-  // el backend (GetProductByName, vía GET /api/products?q=) devuelve el producto
-  // completo; estos campos son opcionales para no romper otros usos de Product.
+  // the backend (GetProductByName, via GET /api/products?q=) returns the complete
+  // product; these fields are optional so as not to break other uses of Product.
   Type?: string;
   AverageGrade?: number;
   Description?: string;
   Release?: string;
   Genre?: string[];
-  Image?: string; // URL de la única foto del producto (columna Image, nullable)
+  Image?: string; // URL of the single product photo (Image column, nullable)
 }
 
 export interface NewReview {
@@ -110,9 +110,9 @@ export async function searchProducts(
     throw new Error("product search failed");
   }
 
-  // El backend devuelve un array cuando hay varias coincidencias, pero un único
-  // objeto cuando encuentra un producto por nombre exacto (y null/{} si no hay
-  // nada). Normalizamos siempre a Product[] para que el resto de la app no se rompa.
+  // The backend returns an array when there are multiple matches, but a single
+// object when it finds a product by exact name (and null/{} if there is
+// none). We always normalize to Product[] so the rest of the app doesn't break.
   const data: unknown = await res.json();
   if (Array.isArray(data)) return data as Product[];
   if (data && typeof data === "object" && "id" in data) return [data as Product];

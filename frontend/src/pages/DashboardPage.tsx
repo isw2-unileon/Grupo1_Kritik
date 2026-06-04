@@ -5,7 +5,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import { searchProducts, getReviews, type Product, type Review } from "@/services/api";
 
-/* ---------- datos de ejemplo (recomendaciones y círculo: aún no hay API) ---------- */
+/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -14,7 +14,7 @@ const CATS = {
 } as const;
 type CatKey = keyof typeof CATS;
 
-// etiqueta de tipo para las recomendaciones de ejemplo (al abrir su ficha)
+// type label for the example recommendations (when opening their profile)
 const CAT_TO_TYPE: Record<CatKey, string> = {
   game: "Videojuego",
   book: "Libro",
@@ -57,7 +57,7 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-/* ---------- piezas reutilizables ---------- */
+/* ---------- Reusable components ---------- */
 function Spinner() {
   return (
     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -107,8 +107,8 @@ function VerdictChip({ yes }: { yes: boolean }) {
   );
 }
 
-/* ---------- carrusel de portadas (se desliza solo) ---------- */
-// títulos de ejemplo para el carrusel (mientras el backend no dé portadas reales)
+/* ---------- Cover carousel (auto-scrolls) ---------- */
+// Sample titles for the carousel (until the backend provides real covers)
 const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Dune: Parte Dos", cat: "film" },
   { name: "The Last of Us", cat: "series" },
@@ -124,7 +124,7 @@ const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Elden Ring", cat: "game" },
 ];
 
-// baraja (Fisher-Yates): orden aleatorio en cada carga
+// Deck (Fisher-Yates): randomized order on every load
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -139,7 +139,7 @@ function shuffle<T>(arr: T[]): T[] {
 function FeaturedStrip() {
   const navigate = useNavigate();
   const items = useMemo(() => shuffle(FEATURED), []);
-  // duplicamos la lista para que el bucle sea continuo y sin saltos
+  // We duplicate the list so the loop is continuous and seamless.
   const loop = [...items, ...items];
 
   const open = (it: { name: string; cat: CatKey }) =>
@@ -157,7 +157,7 @@ function FeaturedStrip() {
 
   return (
     <div className="group relative overflow-hidden">
-      {/* bordes difuminados para que las tarjetas se fundan con el fondo */}
+      {/* Blurred edges so the cards blend with the background */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
@@ -177,7 +177,7 @@ function FeaturedStrip() {
   );
 }
 
-/* ---------- secciones del panel ---------- */
+/* ---------- sections of the panel ---------- */
 const RECO_CATS = [
   { id: "all", label: "Todas" },
   { id: "game", label: "Juegos" },
@@ -189,14 +189,14 @@ type RecoCatId = (typeof RECO_CATS)[number]["id"];
 
 function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
   const navigate = useNavigate();
-  const preview = typeof limit === "number"; // Inicio = vistazo; pestaña = completa
+  const preview = typeof limit === "number"; // Home = preview; tab = full view
   const [cat, setCat] = useState<RecoCatId>("all");
 
-  // vistazo: las primeras N. Completa: todas, con filtro por categoría.
+  // preview: the first N. Full view: all, with filter by category.
   const list = !preview && cat !== "all" ? RECOS.filter((r) => r.cat === cat) : RECOS;
   const visible = preview ? RECOS.slice(0, limit) : list;
 
-  // abre la ficha del título con sus datos (de ejemplo) vía router state
+  // opens the profile of the title with its data (example) via router state
   const open = (r: Reco) =>
     navigate(`/product/${encodeURIComponent(r.name)}`, {
       state: {
@@ -236,7 +236,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         )}
       </div>
 
-      {/* filtros por categoría: solo en la versión completa (pestaña) */}
+      {/* Category filters: only in the full version (tab) */}
       {!preview && (
         <div
           role="group"
@@ -314,7 +314,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         </div>
       )}
 
-      {/* vistazo: enlace al listado completo si hay más */}
+      {/* Preview: link to the full list if there are more */}
       {preview && onSeeAll && RECOS.length > (limit ?? 0) && (
         <button
           type="button"
@@ -328,7 +328,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
-// fila clicable del círculo: abre la ficha del producto (datos de ejemplo) vía router state
+// clickable row of the circle: opens the product profile (sample data) via router state
 function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
@@ -411,7 +411,7 @@ type SessionUser = {
   email?: string;
 } | null;
 
-/* Tarjeta compacta del perfil para la barra lateral de Inicio. */
+/* Compact profile card for the sidebar on the Home page. */
 function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }) {
   const initial = user?.name?.[0]?.toUpperCase() ?? "?";
   const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
@@ -440,9 +440,9 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
   );
 }
 
-/* Panel completo del perfil (pestaña Perfil): identidad + estadísticas reales
-   calculadas a partir de tus reseñas. Seguidores/seguidos llegarán cuando el
-   backend exponga los arrays following/followers. */
+/* Full profile panel (Profile tab): identity + real statistics
+   calculated from your reviews. Followers/following will be available when the
+   backend exposes the following/followers arrays. */
 function ProfilePanel({ user }: { user: SessionUser }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -454,7 +454,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
         const data = await getReviews();
         if (active) setReviews(data);
       } catch {
-        /* si falla, simplemente no mostramos estadísticas */
+        /* If it fails, we simply don't show statistics */
       } finally {
         if (active) setLoading(false);
       }
@@ -527,7 +527,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
   );
 }
 
-/* ---------- página ---------- */
+/* ---------- page ---------- */
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -535,7 +535,7 @@ export default function DashboardPage() {
   const tabsRef = useRef<HTMLElement>(null);
   const didMount = useRef(false);
 
-  // búsqueda en el catálogo (API real: searchProducts)
+  // Catalog search (real API: searchProducts)
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
@@ -566,8 +566,8 @@ export default function DashboardPage() {
     };
   }, [query]);
 
-  // al cambiar de pestaña, desplaza suavemente hasta las pestañas para que el
-  // contenido no "salte" cuando una pestaña ocupa menos alto que la anterior
+// When changing tabs, smoothly scroll to the tabs so the 
+// content doesn't "jump" if a tab is shorter than the previous one
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true;
@@ -583,11 +583,11 @@ export default function DashboardPage() {
       case "inicio":
         return (
           <div className="space-y-6">
-            {/* carrusel de portadas (solo en Inicio) */}
+            {/* featured carousel (only on Home) */}
             <FeaturedStrip />
-            {/* zona protagonista: recomendaciones (vistazo) */}
+            {/* main area: recommendations (preview) */}
             <Recommendations limit={3} onSeeAll={() => setActiveTab("recomendaciones")} />
-            {/* secundario: tus reseñas, tu círculo y tu perfil */}
+            {/* secondary: your reviews, your circle and your profile */}
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
@@ -618,7 +618,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* cabecera: saludo compacto + barra de acciones (buscar y publicar juntos) */}
+      {/* header: compact greeting + action bar (search and publish together) */}
       <div className="space-y-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
@@ -630,7 +630,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {/* buscador del catálogo */}
+          {/* catalog search */}
           <div className="relative flex-1">
             <svg
               className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
@@ -662,7 +662,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* publicar reseña (junto al buscador) */}
+          {/* publish review (next to the search bar) */}
           <Link
             to="/publish-review"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-acid px-5 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
@@ -670,13 +670,13 @@ export default function DashboardPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            Publicar reseña
+            Publish Review
           </Link>
         </div>
       </div>
 
       {isSearching ? (
-        /* ---------- resultados de búsqueda ---------- */
+        /* ---------- search results ---------- */
         <Card as="section" className="p-7 sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -738,7 +738,7 @@ export default function DashboardPage() {
           )}
         </Card>
       ) : (
-        /* ---------- vista normal con pestañas ---------- */
+        /* ---------- normal view with tabs ---------- */
         <>
           <nav
             ref={tabsRef}
