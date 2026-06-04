@@ -698,6 +698,61 @@ func TestDeleteReviewByIDError(t *testing.T) {
 	}
 }
 
+func TestGetReviewsByUserID(t *testing.T) {
+	userID := 3
+
+	mockDB := &MockDatabase{
+		MockGetReviewsByUserID: func(id int) ([]Review, error) {
+			return []Review{
+				{
+					ID:          1,
+					Recommended: true,
+					Description: "Great product!",
+					UserID:      id,
+					ProductID:   10,
+				},
+				{
+					ID:          2,
+					Recommended: false,
+					Description: "Not bad",
+					UserID:      id,
+					ProductID:   20,
+				},
+			}, nil
+		},
+	}
+
+	reviews, err := mockDB.GetReviewsByUserID(userID)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(reviews) != 2 {
+		t.Errorf("Function returned wrong number of reviews: got %d, want 2", len(reviews))
+	} else if reviews[0].UserID != userID {
+		t.Errorf("Expected reviews belonging to UserID %d, got %d", userID, reviews[0].UserID)
+	}
+}
+
+func TestGetReviewsByUserIDNotFound(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetReviewsByUserID: func(id int) ([]Review, error) {
+			return nil, errors.New("user with id 0 has no reviews")
+		},
+	}
+
+	reviews, err := mockDB.GetReviewsByUserID(0)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(reviews) != 0 {
+		t.Errorf("Function returned %d reviews, should be 0", len(reviews))
+	}
+}
+
 func TestGetReviewsByProductID(t *testing.T) {
 	productNameToSearch := 1
 
