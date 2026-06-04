@@ -72,10 +72,11 @@ type Database interface {
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
 
 	GetReviewByID(reviewID int) (*Review, error)
-	AddReview(newReview Review) (*Review, error)
-	DeleteReviewByID(reviewID int) (bool, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
+	AddReview(newReview Review) (*Review, error)
+	DeleteReviewByID(reviewID int) (bool, error)
+	UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error)
 
 	GetAllFans(influencerID int) ([]User, error)
 	GetAllInfluencers(fanID int) ([]User, error)
@@ -485,6 +486,31 @@ func (db *SupabaseDB) DeleteReviewByID(reviewID int) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// UpdateReviewInfo updates 1 or more parameters from the selected Review
+//
+// Recibes the id from the Review to edit and a Review with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited Review if the info was edited or nil and an error if it could not be edited
+func (db *SupabaseDB) UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error) {
+	var updatedReviews []Review
+
+	_, err := db.client.From("Review").
+		Update(newReviewInfo, "", "").
+		Eq("id", strconv.Itoa(reviewID)).
+		ExecuteTo(&updatedReviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the review: %w", err)
+	}
+
+	if len(updatedReviews) == 0 {
+		return nil, fmt.Errorf("not foud any product with the id %d to update", reviewID)
+	}
+
+	return &updatedReviews[0], nil
 }
 
 /*

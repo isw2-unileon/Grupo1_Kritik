@@ -754,6 +754,67 @@ func TestGetReviewsByProductIDInvalidProduct(t *testing.T) {
 	}
 }
 
+func TestEditReview(t *testing.T) {
+	reviewIDToEdit := 1
+	newReviewInfo := Review{
+		Recommended: false,
+		Description: "updated description",
+	}
+
+	mockDB := &MockDatabase{
+		MockUpdateReviewInfo: func(id int, info Review) (*Review, error) {
+			return &Review{
+				ID:          id,
+				Recommended: info.Recommended,
+				Description: info.Description,
+				UserID:      99,
+				ProductID:   55,
+			}, nil
+		},
+	}
+
+	updatedReview, err := mockDB.UpdateReviewInfo(reviewIDToEdit, newReviewInfo)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if updatedReview == nil {
+		t.Errorf("Updated review is nil")
+		return
+	}
+
+	if updatedReview.Description != newReviewInfo.Description {
+		t.Errorf("Updated description is '%s', but expected '%s'", updatedReview.Description, newReviewInfo.Description)
+	}
+
+	if updatedReview.Recommended != newReviewInfo.Recommended {
+		t.Errorf("Updated recommended is %v, but expected %v", updatedReview.Recommended, newReviewInfo.Recommended)
+	}
+}
+
+func TestEditReviewFailed(t *testing.T) {
+	newReviewInfo := Review{
+		Description: "should fail",
+	}
+
+	mockDB := &MockDatabase{
+		MockUpdateReviewInfo: func(id int, info Review) (*Review, error) {
+			return nil, errors.New("not found any review with the id -1 to update")
+		},
+	}
+
+	updatedReview, err := mockDB.UpdateReviewInfo(-1, newReviewInfo)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if updatedReview != nil {
+		t.Errorf("Updated review should be nil")
+	}
+}
+
 /*
  =========================================================
  Relation functions
