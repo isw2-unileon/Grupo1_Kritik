@@ -1,18 +1,21 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
+  mockSearchProducts: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
   login: mockLogin,
   register: vi.fn(),
   getReviews: mockGetReviews,
+  searchProducts: mockSearchProducts,
 }));
 
 function renderDashboard() {
@@ -60,5 +63,132 @@ describe("DashboardPage", () => {
     mockGetReviews.mockResolvedValue([]);
     renderDashboard();
     expect(screen.getByText("Tus últimas reseñas")).toBeInTheDocument();
+  });
+
+  describe("tabs", () => {
+    it("switches between tabs and shows distinct content", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const tabs = screen.getAllByText("Recomendaciones");
+      await user.click(tabs[0]!);
+      expect(screen.getByText("Recomendaciones para ti")).toBeInTheDocument();
+
+      await user.click(screen.getByText("Reseñas hechas"));
+      expect(screen.getByText("Tu actividad")).toBeInTheDocument();
+    });
+
+    it("renders profile panel when Perfil tab is active", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+
+      expect(screen.getByText("Tu perfil")).toBeInTheDocument();
+      expect(screen.getByText("Veredictos")).toBeInTheDocument();
+    });
+
+    it("loads and displays review stats in profile panel", async () => {
+      mockGetReviews.mockResolvedValue([
+        { id: 1, Description: "Great", Recommended: true, ProductName: "G1", UserName: "u" },
+        { id: 2, Description: "Ok", Recommended: true, ProductName: "G2", UserName: "u" },
+        { id: 3, Description: "Bad", Recommended: false, ProductName: "G3", UserName: "u" },
+      ]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+
+      await waitFor(() => {
+        expect(screen.getByText("3")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("67%")).toBeInTheDocument();
+    });
+  });
+
+  describe("search", () => {
+    beforeEach(() => {
+      mockSearchProducts.mockReset();
+    });
+
+    it("calls searchProducts on input with at least 2 characters", async () => {
+      mockSearchProducts.mockReturnValue(new Promise(() => {}));
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Ha");
+
+      await waitFor(() => {
+        expect(mockSearchProducts).toHaveBeenCalledWith("Ha", expect.any(AbortSignal));
+      }, { timeout: 1500 });
+    });
+
+    it("shows spinner while searching", async () => {
+      mockSearchProducts.mockReturnValue(new Promise(() => {}));
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Ha");
+
+      await waitFor(() => {
+        expect(document.querySelector(".animate-spin")).toBeInTheDocument();
+      }, { timeout: 1500 });
+    });
+
+    it("renders search results", async () => {
+      mockSearchProducts.mockResolvedValue([
+        { id: 1, Name: "Halo", Type: "game", AverageGrade: 85 },
+      ]);
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Hal");
+
+      await waitFor(() => {
+        expect(screen.getByText("Halo")).toBeInTheDocument();
+      }, { timeout: 1500 });
+    });
+
+    it("shows empty state when no results found", async () => {
+      mockSearchProducts.mockResolvedValue([]);
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Xyz");
+
+      await waitFor(() => {
+        expect(screen.getByText(/No se encontró ningún título/)).toBeInTheDocument();
+      }, { timeout: 1500 });
+    });
+
+    it("clears search on X button", async () => {
+      mockSearchProducts.mockResolvedValue([]);
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Ha");
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("Limpiar búsqueda")).toBeInTheDocument();
+      }, { timeout: 1500 });
+
+      await user.click(screen.getByLabelText("Limpiar búsqueda"));
+
+      expect(screen.getByLabelText("Buscar en el catálogo")).toHaveValue("");
+      expect(screen.getByText("Tu espacio de veredictos está listo")).toBeInTheDocument();
+    });
   });
 });
