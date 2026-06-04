@@ -72,10 +72,11 @@ type Database interface {
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
 
 	GetReviewByID(reviewID int) (*Review, error)
-	AddReview(newReview Review) (*Review, error)
-	DeleteReviewByName(reviewName string) (bool, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
+	AddReview(newReview Review) (*Review, error)
+	DeleteReviewByID(reviewID int) (bool, error)
+	UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error)
 
 	GetAllFans(influencerID int) ([]User, error)
 	GetAllInfluencers(fanID int) ([]User, error)
@@ -464,16 +465,16 @@ func (db *SupabaseDB) AddReview(newReview Review) (*Review, error) {
 	return &insertedReview[0], nil
 }
 
-// DeleteReviewByName deletes the Review associated with the reviewName
+// DeleteReviewByID deletes the Review associated with the reviewID
 //
 // Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
-func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
+func (db *SupabaseDB) DeleteReviewByID(reviewID int) (bool, error) {
 
 	var deletedReview []Review
 
 	_, err := db.client.From("Review").
 		Delete("", "representation").
-		Eq("Name", reviewName).
+		Eq("id", strconv.Itoa(reviewID)).
 		ExecuteTo(&deletedReview)
 
 	if err != nil {
@@ -481,10 +482,35 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	}
 
 	if len(deletedReview) == 0 {
-		return false, fmt.Errorf("not foud any review with the name %s to delete", reviewName)
+		return false, fmt.Errorf("not foud any review with the id %d to delete", reviewID)
 	}
 
 	return true, nil
+}
+
+// UpdateReviewInfo updates 1 or more parameters from the selected Review
+//
+// Recibes the id from the Review to edit and a Review with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited Review if the info was edited or nil and an error if it could not be edited
+func (db *SupabaseDB) UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error) {
+	var updatedReviews []Review
+
+	_, err := db.client.From("Review").
+		Update(newReviewInfo, "", "").
+		Eq("id", strconv.Itoa(reviewID)).
+		ExecuteTo(&updatedReviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the review: %w", err)
+	}
+
+	if len(updatedReviews) == 0 {
+		return nil, fmt.Errorf("not foud any product with the id %d to update", reviewID)
+	}
+
+	return &updatedReviews[0], nil
 }
 
 /*

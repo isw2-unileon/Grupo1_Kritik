@@ -33,6 +33,8 @@ func setupReviewsRouter(db bd.Database, withAuth bool) *gin.Engine {
 	}
 	protected.POST("/api/reviews", h.CreateReviewHandler)
 	protected.GET("/api/reviews", h.GetUserReviewsHandler)
+	protected.POST("/api/follow", h.FollowSomeoneHandler)
+	protected.POST("/api/unfollow", h.UnfollowSomeoneHandler)
 
 	return r
 }
@@ -218,5 +220,195 @@ func TestCreateReviewHandler_UserLookupFails(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "fan@test.com", UserName: "fan"}, nil
+		},
+		MockFollowSomeone: func(r bd.FollowerRelation) (*bd.FollowerRelation, error) {
+			return &bd.FollowerRelation{ID: 1, Fan: r.Fan, Influencer: r.Influencer}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var relation bd.FollowerRelation
+	if err := json.Unmarshal(w.Body.Bytes(), &relation); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if relation.ID != 1 || relation.Fan != 1 || relation.Influencer != 2 {
+		t.Errorf("unexpected relation: %+v", relation)
+	}
+}
+
+func TestFollowSomeoneHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_InvalidBody(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader([]byte("not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "fan@test.com", UserName: "fan"}, nil
+		},
+		MockFollowSomeone: func(r bd.FollowerRelation) (*bd.FollowerRelation, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_MissingField(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return true, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_InvalidBody(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader([]byte("not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return false, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_MissingField(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
