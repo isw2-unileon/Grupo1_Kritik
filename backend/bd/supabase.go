@@ -80,7 +80,7 @@ type Database interface {
 	GetAllFans(influencerID int) ([]User, error)
 	GetAllInfluencers(fanID int) ([]User, error)
 	FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error)
-	UnfollowSomeone(userID int) (bool, error)
+	UnfollowSomeone(fanID int, influencerID int) (bool, error)
 }
 
 // SupabaseDB client struct
