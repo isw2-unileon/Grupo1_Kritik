@@ -23,6 +23,14 @@ export interface RegisterPayload {
 export interface Product {
   id: number;
   Name: string;
+  // el backend (GetProductByName, vía GET /api/products?q=) devuelve el producto
+  // completo; estos campos son opcionales para no romper otros usos de Product.
+  Type?: string;
+  AverageGrade?: number;
+  Description?: string;
+  Release?: string;
+  Genre?: string[];
+  Image?: string; // URL de la única foto del producto (columna Image, nullable)
 }
 
 export interface NewReview {

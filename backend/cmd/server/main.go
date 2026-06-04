@@ -1,5 +1,5 @@
-// Comment to pass lint
 // Package main is the entry point for the backend server.
+// Comment to pass lint
 package main
 
 import (

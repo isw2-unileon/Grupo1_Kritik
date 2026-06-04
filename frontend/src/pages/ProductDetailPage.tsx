@@ -1,6 +1,8 @@
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import Card from "@/components/Card";
+import { searchProducts } from "@/services/api";
 
 /* ============================================================
    Página de detalle de un título — inspirada en Steam, con la
@@ -29,6 +31,7 @@ type DetailProduct = {
   Description?: string;
   Release?: string; // civil.Date llega como "YYYY-MM-DD"
   AverageGrade?: number;
+  Image?: string; // única foto del producto (puede venir vacía)
 };
 
 /* paletas de portada por tipo (mismas que el panel, para coherencia) */
@@ -130,36 +133,6 @@ function VerdictStamp({ recommended }: { recommended: boolean }) {
 }
 
 /* ---------- secciones ---------- */
-function GalleryStrip({ cat }: { cat: CatKey }) {
-  const grad = TYPE_STYLES[cat].grad;
-  return (
-    <Card as="section" className="p-6">
-      <div className="flex items-end justify-between">
-        <h2 className="font-display text-xl font-semibold">Galería</h2>
-        <span className="text-xs text-faint">muestras</span>
-      </div>
-      <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className={`relative h-32 w-56 shrink-0 overflow-hidden rounded-2xl border border-line bg-gradient-to-br ${grad}`}
-          >
-            <div
-              aria-hidden
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-                backgroundSize: "14px 14px",
-              }}
-            />
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 function AboutCard({ description }: { description?: string }) {
   return (
     <Card as="section" className="p-7 sm:p-8">
@@ -212,6 +185,9 @@ function RecommendationCard({
           <span className="h-2 w-2 rounded-full bg-coral" />
         </span>
       </div>
+      <p className="mt-4 border-t border-line pt-4 text-xs text-faint">
+        Cálculo de ejemplo — será real cuando haya reseñas por producto.
+      </p>
     </Card>
   );
 }
@@ -272,9 +248,13 @@ function CommunityReviews({ reviews }: { reviews: CommunityReview[] }) {
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">La comunidad opina</p>
           <h2 className="mt-2 font-display text-3xl font-semibold">Veredictos</h2>
+          <p className="mt-2 max-w-md text-sm text-faint">
+            Ejemplo por ahora — aquí aparecerán las reseñas reales cuando el backend
+            las exponga por producto.
+          </p>
         </div>
-        <span className="rounded-full border border-line bg-ink/50 px-3 py-1 text-xs text-faint">
-          datos de ejemplo
+        <span className="shrink-0 rounded-full border border-acid/30 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
+          Próximamente
         </span>
       </div>
 
@@ -304,18 +284,66 @@ function CommunityReviews({ reviews }: { reviews: CommunityReview[] }) {
 
 /* ---------- página ---------- */
 export default function ProductDetailPage() {
+  const { id } = useParams();
   const location = useLocation();
-  const product = (location.state as { product?: DetailProduct } | null)?.product;
+  const stateProduct = (location.state as { product?: DetailProduct } | null)?.product;
 
-  // Sin datos (recarga o enlace directo): el backend no tiene GET /api/products/:id,
-  // así que no podemos recuperarlo por id. Invitamos a abrirlo desde el catálogo.
-  if (!product) {
+  // El nombre llega por el state (al pulsar una tarjeta) o por la URL (/product/<nombre>).
+  const name = stateProduct?.Name ?? (id ? decodeURIComponent(id) : "");
+
+  const [product, setProduct] = useState<DetailProduct | null>(stateProduct ?? null);
+  const [loading, setLoading] = useState(!stateProduct);
+  const [notFound, setNotFound] = useState(false);
+
+  // SIN TOCAR EL BACKEND: pedimos el producto REAL por nombre con el endpoint que ya
+  // existe (GET /api/products?q=). El producto del state, si lo hay, pinta al instante;
+  // cuando vuelve searchProducts lo reemplazamos por los datos reales de la BD.
+  useEffect(() => {
+    if (!name) {
+      if (!stateProduct) setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const results = await searchProducts(name, controller.signal);
+        const match = results.find((p) => p.Name === name) ?? results[0];
+        if (match) {
+          setProduct(match);
+          setNotFound(false);
+        } else if (!stateProduct) {
+          setNotFound(true);
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // No está en el catálogo: si veníamos con datos del state, los mantenemos.
+        if (!stateProduct) setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
+
+  if (loading && !product) {
     return (
       <div className="mx-auto max-w-xl py-20 text-center">
         <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Título</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold">Abre un título desde el catálogo</h1>
+        <p className="mt-3 text-dim">Cargando ficha…</p>
+      </div>
+    );
+  }
+
+  // Sin datos: no existe en el catálogo o el enlace directo no es válido.
+  if (notFound || !product) {
+    return (
+      <div className="mx-auto max-w-xl py-20 text-center">
+        <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Título</p>
+        <h1 className="mt-3 font-display text-4xl font-semibold">No encontramos este título</h1>
         <p className="mt-3 text-dim">
-          Esta ficha se abre al pulsar un título en tu panel. Si has recargado la página, vuelve y
+          Puede que no exista en el catálogo o que el enlace no sea válido. Vuelve al panel y
           elígelo de nuevo.
         </p>
         <Link
@@ -331,6 +359,7 @@ export default function ProductDetailPage() {
   const cat = catFromType(product.Type);
   const style = TYPE_STYLES[cat];
 
+  // Reseñas por producto: pendiente de backend. De ejemplo por ahora.
   const reviews = SAMPLE_REVIEWS;
   const total = reviews.length;
   const positives = reviews.filter((r) => r.verdict).length;
@@ -354,15 +383,28 @@ export default function ProductDetailPage() {
 
       {/* HERO / portada */}
       <section className={`relative overflow-hidden rounded-[2rem] border border-line bg-gradient-to-br ${style.grad}`}>
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-            backgroundSize: "16px 16px",
-          }}
-        />
+        {product.Image ? (
+          // única foto del producto; si la URL falla, la ocultamos y queda el degradado
+          <img
+            src={product.Image}
+            alt={product.Name}
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
+              backgroundSize: "16px 16px",
+            }}
+          />
+        )}
         <div
           aria-hidden
           className="absolute inset-0"
@@ -394,7 +436,6 @@ export default function ProductDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
         {/* columna principal */}
         <div className="space-y-6">
-          <GalleryStrip cat={cat} />
           <AboutCard description={product.Description} />
           <CommunityReviews reviews={reviews} />
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { isEmpty } from "@/utils/validation";
 import { searchProducts, createReview, type Product } from "@/services/api";
 import Card from "@/components/Card";
@@ -31,6 +31,7 @@ function Spinner() {
 
 export default function PublishReviewPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // estado de búsqueda
   const [productQuery, setProductQuery] = useState("");
@@ -81,6 +82,16 @@ export default function PublishReviewPage() {
       if (failTimer.current !== null) window.clearTimeout(failTimer.current);
     };
   }, []);
+
+  // preselección: si llegamos desde una tarjeta (recomendación o resultado de
+  // búsqueda) con un producto en el router state, lo dejamos ya elegido.
+  useEffect(() => {
+    const preset = (location.state as { product?: Product } | null)?.product;
+    if (preset && preset.id != null && preset.Name) {
+      setSelected(preset);
+      setProductQuery(preset.Name);
+    }
+  }, [location.state]);
 
   const handleProductChange = (value: string) => {
     setProductQuery(value);

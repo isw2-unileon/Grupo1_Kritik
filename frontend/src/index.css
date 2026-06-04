@@ -5,8 +5,6 @@
 
 /* ============================================================
    Sistema de diseño Kritik — tokens compartidos por toda la app.
-   Definir aquí genera utilidades automáticas en Tailwind v4:
-   bg-ink, text-cream, text-acid, border-line, font-display, etc.
    ============================================================ */
 @theme {
   /* superficies cálidas */
@@ -28,7 +26,7 @@
   /* línea/borde translúcido */
   --color-line: rgba(246, 240, 228, 0.1);
 
-  /* tipografías (sobreescribe la sans por defecto en toda la app) */
+  /* tipografías */
   --font-sans: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
@@ -38,16 +36,37 @@
     font-family: var(--font-sans);
     color: var(--color-cream);
     background-color: var(--color-ink);
-    /* atmósfera cálida global: el arte de portada y el lime resaltan sobre el negro */
-    background-image:
-      radial-gradient(1100px 520px at 78% -8%, rgba(203, 242, 78, 0.1), transparent 60%),
-      radial-gradient(900px 520px at 8% 102%, rgba(255, 90, 71, 0.07), transparent 60%);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  /* grano de película sutil sobre todo el fondo */
+  /* ----------------------------------------------------------
+     Fondo animado: "auroras" cálidas a la deriva DETRÁS del
+     contenido (z-index -1). Se ve por los huecos entre tarjetas
+     y da sensación de fondo vivo sin distraer.
+     ---------------------------------------------------------- */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: -25%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 38% at 22% 28%, rgba(203, 242, 78, 0.13), transparent 62%),
+      radial-gradient(34% 34% at 80% 72%, rgba(255, 90, 71, 0.10), transparent 62%),
+      radial-gradient(30% 30% at 66% 16%, rgba(159, 194, 46, 0.08), transparent 62%);
+    filter: blur(50px);
+    animation: kritik-aurora 26s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  @keyframes kritik-aurora {
+    0%   { transform: translate3d(0%, 0%, 0) scale(1); }
+    50%  { transform: translate3d(3%, -3%, 0) scale(1.1); }
+    100% { transform: translate3d(-3%, 2%, 0) scale(1.05); }
+  }
+
+  /* grano de película sutil POR ENCIMA del fondo */
   body::before {
     content: "";
     position: fixed;
@@ -58,7 +77,9 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
+  /* accesibilidad: menos movimiento → fondo quieto (sin desaparecer) */
   @media (prefers-reduced-motion: reduce) {
+    body::after { animation: none; }
     * {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
@@ -78,4 +99,35 @@
 }
 ::-webkit-scrollbar-track {
   background: var(--color-ink);
+}
+
+/* el navegador pinta de azul/amarillo los campos autocompletados (login/registro);
+   forzamos que mantengan el fondo (ink) y el texto (cream) del tema */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-cream);
+  caret-color: var(--color-cream);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-ink) inset;
+  box-shadow: 0 0 0 1000px var(--color-ink) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* carrusel de portadas del dashboard (desplazamiento horizontal continuo) */
+@keyframes kritik-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* foco visible para navegación con teclado (anillo del tema) */
+:focus-visible {
+  outline: 2px solid var(--color-acid);
+  outline-offset: 2px;
+}
+/* los campos ya muestran su propio foco (borde + halo): evitamos doble anillo */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }

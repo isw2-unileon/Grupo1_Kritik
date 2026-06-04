@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
-import { searchProducts, type Product } from "@/services/api";
+import { searchProducts, getReviews, type Product, type Review } from "@/services/api";
 
 /* ---------- datos de ejemplo (recomendaciones y círculo: aún no hay API) ---------- */
 const CATS = {
@@ -30,6 +30,14 @@ const RECOS: Reco[] = [
   { name: "Tunic", cat: "game", verdict: true, who: "@dani", text: "Un secreto detrás de cada esquina." },
   { name: "Poor Things", cat: "film", verdict: false, who: "@sara", text: "Visualmente bella, narrativamente fría." },
   { name: "Pachinko", cat: "book", verdict: true, who: "@marco", text: "Generaciones que se te quedan dentro." },
+  { name: "Hollow Knight", cat: "game", verdict: true, who: "@nuria", text: "Atmósfera y control impecables." },
+  { name: "Starfall VII", cat: "game", verdict: false, who: "@bruno", text: "Bonito, pero repetitivo a las pocas horas." },
+  { name: "Klara y el Sol", cat: "book", verdict: true, who: "@elena", text: "Ternura y melancolía a partes iguales." },
+  { name: "La carretera", cat: "book", verdict: false, who: "@hugo", text: "Brillante, pero durísima de releer." },
+  { name: "Shogun", cat: "series", verdict: true, who: "@aitor", text: "Producción enorme y muy bien contada." },
+  { name: "Última señal", cat: "series", verdict: false, who: "@vera", text: "Empieza fuerte y se desinfla al final." },
+  { name: "Oppenheimer", cat: "film", verdict: true, who: "@pablo", text: "Tres horas que se pasan volando." },
+  { name: "Dune: Parte Dos", cat: "film", verdict: true, who: "@noa", text: "Espectáculo y fondo, por fin juntos." },
 ];
 const FRIENDS_YES: Circle[] = [
   { name: "Shogun", cat: "series", n: 4 },
@@ -99,9 +107,95 @@ function VerdictChip({ yes }: { yes: boolean }) {
   );
 }
 
-/* ---------- secciones del panel ---------- */
-function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
+/* ---------- carrusel de portadas (se desliza solo) ---------- */
+// títulos de ejemplo para el carrusel (mientras el backend no dé portadas reales)
+const FEATURED: { name: string; cat: CatKey }[] = [
+  { name: "Dune: Parte Dos", cat: "film" },
+  { name: "The Last of Us", cat: "series" },
+  { name: "Tunic", cat: "game" },
+  { name: "Klara y el Sol", cat: "book" },
+  { name: "Severance", cat: "series" },
+  { name: "Oppenheimer", cat: "film" },
+  { name: "Pachinko", cat: "book" },
+  { name: "Hollow Knight", cat: "game" },
+  { name: "Shogun", cat: "series" },
+  { name: "Poor Things", cat: "film" },
+  { name: "La carretera", cat: "book" },
+  { name: "Elden Ring", cat: "game" },
+];
+
+// baraja (Fisher-Yates): orden aleatorio en cada carga
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]!;
+    a[i] = a[j]!;
+    a[j] = tmp;
+  }
+  return a;
+}
+
+function FeaturedStrip() {
   const navigate = useNavigate();
+  const items = useMemo(() => shuffle(FEATURED), []);
+  // duplicamos la lista para que el bucle sea continuo y sin saltos
+  const loop = [...items, ...items];
+
+  const open = (it: { name: string; cat: CatKey }) =>
+    navigate(`/product/${encodeURIComponent(it.name)}`, {
+      state: {
+        product: {
+          id: it.name,
+          Name: it.name,
+          Type: CAT_TO_TYPE[it.cat],
+          Genre: [] as string[],
+          Description: "",
+        },
+      },
+    });
+
+  return (
+    <div className="group relative overflow-hidden">
+      {/* bordes difuminados para que las tarjetas se fundan con el fondo */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
+      <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
+        {loop.map((it, i) => (
+          <button
+            key={`${it.name}-${i}`}
+            type="button"
+            onClick={() => open(it)}
+            aria-label={`Ver ${it.name}`}
+            className="mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:-translate-y-1 hover:border-acid/40"
+          >
+            <Cover cat={it.cat} name={it.name} className="aspect-[2/3]" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- secciones del panel ---------- */
+const RECO_CATS = [
+  { id: "all", label: "Todas" },
+  { id: "game", label: "Juegos" },
+  { id: "book", label: "Libros" },
+  { id: "series", label: "Series" },
+  { id: "film", label: "Películas" },
+] as const;
+type RecoCatId = (typeof RECO_CATS)[number]["id"];
+
+function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
+  const navigate = useNavigate();
+  const preview = typeof limit === "number"; // Inicio = vistazo; pestaña = completa
+  const [cat, setCat] = useState<RecoCatId>("all");
+
+  // vistazo: las primeras N. Completa: todas, con filtro por categoría.
+  const list = !preview && cat !== "all" ? RECOS.filter((r) => r.cat === cat) : RECOS;
+  const visible = preview ? RECOS.slice(0, limit) : list;
+
   // abre la ficha del título con sus datos (de ejemplo) vía router state
   const open = (r: Reco) =>
     navigate(`/product/${encodeURIComponent(r.name)}`, {
@@ -117,49 +211,158 @@ function Recommendations({ onSeeAll }: { onSeeAll?: () => void }) {
     });
 
   return (
-    <Card as="section" className="p-7 sm:p-8">
+    <Card as="section" className={`p-7 sm:p-8 ${preview ? "ring-1 ring-inset ring-acid/30" : ""}`}>
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Recomendaciones</p>
-          <h2 className="mt-2 font-display text-3xl font-semibold">Sugerencias para ti</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold">
+            {preview ? "Sugerencias para ti" : "Recomendaciones para ti"}
+          </h2>
         </div>
-        {onSeeAll && (
-          <button
-            type="button"
-            onClick={onSeeAll}
-            className="hidden text-sm text-faint transition hover:text-cream sm:block"
-          >
-            Ver todo →
-          </button>
+        {preview ? (
+          onSeeAll && (
+            <button
+              type="button"
+              onClick={onSeeAll}
+              className="hidden text-sm text-faint transition hover:text-cream sm:block"
+            >
+              Ver todas →
+            </button>
+          )
+        ) : (
+          <span className="self-start rounded-full border border-line bg-ink/50 px-3 py-1 text-sm font-semibold text-dim sm:self-auto">
+            {visible.length} {visible.length === 1 ? "título" : "títulos"}
+          </span>
         )}
       </div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {RECOS.map((r) => (
-          <article
-            key={r.name}
-            role="button"
-            tabIndex={0}
-            onClick={() => open(r)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                open(r);
+
+      {/* filtros por categoría: solo en la versión completa (pestaña) */}
+      {!preview && (
+        <div
+          role="group"
+          aria-label="Filtrar por categoría"
+          className="mt-6 flex flex-wrap items-center gap-1"
+        >
+          {RECO_CATS.map((cc) => (
+            <button
+              key={cc.id}
+              type="button"
+              onClick={() => setCat(cc.id)}
+              aria-pressed={cat === cc.id}
+              className={
+                cat === cc.id
+                  ? "rounded-full bg-acid/15 px-3 py-1 text-xs font-bold text-acid ring-1 ring-acid/30"
+                  : "rounded-full px-3 py-1 text-xs font-semibold text-faint transition hover:text-cream"
               }
-            }}
-            className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
-          >
-            <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
-            <div className="p-4">
-              <div className="flex items-center justify-between gap-2">
-                <VerdictChip yes={r.verdict} />
-                <span className="text-xs text-faint">{r.who}</span>
+            >
+              {cc.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <div className="mt-6 rounded-[1.75rem] border border-dashed border-line bg-ink/40 p-8 text-center">
+          <p className="text-dim">No hay recomendaciones en esta categoría todavía.</p>
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map((r) => (
+            <article
+              key={r.name}
+              role="button"
+              tabIndex={0}
+              onClick={() => open(r)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  open(r);
+                }
+              }}
+              className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
+            >
+              <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
+              <div className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <VerdictChip yes={r.verdict} />
+                  <span className="text-xs text-faint">{r.who}</span>
+                </div>
+                <p className="mt-3 text-sm text-dim">"{r.text}"</p>
+                <Link
+                  to="/publish-review"
+                  state={{
+                    product: {
+                      id: r.name,
+                      Name: r.name,
+                      Type: CAT_TO_TYPE[r.cat],
+                      Genre: [] as string[],
+                      Description: r.text,
+                    },
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-cream transition hover:border-acid/40 hover:bg-cream/5"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  Reseñar
+                </Link>
               </div>
-              <p className="mt-3 text-sm text-dim">"{r.text}"</p>
-            </div>
-          </article>
-        ))}
-      </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {/* vistazo: enlace al listado completo si hay más */}
+      {preview && onSeeAll && RECOS.length > (limit ?? 0) && (
+        <button
+          type="button"
+          onClick={onSeeAll}
+          className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-3 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+        >
+          Ver todas las recomendaciones ({RECOS.length}) →
+        </button>
+      )}
     </Card>
+  );
+}
+
+// fila clicable del círculo: abre la ficha del producto (datos de ejemplo) vía router state
+function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
+  const navigate = useNavigate();
+  const open = () =>
+    navigate(`/product/${encodeURIComponent(f.name)}`, {
+      state: {
+        product: {
+          id: f.name,
+          Name: f.name,
+          Type: CAT_TO_TYPE[f.cat],
+          Genre: [] as string[],
+          Description: "",
+        },
+      },
+    });
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          open();
+        }
+      }}
+      className={`flex cursor-pointer items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line transition hover:-translate-y-0.5 ${accent}`}
+    >
+      <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+      <div className="min-w-0">
+        <p className="truncate font-semibold">{f.name}</p>
+        <p className="text-xs text-faint">{note}</p>
+      </div>
+    </div>
   );
 }
 
@@ -170,13 +373,12 @@ function FriendsYes() {
       <h2 className="mt-2 font-display text-2xl font-semibold">A tus amigos les gustó</h2>
       <div className="mt-5 space-y-3">
         {FRIENDS_YES.map((f) => (
-          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
-            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{f.name}</p>
-              <p className="text-xs text-faint">Recomendado por {f.n} amigos</p>
-            </div>
-          </div>
+          <CircleRow
+            key={f.name}
+            f={f}
+            accent="hover:ring-acid/35"
+            note={`Recomendado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
+          />
         ))}
       </div>
     </Card>
@@ -190,37 +392,137 @@ function FriendsNo() {
       <h2 className="mt-2 font-display text-2xl font-semibold">No les convenció</h2>
       <div className="mt-5 space-y-3">
         {FRIENDS_NO.map((f) => (
-          <div key={f.name} className="flex items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line">
-            <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="min-w-0">
-              <p className="truncate font-semibold">{f.name}</p>
-              <p className="text-xs text-faint">Descartado por {f.n} amigos</p>
-            </div>
-          </div>
+          <CircleRow
+            key={f.name}
+            f={f}
+            accent="hover:ring-coral/35"
+            note={`Descartado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
+          />
         ))}
       </div>
     </Card>
   );
 }
 
-function Profile() {
+type SessionUser = {
+  name?: string;
+  surname?: string;
+  user_name?: string;
+  email?: string;
+} | null;
+
+/* Tarjeta compacta del perfil para la barra lateral de Inicio. */
+function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }) {
+  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
+  const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
   return (
     <Card as="article" className="p-6">
-      <h2 className="font-display text-xl font-semibold">Resumen rápido</h2>
-      <dl className="mt-4 space-y-3 text-sm">
-        <div className="flex items-center justify-between">
-          <dt className="text-dim">Perfil</dt>
-          <dd className="font-semibold">Crítica activa</dd>
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
+      <div className="mt-4 flex items-center gap-3">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
+          {initial}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-semibold text-cream">
+            {fullName || "Tu perfil"}
+          </p>
+          <p className="truncate text-sm text-faint">@{user?.user_name ?? "usuario"}</p>
         </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-dim">Veredictos totales</dt>
-          <dd className="font-display text-lg font-bold text-acid">47</dd>
+      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+      >
+        Ver perfil →
+      </button>
+    </Card>
+  );
+}
+
+/* Panel completo del perfil (pestaña Perfil): identidad + estadísticas reales
+   calculadas a partir de tus reseñas. Seguidores/seguidos llegarán cuando el
+   backend exponga los arrays following/followers. */
+function ProfilePanel({ user }: { user: SessionUser }) {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await getReviews();
+        if (active) setReviews(data);
+      } catch {
+        /* si falla, simplemente no mostramos estadísticas */
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const total = reviews.length;
+  const yes = reviews.filter((r) => r.Recommended).length;
+  const pct = total ? Math.round((yes / total) * 100) : 0;
+  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
+  const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
+
+  return (
+    <Card as="article" className="p-7 sm:p-8">
+      <div className="flex items-center gap-4">
+        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
+          {initial}
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
+          <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
+            {fullName || "Tu perfil"}
+          </h2>
+          <p className="truncate text-sm text-faint">@{user?.user_name ?? "usuario"}</p>
         </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-dim">% recomendado</dt>
-          <dd className="font-display text-lg font-bold">72%</dd>
+      </div>
+
+      <dl className="mt-6 space-y-3 border-t border-line pt-6 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-dim">Correo</dt>
+          <dd className="truncate font-medium text-cream">{user?.email ?? "—"}</dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-dim">Usuario</dt>
+          <dd className="font-medium text-cream">@{user?.user_name ?? "—"}</dd>
         </div>
       </dl>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-line bg-ink/40 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-faint">Veredictos</p>
+          <p className="mt-1 font-display text-3xl font-bold text-acid">{loading ? "…" : total}</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-ink/40 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-faint">Recomienda</p>
+          <p className="mt-1 font-display text-3xl font-bold text-cream">{loading ? "…" : `${pct}%`}</p>
+        </div>
+      </div>
+
+      {!loading && total > 0 && (
+        <div className="mt-4">
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-ink">
+            <div className="bg-acid" style={{ width: `${pct}%` }} />
+            <div className="bg-coral" style={{ width: `${100 - pct}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-faint">
+            <span>{yes} sí</span>
+            <span>{total - yes} no</span>
+          </div>
+        </div>
+      )}
+
+      <p className="mt-6 border-t border-line pt-6 text-xs text-faint">
+        Seguidores y seguidos aparecerán aquí cuando conectemos el backend de seguir.
+      </p>
     </Card>
   );
 }
@@ -230,6 +532,8 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("inicio");
+  const tabsRef = useRef<HTMLElement>(null);
+  const didMount = useRef(false);
 
   // búsqueda en el catálogo (API real: searchProducts)
   const [query, setQuery] = useState("");
@@ -262,22 +566,36 @@ export default function DashboardPage() {
     };
   }, [query]);
 
+  // al cambiar de pestaña, desplaza suavemente hasta las pestañas para que el
+  // contenido no "salte" cuando una pestaña ocupa menos alto que la anterior
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+    tabsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [activeTab]);
+
   const isSearching = query.trim().length >= 2;
 
   const renderTab = () => {
     switch (activeTab) {
       case "inicio":
         return (
-          <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-            <div className="space-y-6">
-              <Recommendations onSeeAll={() => setActiveTab("recomendaciones")} />
+          <div className="space-y-6">
+            {/* carrusel de portadas (solo en Inicio) */}
+            <FeaturedStrip />
+            {/* zona protagonista: recomendaciones (vistazo) */}
+            <Recommendations limit={3} onSeeAll={() => setActiveTab("recomendaciones")} />
+            {/* secundario: tus reseñas, tu círculo y tu perfil */}
+            <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
+              <aside className="space-y-6">
+                <FriendsYes />
+                <FriendsNo />
+                <ProfileCard user={user} onOpen={() => setActiveTab("perfil")} />
+              </aside>
             </div>
-            <aside className="space-y-6">
-              <FriendsYes />
-              <FriendsNo />
-              <Profile />
-            </aside>
           </div>
         );
       case "recomendaciones":
@@ -292,7 +610,7 @@ export default function DashboardPage() {
           </div>
         );
       case "perfil":
-        return <div className="max-w-md"><Profile /></div>;
+        return <div className="max-w-2xl"><ProfilePanel user={user} /></div>;
       default:
         return null;
     }
@@ -300,23 +618,54 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* bienvenida */}
-      <Card as="section" className="p-7 sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
-              Hola{user?.name ? `, ${user.name}` : ""}
-            </p>
-            <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl">
-              Tu espacio de veredictos está listo
-            </h1>
-            <p className="mt-3 max-w-xl text-dim">
-              Recomendaciones para ti, lo que valora tu círculo y un atajo para publicar.
-            </p>
+      {/* cabecera: saludo compacto + barra de acciones (buscar y publicar juntos) */}
+      <div className="space-y-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
+            Hola{user?.name ? `, ${user.name}` : ""}
+          </p>
+          <h1 className="mt-1 font-display text-xl font-semibold tracking-tight sm:text-2xl">
+            Tu espacio de veredictos está listo
+          </h1>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* buscador del catálogo */}
+          <div className="relative flex-1">
+            <svg
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Busca una serie, película, videojuego o libro…"
+              autoComplete="off"
+              aria-label="Buscar en el catálogo"
+              className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-11 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
+
+          {/* publicar reseña (junto al buscador) */}
           <Link
             to="/publish-review"
-            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-acid px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e] lg:self-auto"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-acid px-5 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
@@ -324,38 +673,6 @@ export default function DashboardPage() {
             Publicar reseña
           </Link>
         </div>
-      </Card>
-
-      {/* buscador del catálogo */}
-      <div className="relative">
-        <svg
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
-          width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-        </svg>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Busca una serie, película, videojuego o libro…"
-          autoComplete="off"
-          aria-label="Buscar en el catálogo"
-          className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-11 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)]"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            aria-label="Limpiar búsqueda"
-            className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        )}
       </div>
 
       {isSearching ? (
@@ -424,8 +741,9 @@ export default function DashboardPage() {
         /* ---------- vista normal con pestañas ---------- */
         <>
           <nav
+            ref={tabsRef}
             aria-label="Secciones del panel"
-            className="flex flex-wrap items-center gap-2 border-b border-line pb-4"
+            className="scroll-mt-24 flex items-center gap-2 overflow-x-auto border-b border-line pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {TABS.map((t) => (
               <button
@@ -433,11 +751,11 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setActiveTab(t.id)}
                 aria-current={activeTab === t.id ? "page" : undefined}
-                className={
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition ${
                   activeTab === t.id
-                    ? "rounded-full bg-acid px-4 py-1.5 text-sm font-semibold text-ink"
-                    : "rounded-full px-4 py-1.5 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream"
-                }
+                    ? "bg-acid font-semibold text-ink"
+                    : "font-medium text-dim hover:bg-cream/5 hover:text-cream"
+                }`}
               >
                 {t.label}
               </button>

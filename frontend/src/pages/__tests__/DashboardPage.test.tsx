@@ -54,7 +54,6 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
     expect(screen.getByText("A tus amigos les gustó")).toBeInTheDocument();
     expect(screen.getByText("No les convenció")).toBeInTheDocument();
-    expect(screen.getByText("Resumen rápido")).toBeInTheDocument();
   });
 
   it("renders the latest reviews preview", () => {
