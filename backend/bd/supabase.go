@@ -560,7 +560,7 @@ func (db *SupabaseDB) FollowSomeone(newRelation FollowerRelation) (*FollowerRela
 		ExecuteTo(&insertedRelation)
 
 	if err != nil {
-		return nil, fmt.Errorf("error inserting review:\n%w", err)
+		return nil, fmt.Errorf("error inserting relation:\n%w", err)
 	}
 
 	return &insertedRelation[0], nil
