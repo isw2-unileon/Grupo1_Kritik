@@ -526,52 +526,6 @@ func TestEditProductInfoError(t *testing.T) {
 	}
 }
 
-func TestGetFriendsByUserID(t *testing.T) {
-	idToSearch := 1
-
-	mockDB := &MockDatabase{
-		MockGetFriendsByUserID: func(id int) ([]User, error) {
-			return []User{
-				{ID: 2, UserName: "friend1", Email: "friend1@test.com"},
-				{ID: 3, UserName: "friend2", Email: "friend2@test.com"},
-			}, nil
-		},
-	}
-
-	friends, err := mockDB.GetFriendsByUserID(idToSearch)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	switch {
-	case len(friends) != 2:
-		t.Errorf("Expected 2 friends, got %d", len(friends))
-	case friends[0].ID != 2:
-		t.Errorf("Expected first friend ID 2, got %d", friends[0].ID)
-	case friends[1].ID != 3:
-		t.Errorf("Expected second friend ID 3, got %d", friends[1].ID)
-	}
-}
-
-func TestGetFriendsByUserIDNotFound(t *testing.T) {
-	mockDB := &MockDatabase{
-		MockGetFriendsByUserID: func(id int) ([]User, error) {
-			return nil, errors.New("not found any relation with user id -1")
-		},
-	}
-
-	friends, err := mockDB.GetFriendsByUserID(-1)
-
-	if err == nil {
-		t.Error("An error was expected but got nil")
-	}
-
-	if len(friends) != 0 {
-		t.Errorf("Expected 0 friends, got %d", len(friends))
-	}
-}
-
 /*
  =========================================================
  Review functions
@@ -860,15 +814,16 @@ func TestGetReviewsByProductIDInvalidProduct(t *testing.T) {
  =========================================================
 */
 
+// GET RELATION
 func TestGetRelationByUserID(t *testing.T) {
 	idToSearch := 1
 
 	mockDB := &MockDatabase{
-		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
-			return &FriendRelation{
+		MockGetRelationByUserID: func(id int) (*Follower, error) {
+			return &Follower{
 				ID:      1,
-				Friend1: id,
-				Friend2: 2,
+				User:    id,
+				Follows: 2,
 			}, nil
 		},
 	}
@@ -881,14 +836,14 @@ func TestGetRelationByUserID(t *testing.T) {
 
 	if relation == nil {
 		t.Errorf("Relation is nil")
-	} else if relation.Friend1 != idToSearch {
-		t.Errorf("Expected Friend1 %d, got %d", idToSearch, relation.Friend1)
+	} else if relation.User != idToSearch {
+		t.Errorf("Expected User %d, got %d", idToSearch, relation.User)
 	}
 }
 
 func TestGetRelationByUserIDNotFound(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
+		MockGetRelationByUserID: func(id int) (*Follower, error) {
 			return nil, errors.New("not found relation with user id -1")
 		},
 	}
@@ -906,13 +861,13 @@ func TestGetRelationByUserIDNotFound(t *testing.T) {
 
 // ADD RELATION
 func TestAddRelation(t *testing.T) {
-	testRelationToAdd := FriendRelation{
-		Friend1: 1,
-		Friend2: 2,
+	testRelationToAdd := Follower{
+		User:    1,
+		Follows: 2,
 	}
 
 	mockDB := &MockDatabase{
-		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
+		MockAddRelation: func(newRelation Follower) (*Follower, error) {
 			newRelation.ID = 1
 			return &newRelation, nil
 		},
@@ -932,10 +887,10 @@ func TestAddRelation(t *testing.T) {
 }
 
 func TestAddRelationMissingData(t *testing.T) {
-	testRelationToAdd := FriendRelation{}
+	testRelationToAdd := Follower{}
 
 	mockDB := &MockDatabase{
-		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
+		MockAddRelation: func(newRelation Follower) (*Follower, error) {
 			return nil, errors.New("error inserting relation: null value violates not-null constraint")
 		},
 	}
@@ -990,6 +945,53 @@ func TestDeleteRelationByUserIDError(t *testing.T) {
 
 	if isDeleted {
 		t.Errorf("Function returned true, should be false")
+	}
+}
+
+// FRIENDS
+func TestGetFriendsByUserID(t *testing.T) {
+	idToSearch := 1
+
+	mockDB := &MockDatabase{
+		MockGetFriendsByUserID: func(id int) ([]User, error) {
+			return []User{
+				{ID: 2, UserName: "friend1", Email: "friend1@test.com"},
+				{ID: 3, UserName: "friend2", Email: "friend2@test.com"},
+			}, nil
+		},
+	}
+
+	friends, err := mockDB.GetFriendsByUserID(idToSearch)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	switch {
+	case len(friends) != 2:
+		t.Errorf("Expected 2 friends, got %d", len(friends))
+	case friends[0].ID != 2:
+		t.Errorf("Expected first friend ID 2, got %d", friends[0].ID)
+	case friends[1].ID != 3:
+		t.Errorf("Expected second friend ID 3, got %d", friends[1].ID)
+	}
+}
+
+func TestGetFriendsByUserIDNotFound(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetFriendsByUserID: func(id int) ([]User, error) {
+			return nil, errors.New("not found any relation with user id -1")
+		},
+	}
+
+	friends, err := mockDB.GetFriendsByUserID(-1)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(friends) != 0 {
+		t.Errorf("Expected 0 friends, got %d", len(friends))
 	}
 }
 
