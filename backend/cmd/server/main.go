@@ -74,6 +74,10 @@ func main() {
 	api.GET("/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsHandler)
 	api.GET("/products", middleware.RequireAuth(), reviewH.SearchProductHandler)
 
+	api.GET("/fans", middleware.RequireAuth(), reviewH.GetAllFansHandler)
+	api.GET("/influencers", middleware.RequireAuth(), reviewH.GetAllInfluencersHandler)
+	api.POST("/follow", middleware.RequireAuth(), reviewH.FollowSomeoneHandler)
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,
