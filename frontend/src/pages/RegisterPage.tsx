@@ -5,15 +5,15 @@ import { isEmpty, isValidEmail } from "@/utils/validation";
 import Card from "@/components/Card";
 
 /**
- * RegisterPage — tema nuevo + feedback de carga + timeout.
+ * RegisterPage — new theme + loading feedback + timeout.
  *
- * Como `useAuth().register` no acepta AbortSignal (AuthContext.tsx no
- * propaga uno aún), el timeout se gestiona a nivel de UI: tras
- * TIMEOUT_MS marcamos la operación como abandonada y damos error;
- * la petición de fondo puede seguir, pero ya no afectará al usuario.
+ * Since `useAuth().register` does not accept an AbortSignal (AuthContext.tsx does
+ * not propagate one yet), the timeout is managed at the UI level: after
+ * TIMEOUT_MS we mark the operation as abandoned and trigger an error;
+ * the background request might continue, but it will no longer affect the user.
  *
- * Cuando me pases AuthContext.tsx, esto se convierte en timeout real
- * (cancela el fetch) en una iteración.
+ * Once you pass me AuthContext.tsx, this will convert into a real timeout
+ * (canceling the fetch) in a future iteration.
  */
 
 const SLOW_HINT_MS = 4500;
@@ -50,7 +50,7 @@ export default function RegisterPage() {
   const failTimer = useRef<number | null>(null);
   const abandoned = useRef(false);
 
-  // limpiar timers al desmontar
+  // clear timers on unmount
   useEffect(() => {
     return () => {
       if (slowTimer.current !== null) window.clearTimeout(slowTimer.current);

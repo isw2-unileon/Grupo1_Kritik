@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 
 /**
- * LandingPage — rediseño editorial/cinematográfico de Kritik.
- * Usa los tokens del sistema definidos en src/index.css (@theme):
+ * LandingPage — editorial/cinematographic redesign of Kritik.
+ * Uses the system tokens defined in src/index.css (@theme):
  *   font-display, bg-ink/surface, text-cream/dim/faint/acid, border-line…
- * Los botones conservan su navegación con react-router:
- *   "Crear cuenta gratis" -> /register   |   "Ya tengo cuenta" -> /login
+ * Buttons retain their react-router navigation:
+ *   "Create free account" -> /register   |   "Already have an account" -> /login
  */
 
 type Step = { n: string; title: string; body: string };
@@ -28,7 +28,7 @@ const steps: Step[] = [
   },
 ];
 
-// grano sutil para el panel del hero (sin archivos ni dependencias)
+// Subtle grain for the hero panel (without files or dependencies)
 const GRAIN_BG =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
@@ -37,7 +37,7 @@ export default function LandingPage() {
     <div className="space-y-6">
       {/* ===================== HERO ===================== */}
       <section className="relative overflow-hidden rounded-[2.5rem] border border-line bg-ink p-8 sm:p-12">
-        {/* resplandor cálido */}
+        {/* warm glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -46,7 +46,7 @@ export default function LandingPage() {
               "radial-gradient(900px 420px at 80% -10%, rgba(203,242,78,0.12), transparent 60%), radial-gradient(700px 420px at 0% 110%, rgba(255,90,71,0.08), transparent 60%)",
           }}
         />
-        {/* grano */}
+        {/* subtle grain */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.05]"
@@ -54,7 +54,7 @@ export default function LandingPage() {
         />
 
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          {/* texto */}
+          {/* text */}
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
               Reseñas honestas · Veredictos claros
@@ -70,7 +70,7 @@ export default function LandingPage() {
               veredicto que ayuda a tu comunidad a decidir con confianza.
             </p>
 
-            {/* CTAs funcionales */}
+            {/* Functional CTAs */}
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/register"
@@ -86,7 +86,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* prueba social */}
+            {/* social proof */}
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-faint">
               <span>
                 <b className="font-display text-cream">12.4k</b> reseñas
@@ -102,7 +102,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* tarjeta-veredicto */}
+          {/* verdict-card */}
           <div>
             <article className="rounded-[2rem] border border-line bg-surface p-3 shadow-2xl">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]">
@@ -144,7 +144,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===================== CÓMO FUNCIONA ===================== */}
+      {/* ===================== HOW IT WORKS ===================== */}
       <section>
         <p className="px-1 text-xs font-medium uppercase tracking-[0.34em] text-faint">
           Cómo funciona
@@ -163,7 +163,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===================== ACERCA ===================== */}
+      {/* ===================== ABOUT ===================== */}
       <section className="grid gap-4 xl:grid-cols-2">
         <article className="rounded-[2rem] border border-line bg-surface p-8">
           <h2 className="font-display text-3xl font-semibold text-cream">Qué hacemos</h2>

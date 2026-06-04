@@ -11,7 +11,7 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
 
-  // clases reutilizables del nuevo tema
+  // Reusable classes of the new theme
   const ghost =
     "rounded-full px-4 py-2 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream";
   const primary =

@@ -5,22 +5,22 @@ import Card from "@/components/Card";
 import { searchProducts } from "@/services/api";
 
 /* ============================================================
-   Página de detalle de un título — inspirada en Steam, con la
-   identidad de Kritik (el veredicto Sí/No como "% recomienda").
+   Title Detail Page — Steam-inspired, with Kritik's identity
+   (the Yes/No verdict as "% recommended").
 
-   CÓMO LLEGAN LOS DATOS
-   El producto se recibe por router state al pulsar una tarjeta
-   (búsqueda del catálogo o recomendaciones). La ficha usa esos
-   datos reales (Tipo, Género, Estreno, Descripción, Nota media).
+   HOW THE DATA ARRIVES
+   The product is received via router state when clicking a card
+   (catalog search or recommendations). The page uses that real
+   data (Type, Genre, Release Date, Description, Average Score).
 
-   PENDIENTE DE BACKEND
-   Las reseñas y la galería son DE EJEMPLO: el backend todavía no
-   expone reseñas por producto (GET /api/reviews solo devuelve las
-   del usuario logueado, y no hay GET /api/products/:id). El % se
-   calcula a partir de las reseñas de ejemplo para que la página sea
-   coherente. Para hacerlo real bastaría con exponer en el backend
-   GetReviewsByProductName, p. ej. GET /api/products/:id/reviews,
-   y sustituir SAMPLE_REVIEWS por una llamada a esa API.
+   BACKEND PENDING
+   The reviews and gallery are PLACEHOLDERS: the backend does not
+   yet expose reviews per product (GET /api/reviews only returns
+   those of the logged-in user, and there is no GET /api/products/:id).
+   The % is calculated from the sample reviews to keep the page
+   consistent. To make it real, the backend would simply need to
+   expose GetReviewsByProductName, e.g., GET /api/products/:id/reviews,
+   and replace SAMPLE_REVIEWS with a call to that API.
    ============================================================ */
 
 type DetailProduct = {
@@ -29,12 +29,12 @@ type DetailProduct = {
   Type?: string;
   Genre?: string[];
   Description?: string;
-  Release?: string; // civil.Date llega como "YYYY-MM-DD"
+  Release?: string; // civil.Date format = "YYYY-MM-DD"
   AverageGrade?: number;
-  Image?: string; // única foto del producto (puede venir vacía)
+  Image?: string; // single product photo (may be empty)
 };
 
-/* paletas de portada por tipo (mismas que el panel, para coherencia) */
+/* cover palettes by type (same as the panel, for consistency) */
 const TYPE_STYLES = {
   series: { label: "Serie", grad: "from-[#2d5b6b] via-[#2e88a3] to-[#1b333f]" },
   film: { label: "Película", grad: "from-[#6b2d4a] via-[#a32e5e] to-[#3f1b2c]" },
@@ -53,7 +53,7 @@ function catFromType(type?: string): CatKey {
   return "other";
 }
 
-/* ---------- reseñas de ejemplo (pendiente de endpoint en backend) ---------- */
+/* ---------- sample reviews (pending backend endpoint) ---------- */
 type CommunityReview = {
   id: number;
   author: string;
@@ -95,7 +95,7 @@ function formatRelease(release?: string): string | null {
   return `${Number(d)} ${months[Number(mo) - 1] ?? ""} ${y}`.trim();
 }
 
-/* ---------- piezas reutilizables ---------- */
+/* ---------- reusable pieces ---------- */
 function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-line bg-ink/50 px-3 py-1 text-xs font-medium text-dim backdrop-blur-sm">
@@ -116,7 +116,7 @@ function VerdictChip({ yes }: { yes: boolean }) {
   );
 }
 
-/* el "sello" de Kritik sobre la portada */
+/* the Kritik "stamp" over the cover */
 function VerdictStamp({ recommended }: { recommended: boolean }) {
   return (
     <div
@@ -132,7 +132,7 @@ function VerdictStamp({ recommended }: { recommended: boolean }) {
   );
 }
 
-/* ---------- secciones ---------- */
+/* ---------- sections ---------- */
 function AboutCard({ description }: { description?: string }) {
   return (
     <Card as="section" className="p-7 sm:p-8">
@@ -170,7 +170,7 @@ function RecommendationCard({
       </div>
       <p className={`mt-2 font-display text-lg font-semibold ${toneText[tier.tone]}`}>{tier.label}</p>
 
-      {/* barra Sí / No */}
+      {/* Yes / No bar */}
       <div className="mt-5 flex h-3 overflow-hidden rounded-full bg-coral/30" aria-hidden>
         <div className="h-full bg-acid" style={{ width: `${pct}%` }} />
       </div>
@@ -282,22 +282,22 @@ function CommunityReviews({ reviews }: { reviews: CommunityReview[] }) {
   );
 }
 
-/* ---------- página ---------- */
+/* ---------- page ---------- */
 export default function ProductDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const stateProduct = (location.state as { product?: DetailProduct } | null)?.product;
 
-  // El nombre llega por el state (al pulsar una tarjeta) o por la URL (/product/<nombre>).
+  // The name comes from the state (when clicking a card) or from the URL (/product/<name>).
   const name = stateProduct?.Name ?? (id ? decodeURIComponent(id) : "");
 
   const [product, setProduct] = useState<DetailProduct | null>(stateProduct ?? null);
   const [loading, setLoading] = useState(!stateProduct);
   const [notFound, setNotFound] = useState(false);
 
-  // SIN TOCAR EL BACKEND: pedimos el producto REAL por nombre con el endpoint que ya
-  // existe (GET /api/products?q=). El producto del state, si lo hay, pinta al instante;
-  // cuando vuelve searchProducts lo reemplazamos por los datos reales de la BD.
+  // WITHOUT TOUCHING THE BACKEND: we request the REAL product by name using the existing
+  // endpoint (GET /api/products?q=). The product from state, if available, renders instantly;
+  // once searchProducts resolves, we replace it with the real data from the DB.
   useEffect(() => {
     if (!name) {
       if (!stateProduct) setNotFound(true);
@@ -317,7 +317,7 @@ export default function ProductDetailPage() {
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        // No está en el catálogo: si veníamos con datos del state, los mantenemos.
+        // Not in the catalog: if we had data from state, we keep it.
         if (!stateProduct) setNotFound(true);
       } finally {
         setLoading(false);
@@ -336,7 +336,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  // Sin datos: no existe en el catálogo o el enlace directo no es válido.
+  // No data: it does not exist in the catalog or the direct link is invalid.
   if (notFound || !product) {
     return (
       <div className="mx-auto max-w-xl py-20 text-center">
@@ -359,7 +359,7 @@ export default function ProductDetailPage() {
   const cat = catFromType(product.Type);
   const style = TYPE_STYLES[cat];
 
-  // Reseñas por producto: pendiente de backend. De ejemplo por ahora.
+  // Reviews by product: pending backend. Example for now.
   const reviews = SAMPLE_REVIEWS;
   const total = reviews.length;
   const positives = reviews.filter((r) => r.verdict).length;
@@ -370,7 +370,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="space-y-8">
-      {/* volver */}
+      {/* back */}
       <Link
         to="/dashboard"
         className="inline-flex items-center gap-2 text-sm text-dim transition hover:text-cream"
@@ -381,10 +381,10 @@ export default function ProductDetailPage() {
         Volver al catálogo
       </Link>
 
-      {/* HERO / portada */}
+      {/* HERO / cover */}
       <section className={`relative overflow-hidden rounded-[2rem] border border-line bg-gradient-to-br ${style.grad}`}>
         {product.Image ? (
-          // única foto del producto; si la URL falla, la ocultamos y queda el degradado
+          // single product photo; if the URL fails, we hide it and keep the gradient
           <img
             src={product.Image}
             alt={product.Name}
@@ -432,15 +432,15 @@ export default function ProductDetailPage() {
         </div>
       </section>
 
-      {/* CONTENIDO */}
+      {/* CONTENT */}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
-        {/* columna principal */}
+        {/* main column */}
         <div className="space-y-6">
           <AboutCard description={product.Description} />
           <CommunityReviews reviews={reviews} />
         </div>
 
-        {/* barra lateral */}
+        {/* lateral bar */}
         <aside className="space-y-6">
           <RecommendationCard pct={pct} tier={tier} positives={positives} total={total} />
           <DetailsCard product={product} release={release} typeLabel={style.label} />

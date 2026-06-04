@@ -5,20 +5,20 @@ import { isEmpty, isValidEmail } from "@/utils/validation";
 import Card from "@/components/Card";
 
 /**
- * LoginPage — versión con feedback visual de carga + timeout.
+ * LoginPage — version with visual loading feedback + timeout.
  *
- * Flujo de "Entrando…":
- *   t=0          → spinner gira, inputs deshabilitados
- *   t=SLOW_HINT  → aparece el aviso "Esto está tardando más de lo normal…"
- *   t=TIMEOUT    → se aborta visualmente con un error y se vuelve a habilitar el formulario
+ * "Entering…" flow:
+ *   t=0         → spinner spins, inputs disabled
+ *   t=SLOW_HINT → the notice "This is taking longer than usual…" appears
+ *   t=TIMEOUT   → visually aborts with an error and re-enables the form
  *
- * Nota: como AuthContext.login no acepta AbortSignal, el timeout se gestiona
- * a nivel de UI (la petición de fondo puede seguir, pero ya no afectará al
- * usuario porque marcamos la operación como abandonada).
+ * Note: since AuthContext.login does not accept an AbortSignal, the timeout is managed
+ * at the UI level (the background request may continue, but it will no longer affect the
+ * user because we mark the operation as abandoned).
  */
 
-const SLOW_HINT_MS = 4500; //  pista de "está tardando"
-const TIMEOUT_MS = 12000; //   abandono con error
+const SLOW_HINT_MS = 4500; //  "is taking longer" hint
+const TIMEOUT_MS = 12000; //   abort with error
 
 const inputClass =
   "mt-2 w-full rounded-2xl border border-line bg-ink px-4 py-3 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)] disabled:cursor-not-allowed disabled:opacity-60";
@@ -42,7 +42,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [slow, setSlow] = useState(false);
 
-  // referencias para limpiar timers desde cualquier rama
+  // references to clear timers from any branch
   const slowTimer = useRef<number | null>(null);
   const failTimer = useRef<number | null>(null);
   const abandoned = useRef(false);
@@ -54,7 +54,7 @@ export default function LoginPage() {
     failTimer.current = null;
   };
 
-  // si el usuario navega fuera mientras carga, no dejamos timers colgando
+  // if the user navigates away while loading, we don't leave hanging timers
   useEffect(() => {
     return () => clearTimers();
   }, []);
@@ -80,10 +80,10 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // pista a media carga
+    // mid-loading hint
     slowTimer.current = window.setTimeout(() => setSlow(true), SLOW_HINT_MS);
 
-    // abandono por timeout
+    // abandoned due to timeout
     failTimer.current = window.setTimeout(() => {
       abandoned.current = true;
       setError(
@@ -95,7 +95,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
-      if (abandoned.current) return; // ya dimos error por timeout, ignoramos
+      if (abandoned.current) return; // already errored due to timeout, ignore
       clearTimers();
       navigate("/dashboard");
     } catch (err) {
@@ -169,7 +169,7 @@ export default function LoginPage() {
           <span>{loading ? "Entrando…" : "Entrar"}</span>
         </button>
 
-        {/* aviso de lentitud — reserva espacio para que no salte el layout */}
+        {/* slowness notice — reserve space to prevent layout shift */}
         <p
           aria-live="polite"
           className={`min-h-[1.25rem] text-center text-xs transition-opacity duration-300 ${

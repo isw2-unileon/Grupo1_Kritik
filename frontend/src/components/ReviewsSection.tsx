@@ -3,13 +3,13 @@ import { getReviews, type Review } from "@/services/api";
 import Card from "@/components/Card";
 
 type ReviewsSectionProps = {
-  /** Modo "vistazo": muestra como mucho N reseñas (las más recientes) y oculta los filtros. */
+/** "Glance" mode: shows at most N reviews (the most recent ones) and hides the filters. */
   limit?: number;
-  /** Acción del enlace "Ver todas" (p. ej. cambiar a la pestaña de reseñas). */
+  /** Action of the "See all" link (e.g., switch to the reviews tab). */
   onSeeAll?: () => void;
 };
 
-/* Sello del veredicto, en el sistema de diseño (lime = sí, coral = no). */
+/* Verdict stamp, in the design system (lime = yes, coral = no). */
 function RecommendedBadge({ recommended }: { recommended: boolean }) {
   return recommended ? (
     <span className="shrink-0 rounded-full border-[1.5px] border-acid bg-acid/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-acid">
@@ -22,7 +22,7 @@ function RecommendedBadge({ recommended }: { recommended: boolean }) {
   );
 }
 
-/* Filtro por veredicto: cada estado activo se tiñe con su color de marca. */
+/* Verdict filter: each active state is tinted with its brand color. */
 const VERDICTS = [
   {
     id: "all",
@@ -66,7 +66,7 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // filtros (solo en modo completo)
+  // filters (only in full mode)
   const [verdict, setVerdict] = useState<VerdictId>("all");
   const [query, setQuery] = useState("");
 
@@ -90,10 +90,10 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
   const preview = typeof limit === "number";
   const count = reviews.length;
 
-  // más recientes primero (id mayor = reseña más nueva)
+  // most recent first (higher id = newer review)
   const sorted = [...reviews].sort((a, b) => b.id - a.id);
 
-  // en vistazo: las últimas N; en completo: aplica filtros
+  // in glance mode: the last N; in full mode: apply filters
   const needle = query.trim().toLowerCase();
   const visible = preview
     ? sorted.slice(0, limit)
@@ -120,7 +120,7 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
           </h2>
         </div>
 
-        {/* derecha: en vistazo, enlace "ver todo"; en completo, contador */}
+        {/* right: in glance mode, "see all" link; in full mode, counter */}
         {preview
           ? !loading && !error && count > 0 && onSeeAll && (
               <button
@@ -138,7 +138,7 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
             )}
       </div>
 
-      {/* filtros: solo en modo completo y si hay reseñas que filtrar */}
+      {/* filters: only in full mode and if there are reviews to filter */}
       {!preview && !loading && !error && count > 0 && (
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div
@@ -231,7 +231,7 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
             ))}
           </div>
 
-          {/* en vistazo, si hay más de las mostradas, CTA en cascada hacia el listado completo */}
+          {/* in glance mode, if there are more than those displayed, cascade CTA toward the full list */}
           {hasMore && (
             <button
               type="button"
