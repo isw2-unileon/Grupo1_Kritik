@@ -112,7 +112,12 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, reviews)
 }
 
-// GetAllFansHandler returns all the users that follows a specific user
+// FollowRequest is the payload for following/unfollowing a user.
+type FollowRequest struct {
+	InfluencerID int `json:"influencer_id" binding:"required"`
+}
+
+// GetAllFansHandler returns all the users that follow the authenticated user.
 func (h *ReviewHandler) GetAllFansHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
@@ -120,15 +125,17 @@ func (h *ReviewHandler) GetAllFansHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := h.DB.GetAllFans(userID)
+	fans, err := h.DB.GetAllFans(userID)
 	if err != nil {
-		slog.Error("get reviews: query failed", "userID", userID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		slog.Error("get fans: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load fans"})
 		return
 	}
+
+	c.JSON(http.StatusOK, fans)
 }
 
-// GetAllInfluencersHandler returns all the users followed by a specific user
+// GetAllInfluencersHandler returns all the users followed by the authenticated user.
 func (h *ReviewHandler) GetAllInfluencersHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
@@ -136,12 +143,73 @@ func (h *ReviewHandler) GetAllInfluencersHandler(c *gin.Context) {
 		return
 	}
 
-	relation, err := h.DB.GetAllInfluencers(userID)
+	influencers, err := h.DB.GetAllInfluencers(userID)
 	if err != nil {
-		slog.Error("get reviews: query failed", "userID", userID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		slog.Error("get influencers: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load influencers"})
 		return
 	}
 
-	c.JSON(http.StatusOK, relation)
+	c.JSON(http.StatusOK, influencers)
+}
+
+// FollowSomeoneHandler lets the authenticated user follow another user.
+func (h *ReviewHandler) FollowSomeoneHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	var req FollowRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("follow: invalid body", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	relation, err := h.DB.FollowSomeone(bd.FollowerRelation{
+		Fan:        userID,
+		Influencer: req.InfluencerID,
+	})
+	if err != nil {
+		slog.Error("follow: insert failed", "fan", userID, "influencer", req.InfluencerID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not follow user"})
+		return
+	}
+
+	slog.Info("follow: success", "fan", userID, "influencer", req.InfluencerID)
+	c.JSON(http.StatusCreated, relation)
+}
+
+// UnfollowSomeoneHandler lets the authenticated user unfollow another user.
+func (h *ReviewHandler) UnfollowSomeoneHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	var req FollowRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("unfollow: invalid body", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	ok, err := h.DB.UnfollowSomeone(userID, req.InfluencerID)
+	if err != nil {
+		slog.Error("unfollow: delete failed", "fan", userID, "influencer", req.InfluencerID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not unfollow user"})
+		return
+	}
+
+	if !ok {
+		slog.Warn("unfollow: relation not found", "fan", userID, "influencer", req.InfluencerID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "follow relation not found"})
+		return
+	}
+
+	slog.Info("unfollow: success", "fan", userID, "influencer", req.InfluencerID)
+	c.JSON(http.StatusOK, gin.H{"status": "unfollowed"})
 }
