@@ -535,3 +535,203 @@ func TestGetAllInfluencersHandler_DBError(t *testing.T) {
 		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestGetAllFansHandler_Empty(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllFans: func(influencerID int) ([]bd.User, error) {
+			return []bd.User{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fans", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var fans []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &fans); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(fans) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(fans))
+	}
+}
+
+func TestGetAllInfluencersHandler_Empty(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]bd.User, error) {
+			return []bd.User{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/influencers", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var influencers []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &influencers); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(influencers) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(influencers))
+	}
+}
+
+func TestSearchProductHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetProductsByName: func(name string) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products?q=error", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSearchProductHandler_WhitespaceQuery(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products?q=%20%20", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(products))
+	}
+}
+
+func TestCreateReviewHandler_AddReviewFails(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockAddReview: func(r bd.Review) (*bd.Review, error) {
+			return nil, errors.New("insert error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"product_id":  1,
+		"description": "A review",
+		"recommended": true,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/reviews", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_UserLookupFails(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return nil, errors.New("user not found")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return nil, errors.New("query error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_EmptyReviews(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var reviews []bd.Review
+	if err := json.Unmarshal(w.Body.Bytes(), &reviews); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(reviews) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(reviews))
+	}
+}
+
+func TestUnfollowSomeoneHandler_RelationNotFound(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return false, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 999,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
