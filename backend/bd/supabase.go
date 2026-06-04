@@ -77,12 +77,10 @@ type Database interface {
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
 
-	GetRelationByUserID(userID int) (*FollowerRelation, error)
-	AddRelation(newRelation FollowerRelation) (*FollowerRelation, error)
-	DeleteRelationByUserID(userID int) (bool, error)
-
 	GetAllFans(influencerID int) ([]User, error)
 	GetAllInfluencers(fanID int) ([]User, error)
+	FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error)
+	UnfollowSomeone(userID int) (bool, error)
 }
 
 // SupabaseDB client struct
@@ -495,69 +493,6 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
  =========================================================
 */
 
-// GetRelationByUserID returns the relation between two users or an error if it occurred
-func (db *SupabaseDB) GetRelationByUserID(userID int) (*FollowerRelation, error) {
-
-	var relations []FollowerRelation
-
-	_, err := db.client.From("Followers").
-		Select("*", "exact", false).
-		Eq("User", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
-
-	if err != nil {
-		_, err2 := db.client.From("Followers").
-			Select("*", "exact", false).
-			Eq("Follows", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
-
-		if err2 != nil {
-			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
-		}
-	}
-
-	return &relations[0], nil
-}
-
-// AddRelation adds a friend relation between two User
-func (db *SupabaseDB) AddRelation(newRelation FollowerRelation) (*FollowerRelation, error) {
-	var insertedRelation []FollowerRelation
-
-	_, err := db.client.From("Followers").
-		Insert(newRelation, false, "", "", "").
-		ExecuteTo(&insertedRelation)
-
-	if err != nil {
-		return nil, fmt.Errorf("error inserting review:\n%w", err)
-	}
-
-	return &insertedRelation[0], nil
-}
-
-// DeleteRelationByUserID deletes a friend relation between two User using a userID
-func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
-
-	var relations []FollowerRelation
-
-	_, err := db.client.From("Followers").
-		Delete("", "representation").
-		Eq("User", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
-
-	if err != nil {
-		_, err2 := db.client.From("Followers").
-			Delete("", "representation").
-			Eq("Follows", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
-
-		if err2 != nil {
-			return false, fmt.Errorf("error getting the relation:\n%w", err2)
-		}
-	}
-
-	return true, nil
-}
-
 // GetAllFans returns an array of User that follows the given UserID, or an error if it occurred
 func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 
@@ -614,6 +549,37 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 	}
 
 	return usuariosSeguidos, nil
+}
+
+// FollowSomeone adds a follow relation between two Users
+func (db *SupabaseDB) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
+	var insertedRelation []FollowerRelation
+
+	_, err := db.client.From("Followers").
+		Insert(newRelation, false, "", "", "").
+		ExecuteTo(&insertedRelation)
+
+	if err != nil {
+		return nil, fmt.Errorf("error inserting review:\n%w", err)
+	}
+
+	return &insertedRelation[0], nil
+}
+
+// UnfollowSomeone deletes a follow relation between two Users using the fanID and influencerID
+func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
+
+	_, _, err := db.client.From("Followers").
+		Delete("", "").
+		Eq("Fan", fmt.Sprintf("%d", fanID)).
+		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
+		Execute()
+
+	if err != nil {
+		return false, fmt.Errorf("error deleting relation:\n%w", err)
+	}
+
+	return true, nil
 }
 
 /*

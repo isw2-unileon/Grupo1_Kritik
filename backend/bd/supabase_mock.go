@@ -23,12 +23,10 @@ type MockDatabase struct {
 	MockGetReviewsByUserID    func(userID int) ([]Review, error)
 	MockGetReviewsByProductID func(productID int) ([]Review, error)
 
-	MockGetRelationByUserID    func(userID int) (*FollowerRelation, error)
-	MockAddRelation            func(newRelation FollowerRelation) (*FollowerRelation, error)
-	MockDeleteRelationByUserID func(userID int) (bool, error)
-
 	MockGetAllFans        func(influencerID int) ([]User, error)
-	MockGetAllInfluencers func(influencerID int) ([]User, error)
+	MockGetAllInfluencers func(fanID int) ([]User, error)
+	MockFollowSomeone     func(newRelation FollowerRelation) (*FollowerRelation, error)
+	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
 }
 
 // GetUserByEmail mock
@@ -111,21 +109,6 @@ func (m *MockDatabase) GetReviewsByProductID(id int) ([]Review, error) {
 	return m.MockGetReviewsByProductID(id)
 }
 
-// GetRelationByUserID mock
-func (m *MockDatabase) GetRelationByUserID(id int) (*FollowerRelation, error) {
-	return m.MockGetRelationByUserID(id)
-}
-
-// AddRelation mock
-func (m *MockDatabase) AddRelation(f FollowerRelation) (*FollowerRelation, error) {
-	return m.MockAddRelation(f)
-}
-
-// DeleteRelationByUserID mock
-func (m *MockDatabase) DeleteRelationByUserID(userID int) (bool, error) {
-	return m.MockDeleteRelationByUserID(userID)
-}
-
 // GetAllFans mock
 func (m *MockDatabase) GetAllFans(influencerID int) ([]User, error) {
 	return m.MockGetAllFans(influencerID)
@@ -134,4 +117,14 @@ func (m *MockDatabase) GetAllFans(influencerID int) ([]User, error) {
 // GetAllInfluencers mock
 func (m *MockDatabase) GetAllInfluencers(fanID int) ([]User, error) {
 	return m.MockGetAllInfluencers(fanID)
+}
+
+// FollowSomeone mock
+func (m *MockDatabase) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
+	return m.MockFollowSomeone(newRelation)
+}
+
+// UnfollowSomeone mock
+func (m *MockDatabase) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
+	return m.MockUnfollowSomeone(fanID, influencerID)
 }
