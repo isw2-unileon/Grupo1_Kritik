@@ -23,11 +23,10 @@ type MockDatabase struct {
 	MockGetReviewsByUserID    func(userID int) ([]Review, error)
 	MockGetReviewsByProductID func(productID int) ([]Review, error)
 
-	MockGetRelationByUserID    func(userID int) (*FriendRelation, error)
-	MockAddRelation            func(newRelation FriendRelation) (*FriendRelation, error)
-	MockDeleteRelationByUserID func(userID int) (bool, error)
-
-	MockGetFriendsByUserID func(userID int) ([]User, error)
+	MockGetAllFans        func(influencerID int) ([]User, error)
+	MockGetAllInfluencers func(fanID int) ([]User, error)
+	MockFollowSomeone     func(newRelation FollowerRelation) (*FollowerRelation, error)
+	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
 }
 
 // GetUserByEmail mock
@@ -110,22 +109,22 @@ func (m *MockDatabase) GetReviewsByProductID(id int) ([]Review, error) {
 	return m.MockGetReviewsByProductID(id)
 }
 
-// GetRelationByUserID mock
-func (m *MockDatabase) GetRelationByUserID(id int) (*FriendRelation, error) {
-	return m.MockGetRelationByUserID(id)
+// GetAllFans mock
+func (m *MockDatabase) GetAllFans(influencerID int) ([]User, error) {
+	return m.MockGetAllFans(influencerID)
 }
 
-// AddRelation mock
-func (m *MockDatabase) AddRelation(f FriendRelation) (*FriendRelation, error) {
-	return m.MockAddRelation(f)
+// GetAllInfluencers mock
+func (m *MockDatabase) GetAllInfluencers(fanID int) ([]User, error) {
+	return m.MockGetAllInfluencers(fanID)
 }
 
-// DeleteRelationByUserID mock
-func (m *MockDatabase) DeleteRelationByUserID(userID int) (bool, error) {
-	return m.MockDeleteRelationByUserID(userID)
+// FollowSomeone mock
+func (m *MockDatabase) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
+	return m.MockFollowSomeone(newRelation)
 }
 
-// GetFriendsByUserID mock
-func (m *MockDatabase) GetFriendsByUserID(userID int) ([]User, error) {
-	return m.MockGetFriendsByUserID(userID)
+// UnfollowSomeone mock
+func (m *MockDatabase) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
+	return m.MockUnfollowSomeone(fanID, influencerID)
 }

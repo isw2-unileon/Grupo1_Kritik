@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/civil"
+	"github.com/bytedance/gopkg/util/logger"
 	"github.com/joho/godotenv"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
@@ -46,11 +47,11 @@ type Review struct {
 	UserID    int `json:"UserId,omitempty"`
 }
 
-// FriendRelation struct
-type FriendRelation struct {
-	ID      int `json:"id,omitempty"`
-	Friend1 int `json:"Friend1,omitempty"`
-	Friend2 int `json:"Friend2,omitempty"`
+// FollowerRelation struct
+type FollowerRelation struct {
+	ID         int `json:"id,omitempty"`
+	Fan        int `json:"Fan,omitempty"`        // User who follows another User
+	Influencer int `json:"Influencer,omitempty"` // User who is followed by another user
 }
 
 // Database interface
@@ -76,11 +77,10 @@ type Database interface {
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
 
-	GetRelationByUserID(userID int) (*FriendRelation, error)
-	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
-	DeleteRelationByUserID(userID int) (bool, error)
-
-	GetFriendsByUserID(userID int) ([]User, error)
+	GetAllFans(influencerID int) ([]User, error)
+	GetAllInfluencers(fanID int) ([]User, error)
+	FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error)
+	UnfollowSomeone(fanID int, influencerID int) (bool, error)
 }
 
 // SupabaseDB client struct
@@ -493,118 +493,97 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
  =========================================================
 */
 
-// GetRelationByUserID returns the relation between two users or an error if it occurred
-func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
+// GetAllFans returns an array of User that follows the given UserID, or an error if it occurred
+//
+//nolint:dupl // For some reason, lint sees this and GetAllInfluencers as duplicates
+func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 
-	var relations []FriendRelation
+	var relations []FollowerRelation
 
-	_, err := db.client.From("Friend_Relations").
-		Select("*", "exact", false).
-		Eq("Friend1", strconv.Itoa(userID)).
+	_, err := db.client.From("Followers").
+		Select("Fan(*)", "exact", false).
+		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
 		ExecuteTo(&relations)
 
 	if err != nil {
-		_, err2 := db.client.From("Friend_Relations").
-			Select("*", "exact", false).
-			Eq("Friend2", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
+		return nil, err
+	}
 
+	var followedUsers []User
+	for _, rel := range relations {
+		user, err2 := db.GetUserByID(rel.Fan)
 		if err2 != nil {
-			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+			logger.Errorf("error getting the user\n")
+		}
+
+		if user != nil {
+			followedUsers = append(followedUsers, *user)
+		}
+
+	}
+
+	return followedUsers, nil
+}
+
+// GetAllInfluencers returns an array of User that are followed by the given UserID, or an error if it occurred
+//
+//nolint:dupl // For some reason, lint sees this and GetAllFans as duplicates
+func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
+	var relations []FollowerRelation
+
+	_, err := db.client.From("Followers").
+		Select("Influencer(*)", "exact", false).
+		Eq("Fan", fmt.Sprintf("%d", fanID)).
+		ExecuteTo(&relations)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var followedUsers []User
+	for _, rel := range relations {
+		user, err2 := db.GetUserByID(rel.Influencer)
+		if err2 != nil {
+			logger.Errorf("error getting the user\n")
+		}
+
+		if user != nil {
+			followedUsers = append(followedUsers, *user)
 		}
 	}
 
-	return &relations[0], nil
+	return followedUsers, nil
 }
 
-// AddRelation adds a friend relation between two User
-func (db *SupabaseDB) AddRelation(newRelation FriendRelation) (*FriendRelation, error) {
-	var insertedRelation []FriendRelation
+// FollowSomeone adds a follow relation between two Users
+func (db *SupabaseDB) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
+	var insertedRelation []FollowerRelation
 
-	_, err := db.client.From("Friend_Relations").
+	_, err := db.client.From("Followers").
 		Insert(newRelation, false, "", "", "").
 		ExecuteTo(&insertedRelation)
 
 	if err != nil {
-		return nil, fmt.Errorf("error inserting review:\n%w", err)
+		return nil, fmt.Errorf("error inserting relation:\n%w", err)
 	}
 
 	return &insertedRelation[0], nil
 }
 
-// DeleteRelationByUserID deletes a friend relation between two User using a userID
-func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
+// UnfollowSomeone deletes a follow relation between two Users using the fanID and influencerID
+func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
 
-	var relations []FriendRelation
-
-	_, err := db.client.From("Friend_Relations").
-		Delete("", "representation").
-		Eq("Friend1", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
+	_, _, err := db.client.From("Followers").
+		Delete("", "").
+		Eq("Fan", fmt.Sprintf("%d", fanID)).
+		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
+		Execute()
 
 	if err != nil {
-		_, err2 := db.client.From("Friend_Relations").
-			Delete("", "representation").
-			Eq("Friend2", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
-
-		if err2 != nil {
-			return false, fmt.Errorf("error getting the relation:\n%w", err2)
-		}
+		return false, fmt.Errorf("error deleting relation:\n%w", err)
 	}
 
 	return true, nil
-}
-
-// GetFriendsByUserID returns an array of User that are friends with the given user, or an error if it occurred
-func (db *SupabaseDB) GetFriendsByUserID(userID int) ([]User, error) {
-
-	var relations []FriendRelation
-
-	_, err := db.client.From("Friend_Relations").
-		Select("*", "exact", false).
-		Eq("Friend1", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
-	if err != nil {
-		return nil, fmt.Errorf("error getting relations where user is Friend1: %w", err)
-	}
-
-	var relations2 []FriendRelation
-	_, err = db.client.From("Friend_Relations").
-		Select("*", "exact", false).
-		Eq("Friend2", strconv.Itoa(userID)).
-		ExecuteTo(&relations2)
-	if err != nil {
-		return nil, fmt.Errorf("error getting relations where user is Friend2: %w", err)
-	}
-
-	relations = append(relations, relations2...)
-
-	seen := make(map[int]bool)
-	var friendIDs []int
-	for _, r := range relations {
-		var otherID int
-		if r.Friend1 == userID {
-			otherID = r.Friend2
-		} else {
-			otherID = r.Friend1
-		}
-		if !seen[otherID] {
-			seen[otherID] = true
-			friendIDs = append(friendIDs, otherID)
-		}
-	}
-
-	var friends []User
-	for _, id := range friendIDs {
-		user, err := db.GetUserByID(id)
-		if err != nil {
-			return nil, fmt.Errorf("error getting friend user with id %d: %w", id, err)
-		}
-		friends = append(friends, *user)
-	}
-
-	return friends, nil
 }
 
 /*

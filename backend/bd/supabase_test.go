@@ -526,52 +526,6 @@ func TestEditProductInfoError(t *testing.T) {
 	}
 }
 
-func TestGetFriendsByUserID(t *testing.T) {
-	idToSearch := 1
-
-	mockDB := &MockDatabase{
-		MockGetFriendsByUserID: func(id int) ([]User, error) {
-			return []User{
-				{ID: 2, UserName: "friend1", Email: "friend1@test.com"},
-				{ID: 3, UserName: "friend2", Email: "friend2@test.com"},
-			}, nil
-		},
-	}
-
-	friends, err := mockDB.GetFriendsByUserID(idToSearch)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	switch {
-	case len(friends) != 2:
-		t.Errorf("Expected 2 friends, got %d", len(friends))
-	case friends[0].ID != 2:
-		t.Errorf("Expected first friend ID 2, got %d", friends[0].ID)
-	case friends[1].ID != 3:
-		t.Errorf("Expected second friend ID 3, got %d", friends[1].ID)
-	}
-}
-
-func TestGetFriendsByUserIDNotFound(t *testing.T) {
-	mockDB := &MockDatabase{
-		MockGetFriendsByUserID: func(id int) ([]User, error) {
-			return nil, errors.New("not found any relation with user id -1")
-		},
-	}
-
-	friends, err := mockDB.GetFriendsByUserID(-1)
-
-	if err == nil {
-		t.Error("An error was expected but got nil")
-	}
-
-	if len(friends) != 0 {
-		t.Errorf("Expected 0 friends, got %d", len(friends))
-	}
-}
-
 /*
  =========================================================
  Review functions
@@ -744,60 +698,6 @@ func TestDeleteReviewByNameError(t *testing.T) {
 	}
 }
 
-func TestGetReviewsByUserID(t *testing.T) {
-	idToSearch := 1
-
-	mockDB := &MockDatabase{
-		MockGetUserByEmail: func(email string) (*User, error) {
-			return &User{
-				ID:    99,
-				Email: email,
-			}, nil
-		},
-		MockGetReviewsByUserID: func(id int) ([]Review, error) {
-			return []Review{
-				{
-					ID:          1,
-					Recommended: true,
-					Description: "testdescription",
-					UserID:      99,
-					ProductID:   55,
-				},
-			}, nil
-		},
-	}
-
-	reviews, err := mockDB.GetReviewsByUserID(idToSearch)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if len(reviews) != 1 {
-		t.Errorf("Function returned wrong number of reviews: got %d, want 1", len(reviews))
-	} else if reviews[0].UserID != 99 {
-		t.Errorf("Expected review belonging to UserID 99, got %d", reviews[0].UserID)
-	}
-}
-
-func TestGetReviewsByUserIDInvalidUser(t *testing.T) {
-	mockDB := &MockDatabase{
-		MockGetReviewsByUserID: func(id int) ([]Review, error) {
-			return nil, errors.New("not found user with email -1")
-		},
-	}
-
-	reviews, err := mockDB.GetReviewsByUserID(-1)
-
-	if err == nil {
-		t.Error("An error was expected but got nil")
-	}
-
-	if len(reviews) != 0 {
-		t.Errorf("Function returned %d reviews, should be 0", len(reviews))
-	}
-}
-
 func TestGetReviewsByProductID(t *testing.T) {
 	productNameToSearch := 1
 
@@ -860,20 +760,103 @@ func TestGetReviewsByProductIDInvalidProduct(t *testing.T) {
  =========================================================
 */
 
-func TestGetRelationByUserID(t *testing.T) {
-	idToSearch := 1
-
+func TestGetAllFans(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
-			return &FriendRelation{
-				ID:      1,
-				Friend1: id,
-				Friend2: 2,
+		MockGetAllFans: func(influencerID int) ([]User, error) {
+			return []User{
+				{ID: 2, Name: "fan1", Email: "fan1@test.com"},
+				{ID: 3, Name: "fan2", Email: "fan2@test.com"},
 			}, nil
 		},
 	}
 
-	relation, err := mockDB.GetRelationByUserID(idToSearch)
+	fans, err := mockDB.GetAllFans(1)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(fans) != 2 {
+		t.Errorf("Expected 2 fans, got %d", len(fans))
+	}
+
+	if fans[0].Name != "fan1" {
+		t.Errorf("Expected fan name 'fan1', got '%s'", fans[0].Name)
+	}
+}
+
+func TestGetAllFansError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetAllFans: func(influencerID int) ([]User, error) {
+			return nil, errors.New("not found fans for influencer 0")
+		},
+	}
+
+	fans, err := mockDB.GetAllFans(0)
+
+	if err == nil {
+		t.Error("Expected error")
+	}
+
+	if fans != nil {
+		t.Errorf("Fans should be nil")
+	}
+}
+
+func TestGetAllInfluencers(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]User, error) {
+			return []User{
+				{ID: 5, Name: "inf1", Email: "inf1@test.com"},
+			}, nil
+		},
+	}
+
+	influencers, err := mockDB.GetAllInfluencers(1)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(influencers) != 1 {
+		t.Errorf("Expected 1 influencer, got %d", len(influencers))
+	}
+
+	if influencers[0].Name != "inf1" {
+		t.Errorf("Expected influencer name 'inf1', got '%s'", influencers[0].Name)
+	}
+}
+
+func TestGetAllInfluencersError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]User, error) {
+			return nil, errors.New("not found influencers for fan 0")
+		},
+	}
+
+	influencers, err := mockDB.GetAllInfluencers(0)
+
+	if err == nil {
+		t.Error("Expected error")
+	}
+
+	if influencers != nil {
+		t.Errorf("Influencers should be nil")
+	}
+}
+
+func TestFollowSomeone(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockFollowSomeone: func(newRelation FollowerRelation) (*FollowerRelation, error) {
+			return &FollowerRelation{
+				ID:         1,
+				Fan:        newRelation.Fan,
+				Influencer: newRelation.Influencer,
+			}, nil
+		},
+	}
+
+	relation, err := mockDB.FollowSomeone(FollowerRelation{Fan: 1, Influencer: 2})
 
 	if err != nil {
 		t.Error(err)
@@ -881,22 +864,33 @@ func TestGetRelationByUserID(t *testing.T) {
 
 	if relation == nil {
 		t.Errorf("Relation is nil")
-	} else if relation.Friend1 != idToSearch {
-		t.Errorf("Expected Friend1 %d, got %d", idToSearch, relation.Friend1)
+		return
+	}
+
+	if relation.ID != 1 {
+		t.Errorf("Expected relation ID 1, got %d", relation.ID)
+	}
+
+	if relation.Fan != 1 {
+		t.Errorf("Expected Fan 1, got %d", relation.Fan)
+	}
+
+	if relation.Influencer != 2 {
+		t.Errorf("Expected Influencer 2, got %d", relation.Influencer)
 	}
 }
 
-func TestGetRelationByUserIDNotFound(t *testing.T) {
+func TestFollowSomeoneError(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockGetRelationByUserID: func(id int) (*FriendRelation, error) {
-			return nil, errors.New("not found relation with user id -1")
+		MockFollowSomeone: func(newRelation FollowerRelation) (*FollowerRelation, error) {
+			return nil, errors.New("error inserting relation: duplicate key violates unique constraint")
 		},
 	}
 
-	relation, err := mockDB.GetRelationByUserID(-1)
+	relation, err := mockDB.FollowSomeone(FollowerRelation{Fan: 1, Influencer: 2})
 
 	if err == nil {
-		t.Errorf("Expected error")
+		t.Error("Expected error")
 	}
 
 	if relation != nil {
@@ -904,67 +898,17 @@ func TestGetRelationByUserIDNotFound(t *testing.T) {
 	}
 }
 
-// ADD RELATION
-func TestAddRelation(t *testing.T) {
-	testRelationToAdd := FriendRelation{
-		Friend1: 1,
-		Friend2: 2,
-	}
-
+func TestUnfollowSomeone(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
-			newRelation.ID = 1
-			return &newRelation, nil
-		},
-	}
-
-	addedRelation, err := mockDB.AddRelation(testRelationToAdd)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if addedRelation == nil {
-		t.Errorf("Added relation is nil")
-	} else if addedRelation.ID != 1 {
-		t.Errorf("Expected relation ID 1, got %d", addedRelation.ID)
-	}
-}
-
-func TestAddRelationMissingData(t *testing.T) {
-	testRelationToAdd := FriendRelation{}
-
-	mockDB := &MockDatabase{
-		MockAddRelation: func(newRelation FriendRelation) (*FriendRelation, error) {
-			return nil, errors.New("error inserting relation: null value violates not-null constraint")
-		},
-	}
-
-	addedRelation, err := mockDB.AddRelation(testRelationToAdd)
-
-	if err == nil {
-		t.Error("Should have returned an error")
-	}
-
-	if addedRelation != nil {
-		t.Errorf("Added relation should be nil, but its not")
-	}
-}
-
-// DELETE RELATION
-func TestDeleteRelationByUserID(t *testing.T) {
-	userIDToDelete := 1
-
-	mockDB := &MockDatabase{
-		MockDeleteRelationByUserID: func(id int) (bool, error) {
-			if id != userIDToDelete {
-				return false, errors.New("wrong user id passed to mock")
+		MockUnfollowSomeone: func(fanID int, influencerID int) (bool, error) {
+			if fanID != 1 || influencerID != 2 {
+				return false, errors.New("wrong params passed to mock")
 			}
 			return true, nil
 		},
 	}
 
-	isDeleted, err := mockDB.DeleteRelationByUserID(userIDToDelete)
+	isDeleted, err := mockDB.UnfollowSomeone(1, 2)
 
 	if err != nil {
 		t.Error(err)
@@ -975,14 +919,14 @@ func TestDeleteRelationByUserID(t *testing.T) {
 	}
 }
 
-func TestDeleteRelationByUserIDError(t *testing.T) {
+func TestUnfollowSomeoneError(t *testing.T) {
 	mockDB := &MockDatabase{
-		MockDeleteRelationByUserID: func(id int) (bool, error) {
-			return false, errors.New("not found any relation with the user id -1 to delete")
+		MockUnfollowSomeone: func(fanID int, influencerID int) (bool, error) {
+			return false, errors.New("error deleting relation: not found")
 		},
 	}
 
-	isDeleted, err := mockDB.DeleteRelationByUserID(-1)
+	isDeleted, err := mockDB.UnfollowSomeone(-1, -2)
 
 	if err == nil {
 		t.Error("An error was expected but got nil")
