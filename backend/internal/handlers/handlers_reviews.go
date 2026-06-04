@@ -112,15 +112,31 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, reviews)
 }
 
-// GetFriendRelationHandler returns the relation between two users
-func (h *ReviewHandler) GetFriendRelationHandler(c *gin.Context) {
+// GetAllFansHandler returns all the users that follows a specific user
+func (h *ReviewHandler) GetAllFansHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
 		return
 	}
 
-	relation, err := h.DB.GetRelationByUserID(userID)
+	_, err := h.DB.GetAllFans(userID)
+	if err != nil {
+		slog.Error("get reviews: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+}
+
+// GetAllInfluencersHandler returns all the users followed by a specific user
+func (h *ReviewHandler) GetAllInfluencersHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	relation, err := h.DB.GetAllInfluencers(userID)
 	if err != nil {
 		slog.Error("get reviews: query failed", "userID", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
