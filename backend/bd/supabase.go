@@ -494,7 +494,7 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 */
 
 // GetAllFans returns an array of User that follows the given UserID, or an error if it occurred
-
+//
 //nolint:dupl // For some reason, lint sees this and GetAllInfluencers as duplicates
 func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 
