@@ -68,6 +68,7 @@ type Database interface {
 
 	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
+	GetRandomProducts(limit int) ([]Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
@@ -313,6 +314,24 @@ func (db *SupabaseDB) GetProductByID(productID int) (*Product, error) {
 	}
 
 	return &products[0], nil
+}
+
+// GetRandomProducts returns random products limited by the limit parameter
+func (db *SupabaseDB) GetRandomProducts(limit int) ([]Product, error) {
+	body := db.client.Rpc("get_random_products", "exact", map[string]interface{}{
+		"lim": limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting random products: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting random products: %s", body)
+	}
+
+	return products, nil
 }
 
 // AddProduct adds a new Product to the database

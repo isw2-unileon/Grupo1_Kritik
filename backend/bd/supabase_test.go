@@ -365,6 +365,46 @@ func TestGetProductByIDNotFound(t *testing.T) {
 	}
 }
 
+func TestGetRandomProducts(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]Product, error) {
+			return []Product{
+				{ID: 1, Name: "Random A", Type: "Videojuego"},
+				{ID: 2, Name: "Random B", Type: "Videojuego"},
+				{ID: 3, Name: "Random C", Type: "Videojuego"},
+			}, nil
+		},
+	}
+
+	products, err := mockDB.GetRandomProducts(3)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(products) != 3 {
+		t.Errorf("Function returned wrong number of products: got %d, want 3", len(products))
+	}
+}
+
+func TestGetRandomProductsError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+
+	products, err := mockDB.GetRandomProducts(-1)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(products) != 0 {
+		t.Errorf("Function returned %d products, should be 0", len(products))
+	}
+}
+
 // ADD PRODUCT
 func TestAddProduct(t *testing.T) {
 	testProductToAdd := Product{
