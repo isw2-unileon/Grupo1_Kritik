@@ -23,14 +23,14 @@ export interface RegisterPayload {
 export interface Product {
   id: number;
   Name: string;
-  // the backend (GetProductByName, via GET /api/products?q=) returns the complete
-  // product; these fields are optional so as not to break other uses of Product.
+  // el backend (GetProductByName, vía GET /api/products?q=) devuelve el producto
+  // completo; estos campos son opcionales para no romper otros usos de Product.
   Type?: string;
   AverageGrade?: number;
   Description?: string;
   Release?: string;
   Genre?: string[];
-  Image?: string; // URL of the single product photo (Image column, nullable)
+  Image?: string; // URL de la única foto del producto (columna Image, nullable)
 }
 
 export interface NewReview {
@@ -110,9 +110,9 @@ export async function searchProducts(
     throw new Error("product search failed");
   }
 
-  // The backend returns an array when there are multiple matches, but a single
-// object when it finds a product by exact name (and null/{} if there is
-// none). We always normalize to Product[] so the rest of the app doesn't break.
+  // El backend devuelve un array cuando hay varias coincidencias, pero un único
+  // objeto cuando encuentra un producto por nombre exacto (y null/{} si no hay
+  // nada). Normalizamos siempre a Product[] para que el resto de la app no se rompa.
   const data: unknown = await res.json();
   if (Array.isArray(data)) return data as Product[];
   if (data && typeof data === "object" && "id" in data) return [data as Product];
@@ -149,4 +149,32 @@ export async function getReviews(signal?: AbortSignal): Promise<Review[]> {
     throw new Error("could not load reviews");
   }
   return res.json();
+}
+
+
+export async function updateReview(
+  id: number,
+  data: { description: string; recommended: boolean },
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/reviews/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not update review" }));
+    throw new Error(err.error || "could not update review");
+  }
+}
+
+export async function deleteReview(id: number, signal?: AbortSignal): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/reviews/${id}`, {
+    method: "DELETE",
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not delete review" }));
+    throw new Error(err.error || "could not delete review");
+  }
 }
