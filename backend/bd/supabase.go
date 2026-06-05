@@ -624,7 +624,7 @@ func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error)
 // GetRecommendations returns recommended products based of user likes
 // userID is the id of the user and limit is the number of products to recommend
 func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, error) {
-	body := db.client.Rpc("obtener_productos_recomendados", "exact", map[string]interface{}{
+	body := db.client.Rpc("obtain_recommended_products", "exact", map[string]interface{}{
 		"user_id_param": userID,
 		"lim":           limit,
 	})
