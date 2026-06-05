@@ -239,7 +239,87 @@ func (h *ReviewHandler) UnfollowSomeoneHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "unfollowed"})
 }
 
-// GetRandomProductsHandler returns random products.
+// DeleteReviewHandler borra una reseña que pertenece al usuario autenticado.
+func (h *ReviewHandler) DeleteReviewHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	reviewID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid review id"})
+		return
+	}
+
+	// only the author can delete it
+	review, err := h.DB.GetReviewByID(reviewID)
+	if err != nil || review == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "review not found"})
+		return
+	}
+	if review.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not your review"})
+		return
+	}
+
+	if _, err := h.DB.DeleteReviewByID(reviewID); err != nil {
+		slog.Error("delete review: failed", "review_id", reviewID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not delete review"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// UpdateReviewHandler edita una reseña que pertenece al usuario autenticado.
+func (h *ReviewHandler) UpdateReviewHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	reviewID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid review id"})
+		return
+	}
+
+	var req struct {
+		Description string `json:"description"`
+		Recommended bool   `json:"recommended"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	review, err := h.DB.GetReviewByID(reviewID)
+	if err != nil || review == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "review not found"})
+		return
+	}
+	if review.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not your review"})
+		return
+	}
+
+	updated, err := h.DB.UpdateReviewInfo(reviewID, bd.Review{
+		Description: strings.TrimSpace(req.Description),
+		Recommended: req.Recommended,
+	})
+	if err != nil {
+		slog.Error("update review: failed", "review_id", reviewID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update review"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updated)
+}
+
+// GetRandomProductsHandler returns a random selection of products (for discovery).
 func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 	limit := 10
 	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
