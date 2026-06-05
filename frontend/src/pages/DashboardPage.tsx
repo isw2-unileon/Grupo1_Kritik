@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
-import { searchProducts, getReviews, type Product, type Review } from "@/services/api";
+import { searchProducts, getReviews, getFollowers, getFollowing, type Product, type Review, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
@@ -446,17 +446,31 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
 function ProfilePanel({ user }: { user: SessionUser }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [followers, setFollowers] = useState<ProfileUser[]>([]);
+  const [following, setFollowing] = useState<ProfileUser[]>([]);
+  const [followLoading, setFollowLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const data = await getReviews();
-        if (active) setReviews(data);
+        const [reviewsData, followersData, followingData] = await Promise.all([
+          getReviews(),
+          getFollowers(),
+          getFollowing(),
+        ]);
+        if (active) {
+          setReviews(reviewsData);
+          setFollowers(followersData);
+          setFollowing(followingData);
+        }
       } catch {
         /* If it fails, we simply don't show statistics */
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setFollowLoading(false);
+        }
       }
     })();
     return () => {
@@ -472,16 +486,28 @@ function ProfilePanel({ user }: { user: SessionUser }) {
 
   return (
     <Card as="article" className="p-7 sm:p-8">
-      <div className="flex items-center gap-4">
-        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
-          {initial}
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
-          <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
-            {fullName || "Tu perfil"}
-          </h2>
-          <p className="truncate text-sm text-faint">@{user?.user_name ?? "usuario"}</p>
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex items-center gap-4 min-w-0">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
+            {initial}
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
+            <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
+              {fullName || "Tu perfil"}
+            </h2>
+            <p className="truncate text-sm text-faint">@{user?.user_name ?? "usuario"}</p>
+          </div>
+        </div>
+        <div className="flex items-start gap-6 shrink-0">
+          <div className="text-center">
+            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : followers.length}</p>
+            <p className="text-xs text-faint">seguidores</p>
+          </div>
+          <div className="text-center">
+            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : following.length}</p>
+            <p className="text-xs text-faint">seguidos</p>
+          </div>
         </div>
       </div>
 
@@ -520,9 +546,6 @@ function ProfilePanel({ user }: { user: SessionUser }) {
         </div>
       )}
 
-      <p className="mt-6 border-t border-line pt-6 text-xs text-faint">
-        Seguidores y seguidos aparecerán aquí cuando conectemos el backend de seguir.
-      </p>
     </Card>
   );
 }

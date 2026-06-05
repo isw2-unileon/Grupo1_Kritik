@@ -5,10 +5,12 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews, mockSearchProducts } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
+  mockGetFollowers: vi.fn(),
+  mockGetFollowing: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -16,9 +18,13 @@ vi.mock("@/services/api", () => ({
   register: vi.fn(),
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
+  getFollowers: mockGetFollowers,
+  getFollowing: mockGetFollowing,
 }));
 
 function renderDashboard() {
+  mockGetFollowers.mockResolvedValue([]);
+  mockGetFollowing.mockResolvedValue([]);
   localStorage.setItem("token", "t");
   localStorage.setItem("user", JSON.stringify({ id: 1, email: "a@b.com", name: "A", surname: "B", user_name: "ab" }));
 
