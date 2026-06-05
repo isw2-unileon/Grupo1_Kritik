@@ -37,6 +37,7 @@ func setupReviewsRouter(db bd.Database, withAuth bool) *gin.Engine {
 	protected.POST("/api/unfollow", h.UnfollowSomeoneHandler)
 	protected.GET("/api/fans", h.GetAllFansHandler)
 	protected.GET("/api/influencers", h.GetAllInfluencersHandler)
+	protected.GET("/api/recommendations", h.GetRecommendationsHandler)
 
 	return r
 }
@@ -733,5 +734,90 @@ func TestUnfollowSomeoneHandler_RelationNotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "Rec1", Type: "Videojuego", Genre: []string{"Acción"}},
+				{ID: 2, Name: "Rec2", Type: "Videojuego", Genre: []string{"Aventura"}},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "Rec1" {
+		t.Errorf("expected product name 'Rec1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetRecommendationsHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "Rec1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations?limit=5", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 5 {
+		t.Errorf("expected limit=5, got %d", capturedLimit)
 	}
 }

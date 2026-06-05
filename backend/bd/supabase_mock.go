@@ -28,6 +28,8 @@ type MockDatabase struct {
 	MockGetAllInfluencers func(fanID int) ([]User, error)
 	MockFollowSomeone     func(newRelation FollowerRelation) (*FollowerRelation, error)
 	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
+
+	MockGetRecommendations func(userID int, limit int) ([]Product, error)
 }
 
 // GetUserByEmail mock
@@ -133,4 +135,9 @@ func (m *MockDatabase) FollowSomeone(newRelation FollowerRelation) (*FollowerRel
 // UnfollowSomeone mock
 func (m *MockDatabase) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
 	return m.MockUnfollowSomeone(fanID, influencerID)
+}
+
+// GetRecommendations mock
+func (m *MockDatabase) GetRecommendations(userID int, limit int) ([]Product, error) {
+	return m.MockGetRecommendations(userID, limit)
 }

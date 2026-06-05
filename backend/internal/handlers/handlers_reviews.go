@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -110,6 +111,30 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, reviews)
+}
+
+// GetRecommendationsHandler returns recommended products for the authenticated user.
+func (h *ReviewHandler) GetRecommendationsHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	limit := 10
+	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
+		limit = l
+	}
+
+	products, err := h.DB.GetRecommendations(userID, limit)
+	if err != nil {
+		slog.Error("get recommendations: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load recommendations"})
+		return
+	}
+
+	slog.Info("get recommendations: success", "userID", userID, "count", len(products))
+	c.JSON(http.StatusOK, products)
 }
 
 // FollowRequest is the payload for following/unfollowing a user.
