@@ -72,6 +72,11 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		UserID:      user.ID,
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "(23505)") {
+			slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
+			c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"})
+			return
+		}
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review"})
 		return
