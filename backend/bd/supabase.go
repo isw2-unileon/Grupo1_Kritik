@@ -44,8 +44,10 @@ type Review struct {
 	Recommended bool   `json:"Recommended"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductId,omitempty"`
-	UserID    int `json:"UserId,omitempty"`
+	ProductID   int    `json:"ProductId,omitempty"`
+	UserID      int    `json:"UserId,omitempty"`
+	ProductName string `json:"ProductName,omitempty"`
+	UserName    string `json:"UserName,omitempty"`
 }
 
 // FollowerRelation struct
@@ -557,7 +559,7 @@ func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 		return nil, err
 	}
 
-	var followedUsers []User
+	followedUsers := []User{}
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Fan)
 		if err2 != nil {
@@ -588,7 +590,7 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 		return nil, err
 	}
 
-	var followedUsers []User
+	followedUsers := []User{}
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Influencer)
 		if err2 != nil {

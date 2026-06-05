@@ -88,6 +88,23 @@ func (h *ReviewHandler) SearchProductHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+// enrichReviews populates ProductName and UserName on a slice of reviews.
+func (h *ReviewHandler) enrichReviews(reviews []bd.Review) []bd.Review {
+	for i, r := range reviews {
+		if r.ProductID > 0 {
+			if p, err := h.DB.GetProductByID(r.ProductID); err == nil && p != nil {
+				reviews[i].ProductName = p.Name
+			}
+		}
+		if r.UserID > 0 {
+			if u, err := h.DB.GetUserByID(r.UserID); err == nil && u != nil {
+				reviews[i].UserName = u.UserName
+			}
+		}
+	}
+	return reviews
+}
+
 // GetUserReviewsHandler returns the reviews written by the authenticated user.
 func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
@@ -110,7 +127,7 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, reviews)
+	c.JSON(http.StatusOK, h.enrichReviews(reviews))
 }
 
 // GetRecommendationsHandler returns recommended products for the authenticated user.
@@ -317,6 +334,85 @@ func (h *ReviewHandler) UpdateReviewHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, updated)
+}
+
+// UserProfileResponse is the response for a public user profile (no email, no password).
+type UserProfileResponse struct {
+	ID               int    `json:"id"`
+	Name             string `json:"Name"`
+	UserName         string `json:"UserName"`
+	FansCount        int    `json:"FansCount"`
+	InfluencersCount int    `json:"InfluencersCount"`
+	IsFollowing      bool   `json:"IsFollowing"`
+}
+
+// GetUserProfileHandler returns public profile info for the given user.
+func (h *ReviewHandler) GetUserProfileHandler(c *gin.Context) {
+	currentUserID := c.GetInt("userID")
+	if currentUserID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	targetID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || targetID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	user, err := h.DB.GetUserByID(targetID)
+	if err != nil {
+		slog.Error("get user profile: user not found", "targetID", targetID, "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	fans, _ := h.DB.GetAllFans(targetID)
+	influencers, _ := h.DB.GetAllInfluencers(targetID)
+
+	following, err := h.DB.GetAllInfluencers(currentUserID)
+	isFollowing := false
+	if err == nil {
+		for _, f := range following {
+			if f.ID == targetID {
+				isFollowing = true
+				break
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, UserProfileResponse{
+		ID:               user.ID,
+		Name:             user.Name,
+		UserName:         user.UserName,
+		FansCount:        len(fans),
+		InfluencersCount: len(influencers),
+		IsFollowing:      isFollowing,
+	})
+}
+
+// GetUserReviewsByIDHandler returns reviews written by a specific user (enriched).
+func (h *ReviewHandler) GetUserReviewsByIDHandler(c *gin.Context) {
+	currentUserID := c.GetInt("userID")
+	if currentUserID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	targetID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || targetID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	reviews, err := h.DB.GetReviewsByUserID(targetID)
+	if err != nil {
+		slog.Error("get user reviews by id: query failed", "targetID", targetID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.enrichReviews(reviews))
 }
 
 // GetRandomProductsHandler returns a random selection of products (for discovery).
