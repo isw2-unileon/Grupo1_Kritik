@@ -318,3 +318,20 @@ func (h *ReviewHandler) UpdateReviewHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, updated)
 }
+
+// GetRandomProductsHandler devuelve una selección aleatoria de productos (para descubrir títulos).
+func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
+	limit := 10
+	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
+		limit = l
+	}
+
+	products, err := h.DB.GetRandomProducts(limit)
+	if err != nil {
+		slog.Error("get random products: query failed", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load random products"})
+		return
+	}
+
+	c.JSON(http.StatusOK, products)
+}
