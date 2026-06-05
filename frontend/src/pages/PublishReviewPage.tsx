@@ -228,6 +228,8 @@ export default function PublishReviewPage() {
                     <li key={product.id}>
                       <button
                         type="button"
+                        // evita que el input pierda el foco antes de registrar el clic
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handlePick(product)}
                         className="block w-full px-4 py-3 text-left text-cream transition hover:bg-cream/5"
                       >
