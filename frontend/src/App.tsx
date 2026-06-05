@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -124,6 +125,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <ProductDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/:id"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
               </ProtectedRoute>
             }
           />

@@ -44,8 +44,10 @@ type Review struct {
 	Recommended bool   `json:"Recommended"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductId,omitempty"`
-	UserID    int `json:"UserId,omitempty"`
+	ProductID   int    `json:"ProductId,omitempty"`
+	UserID      int    `json:"UserId,omitempty"`
+	ProductName string `json:"ProductName,omitempty"`
+	UserName    string `json:"UserName,omitempty"`
 }
 
 // FollowerRelation struct
