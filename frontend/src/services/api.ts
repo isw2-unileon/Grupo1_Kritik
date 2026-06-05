@@ -6,6 +6,14 @@ export interface UserData {
   user_name: string;
 }
 
+// Matches backend bd.User PascalCase JSON response
+export interface ProfileUser {
+  id: number;
+  Email: string;
+  Name: string;
+  UserName: string;
+}
+
 export interface LoginResponse {
   token: string;
   user: UserData;
@@ -177,4 +185,22 @@ export async function deleteReview(id: number, signal?: AbortSignal): Promise<vo
     const err = await res.json().catch(() => ({ error: "could not delete review" }));
     throw new Error(err.error || "could not delete review");
   }
+}
+
+export async function getFollowers(signal?: AbortSignal): Promise<ProfileUser[]> {
+  const res = await authedFetch(`${BASE}/api/fans`, { signal });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not load followers" }));
+    throw new Error(err.error || "could not load followers");
+  }
+  return res.json();
+}
+
+export async function getFollowing(signal?: AbortSignal): Promise<ProfileUser[]> {
+  const res = await authedFetch(`${BASE}/api/influencers`, { signal });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not load following" }));
+    throw new Error(err.error || "could not load following");
+  }
+  return res.json();
 }
