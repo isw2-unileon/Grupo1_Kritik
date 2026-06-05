@@ -159,6 +159,27 @@ export async function getReviews(signal?: AbortSignal): Promise<Review[]> {
   return res.json();
 }
 
+// Reseñas de un producto concreto (GET /api/product-reviews/:id).
+// El backend resuelve cada UserId a su user_name.
+export interface ProductReview {
+  id: number;
+  recommended: boolean;
+  description: string;
+  user_name: string;
+}
+
+export async function getProductReviews(
+  productId: number,
+  signal?: AbortSignal,
+): Promise<ProductReview[]> {
+  const res = await authedFetch(`${BASE}/api/product-reviews/${productId}`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load product reviews");
+  }
+  const data: unknown = await res.json();
+  return Array.isArray(data) ? (data as ProductReview[]) : [];
+}
+
 
 export async function updateReview(
   id: number,

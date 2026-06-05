@@ -61,6 +61,7 @@ func newRouter(db bd.Database) *gin.Engine {
 	api.POST("/unfollow", middleware.RequireAuth(), reviewH.UnfollowSomeoneHandler)
 	api.GET("/recommendations", middleware.RequireAuth(), reviewH.GetRecommendationsHandler)
 	api.GET("/products/random", reviewH.GetRandomProductsHandler)
+	api.GET("/product-reviews/:id", middleware.RequireAuth(), reviewH.GetProductReviewsHandler)
 
 	return r
 }

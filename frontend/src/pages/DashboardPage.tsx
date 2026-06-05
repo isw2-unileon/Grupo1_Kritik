@@ -5,7 +5,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import { searchProducts, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
 
-/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
+/* ---------- datos de ejemplo (recomendaciones y círculo: aún no hay API) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -14,7 +14,7 @@ const CATS = {
 } as const;
 type CatKey = keyof typeof CATS;
 
-// type label for the example recommendations (when opening their profile)
+// etiqueta de tipo para las recomendaciones de ejemplo (al abrir su ficha)
 const CAT_TO_TYPE: Record<CatKey, string> = {
   game: "Videojuego",
   book: "Libro",
@@ -57,7 +57,7 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-/* ---------- Reusable components ---------- */
+/* ---------- piezas reutilizables ---------- */
 function Spinner() {
   return (
     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -107,8 +107,8 @@ function VerdictChip({ yes }: { yes: boolean }) {
   );
 }
 
-/* ---------- Cover carousel (auto-scrolls) ---------- */
-// Sample titles for the carousel (until the backend provides real covers)
+/* ---------- carrusel de portadas (se desliza solo) ---------- */
+// títulos de ejemplo para el carrusel (mientras el backend no dé portadas reales)
 const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Dune: Parte Dos", cat: "film" },
   { name: "The Last of Us", cat: "series" },
@@ -124,7 +124,7 @@ const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Elden Ring", cat: "game" },
 ];
 
-// Deck (Fisher-Yates): randomized order on every load
+// baraja (Fisher-Yates): orden aleatorio en cada carga
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -139,7 +139,7 @@ function shuffle<T>(arr: T[]): T[] {
 function FeaturedStrip() {
   const navigate = useNavigate();
   const items = useMemo(() => shuffle(FEATURED), []);
-  // We duplicate the list so the loop is continuous and seamless.
+  // duplicamos la lista para que el bucle sea continuo y sin saltos
   const loop = [...items, ...items];
 
   const open = (it: { name: string; cat: CatKey }) =>
@@ -157,7 +157,7 @@ function FeaturedStrip() {
 
   return (
     <div className="group relative overflow-hidden">
-      {/* Blurred edges so the cards blend with the background */}
+      {/* bordes difuminados para que las tarjetas se fundan con el fondo */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
@@ -177,7 +177,7 @@ function FeaturedStrip() {
   );
 }
 
-/* ---------- sections of the panel ---------- */
+/* ---------- secciones del panel ---------- */
 const RECO_CATS = [
   { id: "all", label: "Todas" },
   { id: "game", label: "Juegos" },
@@ -189,14 +189,14 @@ type RecoCatId = (typeof RECO_CATS)[number]["id"];
 
 function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
   const navigate = useNavigate();
-  const preview = typeof limit === "number"; // Home = preview; tab = full view
+  const preview = typeof limit === "number"; // Inicio = vistazo; pestaña = completa
   const [cat, setCat] = useState<RecoCatId>("all");
 
-  // preview: the first N. Full view: all, with filter by category.
+  // vistazo: las primeras N. Completa: todas, con filtro por categoría.
   const list = !preview && cat !== "all" ? RECOS.filter((r) => r.cat === cat) : RECOS;
   const visible = preview ? RECOS.slice(0, limit) : list;
 
-  // opens the profile of the title with its data (example) via router state
+  // abre la ficha del título con sus datos (de ejemplo) vía router state
   const open = (r: Reco) =>
     navigate(`/product/${encodeURIComponent(r.name)}`, {
       state: {
@@ -236,7 +236,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         )}
       </div>
 
-      {/* Category filters: only in the full version (tab) */}
+      {/* filtros por categoría: solo en la versión completa (pestaña) */}
       {!preview && (
         <div
           role="group"
@@ -314,7 +314,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         </div>
       )}
 
-      {/* Preview: link to the full list if there are more */}
+      {/* vistazo: enlace al listado completo si hay más */}
       {preview && onSeeAll && RECOS.length > (limit ?? 0) && (
         <button
           type="button"
@@ -328,7 +328,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
-// clickable row of the circle: opens the product profile (sample data) via router state
+// fila clicable del círculo: abre la ficha del producto (datos de ejemplo) vía router state
 function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
@@ -411,7 +411,7 @@ type SessionUser = {
   email?: string;
 } | null;
 
-/* Compact profile card for the sidebar on the Home page. */
+/* Tarjeta compacta del perfil para la barra lateral de Inicio. */
 function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }) {
   const initial = user?.name?.[0]?.toUpperCase() ?? "?";
   const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
@@ -440,21 +440,28 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
   );
 }
 
-/* ---------- Following list modal ---------- */
-function FollowingList({
+/* ---------- People list modal (followers / following) ---------- */
+function PeopleModal({
+  title,
   users,
+  emptyText,
   unfollowingIds,
   error,
   onClose,
   onUnfollow,
 }: {
+  title: string;
   users: ProfileUser[];
-  unfollowingIds: Set<number>;
-  error: string | null;
+  emptyText: string;
+  unfollowingIds?: Set<number>;
+  error?: string | null;
   onClose: () => void;
-  onUnfollow: (id: number) => Promise<void>;
+  onUnfollow?: (id: number) => Promise<void>;
 }) {
+  const list = users ?? [];
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => { setShown(true); }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -469,13 +476,16 @@ function FollowingList({
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Usuarios que sigues"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
+      aria-label={title}
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-[2rem] border border-line bg-surface p-6 shadow-2xl">
+      <div className={`w-full max-w-md rounded-[2rem] border border-line bg-surface p-6 shadow-2xl transition-all duration-200 ${shown ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-95 opacity-0"}`}>
         <div className="flex items-center justify-between gap-4">
-          <h2 className="font-display text-xl font-semibold text-cream">Siguiendo</h2>
+          <h2 className="flex items-center gap-2.5 font-display text-xl font-semibold text-cream">
+            {title}
+            <span className="rounded-full bg-ink/60 px-2 py-0.5 text-xs font-semibold text-dim ring-1 ring-line">{list.length}</span>
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -493,15 +503,24 @@ function FollowingList({
         )}
 
         <div className="mt-4 max-h-80 space-y-1 overflow-y-auto">
-          {users.length === 0 ? (
-            <p className="py-8 text-center text-dim">No sigues a nadie todavía.</p>
+          {list.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-ink/60 text-faint ring-1 ring-line">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 11h-6" />
+                </svg>
+              </span>
+              <p className="text-sm text-dim">{emptyText}</p>
+            </div>
           ) : (
-            users.map((u) => {
-              const loading = unfollowingIds.has(u.id);
+            list.map((u) => {
+              const loading = unfollowingIds?.has(u.id) ?? false;
               return (
                 <div
                   key={u.id}
-                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition hover:bg-ink/40"
+                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 ring-transparent transition hover:bg-ink/40 hover:ring-line"
                 >
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
                     {u.Name?.charAt(0)?.toUpperCase() ?? "?"}
@@ -510,14 +529,23 @@ function FollowingList({
                     <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
                     <p className="truncate text-xs text-faint">@{u.UserName}</p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => onUnfollow(u.id)}
-                    className="shrink-0 rounded-full border border-coral px-3.5 py-1.5 text-xs font-semibold text-coral transition hover:bg-coral/10 disabled:opacity-40"
-                  >
-                    {loading ? "Dejando de seguir…" : "Dejar de seguir"}
-                  </button>
+                  {onUnfollow && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => onUnfollow(u.id)}
+                      className="group/unf shrink-0 rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-dim transition hover:border-coral hover:bg-coral/10 hover:text-coral disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {loading ? (
+                        "…"
+                      ) : (
+                        <>
+                          <span className="inline group-hover/unf:hidden">Siguiendo</span>
+                          <span className="hidden group-hover/unf:inline">Dejar de seguir</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               );
             })
@@ -537,6 +565,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
   const [followers, setFollowers] = useState<ProfileUser[]>([]);
   const [following, setFollowing] = useState<ProfileUser[]>([]);
   const [followLoading, setFollowLoading] = useState(true);
+  const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [unfollowingIds, setUnfollowingIds] = useState<Set<number>>(new Set());
   const [unfollowError, setUnfollowError] = useState<string | null>(null);
@@ -551,12 +580,12 @@ function ProfilePanel({ user }: { user: SessionUser }) {
           getFollowing(),
         ]);
         if (active) {
-          setReviews(reviewsData);
-          setFollowers(followersData);
-          setFollowing(followingData);
+          setReviews(reviewsData ?? []);
+          setFollowers(followersData ?? []);
+          setFollowing(followingData ?? []);
         }
       } catch {
-        /* If it fails, we simply don't show statistics */
+        /* si falla, simplemente no mostramos estadísticas */
       } finally {
         if (active) {
           setLoading(false);
@@ -580,7 +609,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
     setUnfollowingIds((prev) => new Set(prev).add(targetId));
     try {
       await unfollowUser(targetId);
-      setFollowing((prev) => prev.filter((u) => u.id !== targetId));
+      setFollowing((prev) => (prev ?? []).filter((u) => u.id !== targetId));
     } catch {
       setUnfollowError("No se pudo dejar de seguir a este usuario.");
     } finally {
@@ -609,16 +638,20 @@ function ProfilePanel({ user }: { user: SessionUser }) {
           </div>
         </div>
         <div className="flex items-start gap-6 shrink-0">
-          <div className="text-center">
-            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : followers.length}</p>
+          <button
+            type="button"
+            onClick={() => setShowFollowers(true)}
+            className="text-center transition hover:opacity-80"
+          >
+            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : (followers ?? []).length}</p>
             <p className="text-xs text-faint">seguidores</p>
-          </div>
+          </button>
           <button
             type="button"
             onClick={() => setShowFollowing(true)}
             className="text-center transition hover:opacity-80"
           >
-            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : following.length}</p>
+            <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : (following ?? []).length}</p>
             <p className="text-xs text-faint">seguidos</p>
           </button>
         </div>
@@ -658,12 +691,21 @@ function ProfilePanel({ user }: { user: SessionUser }) {
           </div>
         </div>
       )}
-
     </Card>
 
+      {showFollowers && (
+        <PeopleModal
+          title="Seguidores"
+          users={followers}
+          emptyText="Aún no tienes seguidores."
+          onClose={() => setShowFollowers(false)}
+        />
+      )}
       {showFollowing && (
-        <FollowingList
+        <PeopleModal
+          title="Siguiendo"
           users={following}
+          emptyText="No sigues a nadie todavía."
           unfollowingIds={unfollowingIds}
           error={unfollowError}
           onClose={() => { setShowFollowing(false); setUnfollowError(null); }}
@@ -674,7 +716,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
   );
 }
 
-/* ---------- page ---------- */
+/* ---------- página ---------- */
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -682,7 +724,7 @@ export default function DashboardPage() {
   const tabsRef = useRef<HTMLElement>(null);
   const didMount = useRef(false);
 
-  // Catalog search (real API: searchProducts)
+  // búsqueda en el catálogo (API real: searchProducts)
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
@@ -713,8 +755,8 @@ export default function DashboardPage() {
     };
   }, [query]);
 
-// When changing tabs, smoothly scroll to the tabs so the 
-// content doesn't "jump" if a tab is shorter than the previous one
+  // al cambiar de pestaña, desplaza suavemente hasta las pestañas para que el
+  // contenido no "salte" cuando una pestaña ocupa menos alto que la anterior
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true;
@@ -730,11 +772,11 @@ export default function DashboardPage() {
       case "inicio":
         return (
           <div className="space-y-6">
-            {/* featured carousel (only on Home) */}
+            {/* carrusel de portadas (solo en Inicio) */}
             <FeaturedStrip />
-            {/* main area: recommendations (preview) */}
+            {/* zona protagonista: recomendaciones (vistazo) */}
             <Recommendations limit={3} onSeeAll={() => setActiveTab("recomendaciones")} />
-            {/* secondary: your reviews, your circle and your profile */}
+            {/* secundario: tus reseñas, tu círculo y tu perfil */}
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
@@ -765,7 +807,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* header: compact greeting + action bar (search and publish together) */}
+      {/* cabecera: saludo compacto + barra de acciones (buscar y publicar juntos) */}
       <div className="space-y-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
@@ -777,7 +819,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {/* catalog search */}
+          {/* buscador del catálogo */}
           <div className="relative flex-1">
             <svg
               className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
@@ -809,7 +851,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* publish review (next to the search bar) */}
+          {/* publicar reseña (junto al buscador) */}
           <Link
             to="/publish-review"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-acid px-5 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
@@ -823,7 +865,7 @@ export default function DashboardPage() {
       </div>
 
       {isSearching ? (
-        /* ---------- search results ---------- */
+        /* ---------- resultados de búsqueda ---------- */
         <Card as="section" className="p-7 sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -885,7 +927,7 @@ export default function DashboardPage() {
           )}
         </Card>
       ) : (
-        /* ---------- normal view with tabs ---------- */
+        /* ---------- vista normal con pestañas ---------- */
         <>
           <nav
             ref={tabsRef}

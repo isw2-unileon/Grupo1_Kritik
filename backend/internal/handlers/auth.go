@@ -108,6 +108,13 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 
 	addedUser, err := h.DB.AddUser(newUser)
 	if err != nil {
+		// The Users table has a CHECK constraint on Birth; turn that specific
+		// failure into a clear 400 instead of a generic 500.
+		if strings.Contains(err.Error(), "Users_Birth_check") {
+			slog.Warn("register: birth rejected by db check", "email", req.Email, "error", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fecha de nacimiento inválida"})
+			return
+		}
 		slog.Error("register: failed to create user", "email", req.Email, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 		return

@@ -335,3 +335,48 @@ func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, products)
 }
+
+// ProductReviewResponse is a review enriched with the author's username.
+type ProductReviewResponse struct {
+	ID          int    `json:"id"`
+	Recommended bool   `json:"recommended"`
+	Description string `json:"description"`
+	UserName    string `json:"user_name"`
+}
+
+// GetProductReviewsHandler returns all reviews for a product, resolving each
+// review's author id into a username.
+func (h *ReviewHandler) GetProductReviewsHandler(c *gin.Context) {
+	productID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
+	reviews, err := h.DB.GetReviewsByProductID(productID)
+	if err != nil {
+		slog.Error("product reviews: query failed", "product_id", productID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	out := make([]ProductReviewResponse, 0, len(reviews))
+	names := make(map[int]string)
+	for _, r := range reviews {
+		name, ok := names[r.UserID]
+		if !ok {
+			if u, e := h.DB.GetUserByID(r.UserID); e == nil && u != nil {
+				name = u.UserName
+			}
+			names[r.UserID] = name
+		}
+		out = append(out, ProductReviewResponse{
+			ID:          r.ID,
+			Recommended: r.Recommended,
+			Description: r.Description,
+			UserName:    name,
+		})
+	}
+
+	c.JSON(http.StatusOK, out)
+}
