@@ -1,6 +1,7 @@
 package bd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -82,6 +83,8 @@ type Database interface {
 	GetAllInfluencers(fanID int) ([]User, error)
 	FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error)
 	UnfollowSomeone(fanID int, influencerID int) (bool, error)
+
+	GetRecommendations(userID int, limit int) ([]Product, error)
 }
 
 // SupabaseDB client struct
@@ -610,6 +613,32 @@ func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error)
 	}
 
 	return true, nil
+}
+
+/*
+ =========================================================
+ Recommender functions
+ =========================================================
+*/
+
+// GetRecommendations returns recommended products based of user likes
+// userID is the id of the user and limit is the number of products to recommend
+func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, error) {
+	body := db.client.Rpc("get_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
+	}
+
+	return products, nil
 }
 
 /*

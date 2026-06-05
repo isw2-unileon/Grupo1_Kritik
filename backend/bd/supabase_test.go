@@ -1055,6 +1055,67 @@ func TestUnfollowSomeoneError(t *testing.T) {
 
 /*
  =========================================================
+ Recommender functions
+ =========================================================
+*/
+
+func TestGetRecommendations(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]Product, error) {
+			return []Product{
+				{
+					ID:           1,
+					Name:         "Game A",
+					Type:         "Videojuego",
+					AverageGrade: 4,
+					Description:  "Great game",
+					Genre:        []string{"Acción", "Aventura"},
+				},
+				{
+					ID:           2,
+					Name:         "Game B",
+					Type:         "Videojuego",
+					AverageGrade: 3,
+					Description:  "Fun game",
+					Genre:        []string{"Estrategia"},
+				},
+			}, nil
+		},
+	}
+
+	products, err := mockDB.GetRecommendations(1, 10)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(products) != 2 {
+		t.Errorf("Function returned wrong number of products: got %d, want 2", len(products))
+	} else if products[0].ID != 1 {
+		t.Errorf("Expected product ID 1, got %d", products[0].ID)
+	}
+}
+
+func TestGetRecommendationsError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]Product, error) {
+			return nil, errors.New("user with id -1 not found")
+		},
+	}
+
+	products, err := mockDB.GetRecommendations(-1, 10)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(products) != 0 {
+		t.Errorf("Function returned %d products, should be 0", len(products))
+	}
+}
+
+/*
+ =========================================================
  Hash functions
  =========================================================
 */
