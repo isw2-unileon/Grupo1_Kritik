@@ -107,6 +107,25 @@ describe("DashboardPage", () => {
 
       expect(screen.getByText("67%")).toBeInTheDocument();
     });
+
+    it("indicates active tab with aria-current", () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const inicioBtn = screen.getByRole("button", { name: "Inicio" });
+      expect(inicioBtn).toHaveAttribute("aria-current", "page");
+    });
+
+    it("clicking active tab keeps it active", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      const inicioBtn = screen.getByRole("button", { name: "Inicio" });
+      await user.click(inicioBtn);
+
+      expect(screen.getByText("Tu espacio de veredictos está listo")).toBeInTheDocument();
+    });
   });
 
   describe("search", () => {
@@ -189,6 +208,56 @@ describe("DashboardPage", () => {
 
       expect(screen.getByLabelText("Buscar en el catálogo")).toHaveValue("");
       expect(screen.getByText("Tu espacio de veredictos está listo")).toBeInTheDocument();
+    });
+
+    it("hides tab navigation while searching", async () => {
+      mockSearchProducts.mockReturnValue(new Promise(() => {}));
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      expect(screen.getByRole("navigation", { name: "Secciones del panel" })).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      const input = screen.getByLabelText("Buscar en el catálogo");
+      await user.type(input, "Hal");
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("navigation", { name: "Secciones del panel" }),
+        ).not.toBeInTheDocument();
+      }, { timeout: 1500 });
+    });
+  });
+
+  describe("recommendations filter", () => {
+    it("filters by category and shows only matching items", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      await user.click(screen.getAllByText("Recomendaciones")[0]);
+
+      await user.click(screen.getByText("Series"));
+
+      expect(screen.getByText("Severance")).toBeInTheDocument();
+      expect(screen.getByText("Shogun")).toBeInTheDocument();
+      expect(screen.getByText("Última señal")).toBeInTheDocument();
+      expect(screen.queryByText("Tunic")).not.toBeInTheDocument();
+    });
+
+    it("resets filter to show all when clicking Todas", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      await user.click(screen.getAllByText("Recomendaciones")[0]);
+
+      await user.click(screen.getByText("Series"));
+      await user.click(screen.getByText("Todas"));
+
+      expect(screen.getByText("Severance")).toBeInTheDocument();
+      expect(screen.getByText("Tunic")).toBeInTheDocument();
+      expect(screen.getByText("Poor Things")).toBeInTheDocument();
     });
   });
 });
