@@ -173,6 +173,28 @@ func TestAddUser(t *testing.T) {
 	}
 }
 
+func TestAddUserError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockAddUser: func(newUser User) (*User, error) {
+			return nil, errors.New("error adding user to the database")
+		},
+	}
+
+	addedUser, err := mockDB.AddUser(User{
+		Email:    "failemail@gmail.com",
+		Name:     "failuser",
+		Password: "testpassword",
+	})
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if addedUser != nil {
+		t.Errorf("Added user should be nil, got %+v", addedUser)
+	}
+}
+
 // DELETE USER
 func TestDeleteUserByEmail(t *testing.T) {
 	mockDB := &MockDatabase{
