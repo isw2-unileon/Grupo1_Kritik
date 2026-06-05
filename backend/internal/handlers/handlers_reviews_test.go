@@ -39,6 +39,8 @@ func setupReviewsRouter(db bd.Database, withAuth bool) *gin.Engine {
 	protected.GET("/api/influencers", h.GetAllInfluencersHandler)
 	protected.GET("/api/recommendations", h.GetRecommendationsHandler)
 
+	r.GET("/api/products/random", h.GetRandomProductsHandler)
+
 	return r
 }
 
@@ -819,5 +821,77 @@ func TestGetRecommendationsHandler_CustomLimit(t *testing.T) {
 	}
 	if capturedLimit != 5 {
 		t.Errorf("expected limit=5, got %d", capturedLimit)
+	}
+}
+
+func TestGetRandomProductsHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "Rand1", Type: "Videojuego"},
+				{ID: 2, Name: "Rand2", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "Rand1" {
+		t.Errorf("expected product name 'Rand1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetRandomProductsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRandomProductsHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "Rand1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random?limit=7", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 7 {
+		t.Errorf("expected limit=7, got %d", capturedLimit)
 	}
 }

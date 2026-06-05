@@ -13,6 +13,7 @@ type MockDatabase struct {
 
 	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
+	MockGetRandomProducts   func(limit int) ([]Product, error)
 	MockAddProduct          func(newProduct Product) (*Product, error)
 	MockDeleteProductByName func(productName string) (bool, error)
 	MockUpdateProductInfo   func(productName string, newProductInfo Product) (*Product, error)
@@ -70,6 +71,11 @@ func (m *MockDatabase) GetProductsByName(productName string) ([]Product, error) 
 // GetProductByID mock
 func (m *MockDatabase) GetProductByID(productID int) (*Product, error) {
 	return m.MockGetProductByID(productID)
+}
+
+// GetRandomProducts mock
+func (m *MockDatabase) GetRandomProducts(limit int) ([]Product, error) {
+	return m.MockGetRandomProducts(limit)
 }
 
 // AddProduct mock
