@@ -204,3 +204,15 @@ export async function getFollowing(signal?: AbortSignal): Promise<ProfileUser[]>
   }
   return res.json();
 }
+
+export async function unfollowUser(influencerId: number, signal?: AbortSignal): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/unfollow`, {
+    method: "POST",
+    body: JSON.stringify({ influencer_id: influencerId }),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not unfollow" }));
+    throw new Error(err.error || "could not unfollow");
+  }
+}

@@ -5,12 +5,13 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
   mockGetFollowers: vi.fn(),
   mockGetFollowing: vi.fn(),
+  mockUnfollowUser: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -20,11 +21,12 @@ vi.mock("@/services/api", () => ({
   searchProducts: mockSearchProducts,
   getFollowers: mockGetFollowers,
   getFollowing: mockGetFollowing,
+  unfollowUser: mockUnfollowUser,
 }));
 
-function renderDashboard() {
+function renderDashboard(followingOverride?: unknown[]) {
   mockGetFollowers.mockResolvedValue([]);
-  mockGetFollowing.mockResolvedValue([]);
+  mockGetFollowing.mockResolvedValue(followingOverride ?? []);
   localStorage.setItem("token", "t");
   localStorage.setItem("user", JSON.stringify({ id: 1, email: "a@b.com", name: "A", surname: "B", user_name: "ab" }));
 
@@ -131,6 +133,92 @@ describe("DashboardPage", () => {
       await user.click(inicioBtn);
 
       expect(screen.getByText("Tu espacio de veredictos está listo")).toBeInTheDocument();
+    });
+
+    it("opens following list modal when clicking seguiditos count", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard([
+        { id: 10, Email: "u1@t.com", Name: "User One", UserName: "userone" },
+        { id: 20, Email: "u2@t.com", Name: "User Two", UserName: "usertwo" },
+      ]);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+
+      expect(screen.getByRole("dialog", { name: "Usuarios que sigues" })).toBeInTheDocument();
+      expect(screen.getByText("User One")).toBeInTheDocument();
+      expect(screen.getByText("User Two")).toBeInTheDocument();
+    });
+
+    it("shows empty state when not following anyone", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+
+      expect(screen.getByText("No sigues a nadie todavía.")).toBeInTheDocument();
+    });
+
+    it("calls unfollowUser and removes user from list on button click", async () => {
+      mockUnfollowUser.mockResolvedValue(undefined);
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard([
+        { id: 10, Email: "u1@t.com", Name: "User One", UserName: "userone" },
+        { id: 20, Email: "u2@t.com", Name: "User Two", UserName: "usertwo" },
+      ]);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+
+      const unfollowButtons = screen.getAllByText("Dejar de seguir");
+      expect(unfollowButtons).toHaveLength(2);
+
+      await user.click(unfollowButtons[0]!);
+
+      await waitFor(() => {
+        expect(mockUnfollowUser).toHaveBeenCalledWith(10);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("User One")).not.toBeInTheDocument();
+      });
+      expect(screen.getByText("User Two")).toBeInTheDocument();
+    });
+
+    it("shows loading text on unfollow button while unfollowing", async () => {
+      mockUnfollowUser.mockImplementation(() => new Promise(() => {}));
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard([
+        { id: 10, Email: "u1@t.com", Name: "User One", UserName: "userone" },
+      ]);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+      await user.click(screen.getByText("Dejar de seguir"));
+
+      expect(screen.getByText("Dejando de seguir…")).toBeInTheDocument();
+    });
+
+    it("closes modal on Escape key", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard([
+        { id: 10, Email: "u1@t.com", Name: "User One", UserName: "userone" },
+      ]);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
