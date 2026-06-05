@@ -549,7 +549,7 @@ func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 	var relations []FollowerRelation
 
 	_, err := db.client.From("Followers").
-		Select("Fan(*)", "exact", false).
+		Select("*", "exact", false).
 		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
 		ExecuteTo(&relations)
 
@@ -580,7 +580,7 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 	var relations []FollowerRelation
 
 	_, err := db.client.From("Followers").
-		Select("Influencer(*)", "exact", false).
+		Select("*", "exact", false).
 		Eq("Fan", fmt.Sprintf("%d", fanID)).
 		ExecuteTo(&relations)
 
