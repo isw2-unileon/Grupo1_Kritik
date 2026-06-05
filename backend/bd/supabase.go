@@ -282,7 +282,7 @@ func (db *SupabaseDB) GetProductsByName(productName string) ([]Product, error) {
 	var products []Product
 	_, err := db.client.From("Product").
 		Select("*", "exact", false).
-		Eq("Name", productName).
+		Ilike("Name", "*"+productName+"*"). // antes: Eq("Name", productName).
 		ExecuteTo(&products)
 
 	if err != nil {
