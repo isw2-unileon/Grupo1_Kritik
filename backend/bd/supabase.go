@@ -557,7 +557,7 @@ func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 		return nil, err
 	}
 
-	var followedUsers []User
+	followedUsers := []User{}
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Fan)
 		if err2 != nil {
@@ -588,7 +588,7 @@ func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
 		return nil, err
 	}
 
-	var followedUsers []User
+	followedUsers := []User{}
 	for _, rel := range relations {
 		user, err2 := db.GetUserByID(rel.Influencer)
 		if err2 != nil {
