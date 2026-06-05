@@ -110,6 +110,9 @@ func TestCreateReviewHandler_Success(t *testing.T) {
 		MockAddReview: func(r bd.Review) (*bd.Review, error) {
 			return &bd.Review{ID: 1, Description: r.Description, Recommended: r.Recommended, ProductID: r.ProductID, UserID: r.UserID}, nil
 		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
+		},
 	}
 	r := setupReviewsRouter(mock, true)
 
@@ -160,6 +163,42 @@ func TestCreateReviewHandler_InvalidBody(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateReviewHandler_Duplicate(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{
+				{ID: 1, Description: "Existing", Recommended: true, ProductID: id, UserID: 1},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"product_id":  5,
+		"description": "Duplicate",
+		"recommended": true,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/reviews", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if resp["error"] != "El producto ya fue valorado" {
+		t.Errorf("expected conflict message, got '%s'", resp["error"])
 	}
 }
 
@@ -645,6 +684,9 @@ func TestCreateReviewHandler_AddReviewFails(t *testing.T) {
 		},
 		MockAddReview: func(r bd.Review) (*bd.Review, error) {
 			return nil, errors.New("insert error")
+		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
 		},
 	}
 	r := setupReviewsRouter(mock, true)

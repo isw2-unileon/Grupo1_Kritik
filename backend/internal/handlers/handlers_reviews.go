@@ -54,6 +54,17 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		return
 	}
 
+	// Check for duplicate: same user + same product
+	if existing, err := h.DB.GetReviewsByProductID(req.ProductID); err == nil {
+		for _, r := range existing {
+			if r.UserID == user.ID {
+				slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
+				c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"})
+				return
+			}
+		}
+	}
+
 	review, err := h.DB.AddReview(bd.Review{
 		Description: req.Description,
 		Recommended: req.Recommended,
