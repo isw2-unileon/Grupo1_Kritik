@@ -253,7 +253,7 @@ func (h *ReviewHandler) DeleteReviewHandler(c *gin.Context) {
 		return
 	}
 
-	// solo el autor puede borrarla
+	// only the author can delete it
 	review, err := h.DB.GetReviewByID(reviewID)
 	if err != nil || review == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "review not found"})
@@ -319,7 +319,7 @@ func (h *ReviewHandler) UpdateReviewHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
-// GetRandomProductsHandler devuelve una selección aleatoria de productos (para descubrir títulos).
+// GetRandomProductsHandler returns a random selection of products (for discovery).
 func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 	limit := 10
 	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
