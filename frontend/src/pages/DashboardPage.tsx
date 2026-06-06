@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
+import UserAvatar from "@/components/UserAvatar";
 import { searchProducts, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
@@ -409,19 +410,17 @@ type SessionUser = {
   surname?: string;
   user_name?: string;
   email?: string;
+  image?: string;
 } | null;
 
 /* Compact profile card for the sidebar on the Home page. */
 function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }) {
-  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
   const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
   return (
     <Card as="article" className="p-6">
       <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
       <div className="mt-4 flex items-center gap-3">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
-          {initial}
-        </span>
+        <UserAvatar image={user?.image} name={user?.name} size="md" />
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-semibold text-cream">
             {fullName || "Tu perfil"}
@@ -508,9 +507,7 @@ function FollowingList({
                     className="flex items-center gap-3 flex-1 min-w-0"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                      {u.Name?.charAt(0)?.toUpperCase() ?? "?"}
-                    </span>
+                    <UserAvatar image={u.Image} name={u.Name} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
                       <p className="truncate text-xs text-faint">@{u.UserName}</p>
@@ -578,7 +575,6 @@ function ProfilePanel({ user }: { user: SessionUser }) {
   const total = reviews.length;
   const yes = reviews.filter((r) => r.Recommended).length;
   const pct = total ? Math.round((yes / total) * 100) : 0;
-  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
   const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
 
   const handleUnfollow = async (targetId: number) => {
@@ -603,9 +599,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
     <Card as="article" className="p-7 sm:p-8">
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-4 min-w-0">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
-            {initial}
-          </span>
+          <UserAvatar image={user?.image} name={user?.name} size="lg" />
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
             <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
