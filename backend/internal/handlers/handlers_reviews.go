@@ -188,6 +188,54 @@ func (h *ReviewHandler) GetRecommendationsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+// GetInfluencerRecommendationHandler returns products recommended by influencers the user follows.
+func (h *ReviewHandler) GetInfluencerRecommendationHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	limit := 10
+	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
+		limit = l
+	}
+
+	products, err := h.DB.GetInfluencerRecommendation(userID, limit)
+	if err != nil {
+		slog.Error("get influencer recommendations: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load influencer recommendations"})
+		return
+	}
+
+	slog.Info("get influencer recommendations: success", "userID", userID, "count", len(products))
+	c.JSON(http.StatusOK, products)
+}
+
+// GetInfluencerNotRecommendationHandler returns products NOT recommended by influencers the user follows.
+func (h *ReviewHandler) GetInfluencerNotRecommendationHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	limit := 10
+	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
+		limit = l
+	}
+
+	products, err := h.DB.GetInfluencerNotRecommendation(userID, limit)
+	if err != nil {
+		slog.Error("get influencer not-recommendations: query failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load influencer not-recommendations"})
+		return
+	}
+
+	slog.Info("get influencer not-recommendations: success", "userID", userID, "count", len(products))
+	c.JSON(http.StatusOK, products)
+}
+
 // FollowRequest is the payload for following/unfollowing a user.
 type FollowRequest struct {
 	InfluencerID int `json:"influencer_id" binding:"required"`

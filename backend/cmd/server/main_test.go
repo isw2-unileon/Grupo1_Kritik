@@ -32,6 +32,8 @@ func TestNewRouter_HasAllRoutes(t *testing.T) {
 		{"GET", "/api/fans"},
 		{"GET", "/api/influencers"},
 		{"POST", "/api/follow"},
+		{"GET", "/api/recommendations/influencer"},
+		{"GET", "/api/recommendations/influencer/not"},
 	}
 
 	for _, rt := range routes {
