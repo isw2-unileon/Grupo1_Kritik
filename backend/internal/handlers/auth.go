@@ -259,3 +259,21 @@ func (h *AuthHandler) UpdateAvatarHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"image": publicURL})
 }
+
+// DeleteAvatarHandler removes the authenticated user's avatar from Storage and
+// clears the Image field in the DB.
+func (h *AuthHandler) DeleteAvatarHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	if err := h.DB.DeleteAvatar(userID); err != nil {
+		slog.Error("avatar: delete failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"image": ""})
+}
