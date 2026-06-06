@@ -104,6 +104,24 @@ func (h *ReviewHandler) SearchProductHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+// SearchUsersHandler returns Users matching the ?q= query string by UserName.
+func (h *ReviewHandler) SearchUsersHandler(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		c.JSON(http.StatusOK, []bd.User{})
+		return
+	}
+
+	users, err := h.DB.GetUsersByUserName(query)
+	if err != nil {
+		slog.Error("search users: failed", "q", query, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
 // enrichReviews populates ProductName and UserName on a slice of reviews.
 func (h *ReviewHandler) enrichReviews(reviews []bd.Review) []bd.Review {
 	for i, r := range reviews {

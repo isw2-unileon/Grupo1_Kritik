@@ -129,6 +129,22 @@ export async function searchProducts(
   return [];
 }
 
+export async function searchUsers(
+  query: string,
+  signal?: AbortSignal,
+): Promise<ProfileUser[]> {
+  const res = await authedFetch(
+    `${BASE}/api/users/search?q=${encodeURIComponent(query)}`,
+    { signal },
+  );
+  if (!res.ok) {
+    throw new Error("user search failed");
+  }
+  const data: unknown = await res.json();
+  if (Array.isArray(data)) return data as ProfileUser[];
+  return [];
+}
+
 export async function createReview(
   review: NewReview,
   signal?: AbortSignal,

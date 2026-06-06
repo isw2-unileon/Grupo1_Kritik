@@ -7,6 +7,7 @@ type MockDatabase struct {
 	MockGetUserByEmail    func(userEmail string) (*User, error)
 	MockGetUserByUserName func(userName string) (*User, error)
 	MockGetUserByID       func(userID int) (*User, error)
+	MockGetUsersByUserName func(userName string) ([]User, error)
 	MockAddUser           func(newUser User) (*User, error)
 	MockDeleteUserByEmail func(userEmail string) (bool, error)
 	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
@@ -46,6 +47,11 @@ func (m *MockDatabase) GetUserByUserName(userName string) (*User, error) {
 // GetUserByID mock
 func (m *MockDatabase) GetUserByID(userID int) (*User, error) {
 	return m.MockGetUserByID(userID)
+}
+
+// GetUsersByUserName mock
+func (m *MockDatabase) GetUsersByUserName(userName string) ([]User, error) {
+	return m.MockGetUsersByUserName(userName)
 }
 
 // AddUser mock

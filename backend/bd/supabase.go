@@ -64,6 +64,7 @@ type Database interface {
 	GetUserByEmail(userEmail string) (*User, error)
 	GetUserByUserName(userName string) (*User, error)
 	GetUserByID(userID int) (*User, error)
+	GetUsersByUserName(userName string) ([]User, error)
 	AddUser(newUser User) (*User, error)
 	DeleteUserByEmail(userEmail string) (bool, error)
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
@@ -160,7 +161,7 @@ func (db *SupabaseDB) GetUserByUserName(userName string) (*User, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with userName %s", userName)
+		return nil, fmt.Errorf("not found user with username %s", userName)
 	}
 
 	return &users[0], nil
@@ -184,6 +185,21 @@ func (db *SupabaseDB) GetUserByID(userID int) (*User, error) {
 	}
 
 	return &users[0], nil
+}
+
+// GetUsersByUserName returns users whose UserName contains the given string (case-insensitive).
+func (db *SupabaseDB) GetUsersByUserName(userName string) ([]User, error) {
+	var users []User
+	_, err := db.client.From("Users").
+		Select("*", "exact", false).
+		Ilike("UserName", "*"+userName+"*").
+		ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 // AddUser adds a new User to the database
