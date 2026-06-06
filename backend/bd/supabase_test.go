@@ -1208,18 +1208,112 @@ func TestHashEmptyPassword(t *testing.T) {
 	}
 }
 
-func GetInfluencerRecommendation(t *testing.T) {
+func TestGetInfluencerRecommendation(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetInfluencerRecommendation: func(userID int, limit int) ([]Product, error) {
+			return []Product{
+				{
+					ID:           1,
+					Name:         "Game A",
+					Type:         "Videojuego",
+					AverageGrade: 4,
+					Description:  "Great game",
+					Genre:        []string{"Acción", "Aventura"},
+				},
+				{
+					ID:           2,
+					Name:         "Game B",
+					Type:         "Videojuego",
+					AverageGrade: 3,
+					Description:  "Fun game",
+					Genre:        []string{"Estrategia"},
+				},
+			}, nil
+		},
+	}
 
+	products, err := mockDB.GetInfluencerRecommendation(1, 10)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(products) != 2 {
+		t.Errorf("Function returned wrong number of products: got %d, want 2", len(products))
+	} else if products[0].ID != 1 {
+		t.Errorf("Expected product ID 1, got %d", products[0].ID)
+	}
 }
 
-func GetInfluencerRecommendationError(t *testing.T) {
+func TestGetInfluencerRecommendationError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetInfluencerRecommendation: func(userID int, limit int) ([]Product, error) {
+			return nil, errors.New("user with id -1 not found")
+		},
+	}
 
+	products, err := mockDB.GetInfluencerRecommendation(-1, 10)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(products) != 0 {
+		t.Errorf("Function returned %d products, should be 0", len(products))
+	}
 }
 
-func GetInfluencerNotRecommendation(t *testing.T) {
+func TestGetInfluencerNotRecommendation(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetInfluencerNotRecommendation: func(userID int, limit int) ([]Product, error) {
+			return []Product{
+				{
+					ID:           3,
+					Name:         "Game C",
+					Type:         "Libro",
+					AverageGrade: 5,
+					Description:  "Not recommended",
+					Genre:        []string{"Terror"},
+				},
+				{
+					ID:           4,
+					Name:         "Game D",
+					Type:         "Libro",
+					AverageGrade: 2,
+					Description:  "Boring",
+					Genre:        []string{"Drama"},
+				},
+			}, nil
+		},
+	}
 
+	products, err := mockDB.GetInfluencerNotRecommendation(2, 5)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(products) != 2 {
+		t.Errorf("Function returned wrong number of products: got %d, want 2", len(products))
+	} else if products[0].ID != 3 {
+		t.Errorf("Expected product ID 3, got %d", products[0].ID)
+	}
 }
 
-func GetInfluencerNotRecommendationError(t *testing.T) {
+func TestGetInfluencerNotRecommendationError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetInfluencerNotRecommendation: func(userID int, limit int) ([]Product, error) {
+			return nil, errors.New("user with id -1 not found")
+		},
+	}
 
+	products, err := mockDB.GetInfluencerNotRecommendation(-1, 10)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(products) != 0 {
+		t.Errorf("Function returned %d products, should be 0", len(products))
+	}
 }

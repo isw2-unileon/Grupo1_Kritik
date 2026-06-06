@@ -34,8 +34,8 @@ type MockDatabase struct {
 	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
 
 	MockGetRecommendations              func(userID int, limit int) ([]Product, error)
-	MockGetInfluencerRecommendations    func(userID int, limit int) ([]Product, error)
-	MockGetInfluencerNotRecommendations func(userID int, limit int) ([]Product, error)
+	MockGetInfluencerRecommendation    func(userID int, limit int) ([]Product, error)
+	MockGetInfluencerNotRecommendation func(userID int, limit int) ([]Product, error)
 }
 
 // GetUserByEmail mock
@@ -168,12 +168,12 @@ func (m *MockDatabase) GetRecommendations(userID int, limit int) ([]Product, err
 	return m.MockGetRecommendations(userID, limit)
 }
 
-// GetInfluencerRecommendations mock
-func (m *MockDatabase) GetInfluencerRecommendations(userID int, limit int) ([]Product, error) {
-	return m.MockGetInfluencerRecommendations(userID, limit)
+// GetInfluencerRecommendation mock
+func (m *MockDatabase) GetInfluencerRecommendation(userID int, limit int) ([]Product, error) {
+	return m.MockGetInfluencerRecommendation(userID, limit)
 }
 
-// GetInfluencerNotRecommendations mock
-func (m *MockDatabase) GetInfluencerNotRecommendations(userID int, limit int) ([]Product, error) {
-	return m.MockGetInfluencerNotRecommendations(userID, limit)
+// GetInfluencerNotRecommendation mock
+func (m *MockDatabase) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
+	return m.MockGetInfluencerNotRecommendation(userID, limit)
 }
