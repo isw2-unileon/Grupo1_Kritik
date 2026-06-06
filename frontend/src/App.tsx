@@ -6,12 +6,14 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
+import PublishProductPage from "./pages/PublishProductPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import UserProfilePage from "./pages/UserProfilePage";
 
 function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, isAdmin, user, logout } = useAuth();
 
   //   Reusable classes of the new theme
   const ghost =
@@ -44,7 +46,7 @@ function Header() {
                 Inicio
               </NavLink>
               <NavLink
-                to="/publish-review"
+                to={isAdmin ? "/publish-product" : "/publish-review"}
                 className={({ isActive }) =>
                   `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${isActive ? "text-acid" : "text-dim hover:text-cream"
                   }`
@@ -86,6 +88,11 @@ function Header() {
   );
 }
 
+function DashboardGate() {
+  const { isAdmin } = useAuth();
+  return isAdmin ? <AdminDashboardPage /> : <DashboardPage />;
+}
+
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
@@ -105,7 +112,7 @@ function AppContent() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <DashboardGate />
               </ProtectedRoute>
             }
           />
@@ -114,6 +121,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <PublishReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/publish-product"
+            element={
+              <ProtectedRoute>
+                <PublishProductPage />
               </ProtectedRoute>
             }
           />
