@@ -754,6 +754,8 @@ func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error)
 
 // GetRecommendations returns recommended products based of user and user friends likes
 // userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
 func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, error) {
 	_, err := db.GetUserByID(userID)
 	if err != nil {
@@ -779,6 +781,8 @@ func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, erro
 
 // GetInfluencerRecommendation returns recommended products based of user friends likes
 // userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
 func (db *SupabaseDB) GetInfluencerRecommendation(userID int, limit int) ([]Product, error) {
 	_, err := db.GetUserByID(userID)
 	if err != nil {
@@ -804,6 +808,8 @@ func (db *SupabaseDB) GetInfluencerRecommendation(userID int, limit int) ([]Prod
 
 // GetInfluencerNotRecommendation returns recommended products based of user friends dislikes
 // userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
 func (db *SupabaseDB) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
 	_, err := db.GetUserByID(userID)
 	if err != nil {
