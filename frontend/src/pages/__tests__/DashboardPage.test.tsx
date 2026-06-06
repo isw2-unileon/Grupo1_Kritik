@@ -220,6 +220,24 @@ describe("DashboardPage", () => {
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+
+    it("following list rows link to /user/:id", async () => {
+      mockGetReviews.mockResolvedValue([]);
+      renderDashboard([
+        { id: 10, Email: "u1@t.com", Name: "User One", UserName: "userone" },
+      ]);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Perfil"));
+      await user.click(screen.getByText("seguidos"));
+
+      await waitFor(() => {
+        expect(screen.getByText("User One")).toBeInTheDocument();
+      });
+
+      const link = screen.getByText("User One").closest("a");
+      expect(link).toHaveAttribute("href", "/user/10");
+    });
   });
 
   describe("search", () => {

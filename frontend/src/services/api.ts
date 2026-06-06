@@ -237,3 +237,41 @@ export async function unfollowUser(influencerId: number, signal?: AbortSignal): 
     throw new Error(err.error || "could not unfollow");
   }
 }
+
+export interface UserProfile {
+  id: number;
+  Name: string;
+  UserName: string;
+  FansCount: number;
+  InfluencersCount: number;
+  IsFollowing: boolean;
+}
+
+export async function getUserProfile(id: number, signal?: AbortSignal): Promise<UserProfile> {
+  const res = await authedFetch(`${BASE}/api/users/${id}/profile`, { signal });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not load user profile" }));
+    throw new Error(err.error || "could not load user profile");
+  }
+  return res.json();
+}
+
+export async function followUser(influencerId: number, signal?: AbortSignal): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/follow`, {
+    method: "POST",
+    body: JSON.stringify({ influencer_id: influencerId }),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not follow user" }));
+    throw new Error(err.error || "could not follow user");
+  }
+}
+
+export async function getUserReviews(userId: number, signal?: AbortSignal): Promise<Review[]> {
+  const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load user reviews");
+  }
+  return res.json();
+}

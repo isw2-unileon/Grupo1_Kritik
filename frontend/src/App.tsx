@@ -7,11 +7,12 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
 
-  // Reusable classes of the new theme
+  //  Reusable classes of the new theme
   const ghost =
     "rounded-full px-4 py-2 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream";
   const primary =
@@ -124,6 +125,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <ProductDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/:id"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
               </ProtectedRoute>
             }
           />
