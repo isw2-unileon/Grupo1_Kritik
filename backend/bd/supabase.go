@@ -28,6 +28,7 @@ type User struct {
 	Password string      `json:"Password,omitempty"`
 	Birth    *civil.Date `json:"Birth,omitempty"`
 	Image    string      `json:"Image,omitempty"`
+	IsAdmin  bool        `json:"IsAdmin,omitempty"`
 }
 
 // Product struct
@@ -752,6 +753,11 @@ func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error)
 // GetRecommendations returns recommended products based of user likes
 // userID is the id of the user and limit is the number of products to recommend
 func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
 	body := db.client.Rpc("get_recommended_products", "exact", map[string]interface{}{
 		"user_id_param": userID,
 		"lim":           limit,
