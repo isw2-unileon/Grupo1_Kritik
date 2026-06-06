@@ -156,9 +156,13 @@ export default function AdminDashboardPage() {
                       onClick={() => navigate(`/product/${p.id}`, { state: { product: p } })}
                       className="flex w-full items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 text-left transition hover:-translate-y-0.5 hover:border-acid/35"
                     >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
-                        {p.Name.charAt(0).toUpperCase()}
-                      </span>
+                      {p.Image ? (
+                        <img src={p.Image} alt={p.Name} className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-line" />
+                      ) : (
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
+                          {p.Name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-cream">{p.Name}</p>
                         <p className="text-xs text-faint">
@@ -187,9 +191,13 @@ export default function AdminDashboardPage() {
                       onClick={() => navigate(`/product/${p.id}`, { state: { product: p } })}
                       className="flex w-full items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 text-left transition hover:-translate-y-0.5 hover:border-coral/35"
                     >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-coral ring-1 ring-line">
-                        {p.Name.charAt(0).toUpperCase()}
-                      </span>
+                      {p.Image ? (
+                        <img src={p.Image} alt={p.Name} className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-line" />
+                      ) : (
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-coral ring-1 ring-line">
+                          {p.Name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-cream">{p.Name}</p>
                         <p className="text-xs text-faint">
@@ -223,9 +231,13 @@ export default function AdminDashboardPage() {
                     key={p.id}
                     className="flex items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3"
                   >
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
-                      {p.Name.charAt(0).toUpperCase()}
-                    </span>
+                      {p.Image ? (
+                        <img src={p.Image} alt={p.Name} className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-line" />
+                      ) : (
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
+                          {p.Name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-cream">{p.Name}</p>
                       <p className="text-xs text-faint">
@@ -342,9 +354,13 @@ export default function AdminDashboardPage() {
                   }}
                   className="flex cursor-pointer items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 transition hover:-translate-y-0.5 hover:border-acid/35"
                 >
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
-                    {p.Name.charAt(0).toUpperCase()}
-                  </span>
+                  {p.Image ? (
+                    <img src={p.Image} alt={p.Name} className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-line" />
+                  ) : (
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
+                      {p.Name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-cream">{p.Name}</p>
                     <p className="text-xs text-faint">Ver ficha →</p>
