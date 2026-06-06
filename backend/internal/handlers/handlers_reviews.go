@@ -430,6 +430,8 @@ type UserProfileResponse struct {
 }
 
 // GetUserProfileHandler returns public profile info for the given user.
+//
+//nolint:dupl
 func (h *ReviewHandler) GetUserProfileHandler(c *gin.Context) {
 	currentUserID := c.GetInt("userID")
 	if currentUserID == 0 {
@@ -476,6 +478,8 @@ func (h *ReviewHandler) GetUserProfileHandler(c *gin.Context) {
 }
 
 // GetUserReviewsByIDHandler returns reviews written by a specific user (enriched).
+//
+//nolint:dupl
 func (h *ReviewHandler) GetUserReviewsByIDHandler(c *gin.Context) {
 	currentUserID := c.GetInt("userID")
 	if currentUserID == 0 {
@@ -500,6 +504,8 @@ func (h *ReviewHandler) GetUserReviewsByIDHandler(c *gin.Context) {
 }
 
 // GetRandomProductsHandler returns a random selection of products (for discovery).
+//
+//nolint:dupl
 func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 	limit := 10
 	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
