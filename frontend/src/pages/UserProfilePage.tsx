@@ -60,7 +60,8 @@ export default function UserProfilePage() {
       } else {
         await followUser(profile.id);
       }
-      setProfile((prev) => prev ? { ...prev, IsFollowing: !prev.IsFollowing } : null);
+      const updated = await getUserProfile(profile.id);
+      setProfile(updated);
     } catch {
       // silently fail
     } finally {

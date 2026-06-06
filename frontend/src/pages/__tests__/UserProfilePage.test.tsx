@@ -118,10 +118,15 @@ describe("UserProfilePage", () => {
 
   it("calls followUser and toggles button when clicking Seguir", async () => {
     mockFollowUser.mockResolvedValue(undefined);
-    mockGetUserProfile.mockResolvedValue({
-      id: 5, Name: "Test User", UserName: "testuser",
-      FansCount: 0, InfluencersCount: 0, IsFollowing: false,
-    });
+    mockGetUserProfile
+      .mockResolvedValueOnce({
+        id: 5, Name: "Test User", UserName: "testuser",
+        FansCount: 0, InfluencersCount: 0, IsFollowing: false,
+      })
+      .mockResolvedValueOnce({
+        id: 5, Name: "Test User", UserName: "testuser",
+        FansCount: 1, InfluencersCount: 0, IsFollowing: true,
+      });
     mockGetUserReviews.mockResolvedValue([]);
     renderProfile();
 
@@ -140,10 +145,15 @@ describe("UserProfilePage", () => {
 
   it("calls unfollowUser and toggles button when clicking Dejar de seguir", async () => {
     mockUnfollowUser.mockResolvedValue(undefined);
-    mockGetUserProfile.mockResolvedValue({
-      id: 5, Name: "Test User", UserName: "testuser",
-      FansCount: 0, InfluencersCount: 0, IsFollowing: true,
-    });
+    mockGetUserProfile
+      .mockResolvedValueOnce({
+        id: 5, Name: "Test User", UserName: "testuser",
+        FansCount: 1, InfluencersCount: 0, IsFollowing: true,
+      })
+      .mockResolvedValueOnce({
+        id: 5, Name: "Test User", UserName: "testuser",
+        FansCount: 0, InfluencersCount: 0, IsFollowing: false,
+      });
     mockGetUserReviews.mockResolvedValue([]);
     renderProfile();
 
