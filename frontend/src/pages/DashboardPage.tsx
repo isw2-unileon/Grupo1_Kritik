@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
-import { searchProducts, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
+import { searchProducts, searchUsers, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
@@ -687,6 +687,13 @@ export default function DashboardPage() {
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // User search (real API: searchUsers)
+  const [userQuery, setUserQuery] = useState("");
+  const [userResults, setUserResults] = useState<ProfileUser[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const userSearchRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
@@ -712,6 +719,44 @@ export default function DashboardPage() {
       controller.abort();
     };
   }, [query]);
+
+  // User search — debounced, with click-outside close
+  useEffect(() => {
+    const q = userQuery.trim();
+    if (q.length < 2) {
+      setUserResults([]);
+      setUserSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setUserSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const items = await searchUsers(q, controller.signal);
+        setUserResults(items);
+        setUserSearching(false);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setUserResults([]);
+        setUserSearching(false);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [userQuery]);
+
+  useEffect(() => {
+    if (!userSearchOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (userSearchRef.current && !userSearchRef.current.contains(e.target as Node)) {
+        setUserSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [userSearchOpen]);
 
 // When changing tabs, smoothly scroll to the tabs so the 
 // content doesn't "jump" if a tab is shorter than the previous one
@@ -907,6 +952,51 @@ export default function DashboardPage() {
                 {t.label}
               </button>
             ))}
+
+            <div ref={userSearchRef} className="relative ml-auto">
+              <input
+                type="text"
+                value={userQuery}
+                onChange={(e) => { setUserQuery(e.target.value); setUserSearchOpen(true); }}
+                onFocus={() => userQuery.trim().length >= 2 && setUserSearchOpen(true)}
+                placeholder="Buscar usuarios…"
+                autoComplete="off"
+                aria-label="Buscar usuarios"
+                className="w-44 rounded-full border border-line bg-surface py-1.5 pl-3 pr-8 text-sm text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_3px_rgba(203,242,78,0.14)]"
+              />
+              <svg
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-faint"
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+              </svg>
+
+              {userSearchOpen && userQuery.trim().length >= 2 && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-line bg-surface py-2 shadow-xl">
+                  {userSearching ? (
+                    <p className="px-4 py-2 text-sm text-faint">Buscando…</p>
+                  ) : userResults.length === 0 ? (
+                    <p className="px-4 py-2 text-sm text-faint">Ningún usuario encontrado</p>
+                  ) : (
+                    userResults.map((u) => (
+                      <Link
+                        key={u.id}
+                        to={`/user/${u.id}`}
+                        onClick={() => { setUserQuery(""); setUserResults([]); setUserSearchOpen(false); }}
+                        className="flex items-center gap-3 px-4 py-2 transition hover:bg-cream/5"
+                      >
+                        <UserAvatar image={u.Image} name={u.Name} size="xs" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
+                          <p className="truncate text-xs text-faint">@{u.UserName}</p>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </nav>
 
           {renderTab()}
