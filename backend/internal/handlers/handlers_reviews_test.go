@@ -197,7 +197,7 @@ func TestCreateReviewHandler_Duplicate(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("failed to parse: %v", err)
 	}
-	if resp["error"] != "El producto ya fue valorado" {
+	if resp["error"] != "El producto ya fue valorado" { //nolint:misspell
 		t.Errorf("expected conflict message, got '%s'", resp["error"])
 	}
 }

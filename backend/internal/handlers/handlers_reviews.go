@@ -59,7 +59,7 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		for _, r := range existing {
 			if r.UserID == user.ID {
 				slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
-				c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"})
+				c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"}) //nolint:misspell
 				return
 			}
 		}
@@ -74,7 +74,7 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 	if err != nil {
 		if strings.Contains(err.Error(), "(23505)") {
 			slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
-			c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"})
+			c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"}) //nolint:misspell
 			return
 		}
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
