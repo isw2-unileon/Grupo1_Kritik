@@ -352,7 +352,7 @@ func TestUploadProductImageHandler_Success(t *testing.T) {
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	fw, err := mw.CreateFormFile("product_image", "test.jpg")
+	fw, err := mw.CreateFormFile("image", "test.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestUploadProductImageHandler_InvalidID(t *testing.T) {
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	fw, err := mw.CreateFormFile("product_image", "test.jpg")
+	fw, err := mw.CreateFormFile("image", "test.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestUploadProductImageHandler_DBError(t *testing.T) {
 
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	fw, err := mw.CreateFormFile("product_image", "test.png")
+	fw, err := mw.CreateFormFile("image", "test.png")
 	if err != nil {
 		t.Fatal(err)
 	}
