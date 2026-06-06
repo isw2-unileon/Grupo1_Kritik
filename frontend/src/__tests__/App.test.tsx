@@ -3,9 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import App from "@/App";
 
-const { mockGetReviews, mockSearchProducts } = vi.hoisted(() => ({
+const { mockGetReviews, mockSearchProducts, mockGetRecommendations } = vi.hoisted(() => ({
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
+  mockGetRecommendations: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -14,12 +15,14 @@ vi.mock("@/services/api", () => ({
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
   createReview: vi.fn(),
+  getRecommendations: mockGetRecommendations,
 }));
 
 const fakeUser = { id: 1, email: "a@b.com", name: "Ana", surname: "G", user_name: "ana" };
 
 function authenticatedSetup() {
   mockGetReviews.mockResolvedValue([]);
+  mockGetRecommendations.mockResolvedValue([]);
   mockSearchProducts.mockReturnValue(new Promise(() => {}));
   localStorage.setItem("token", "t");
   localStorage.setItem("user", JSON.stringify(fakeUser));

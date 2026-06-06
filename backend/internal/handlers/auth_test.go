@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -277,6 +278,61 @@ func TestUpdateAvatarHandler_NoFile(t *testing.T) {
 
 	if resp.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.Code)
+	}
+}
+
+func setupDeleteAvatarRouter(db bd.Database) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	h := NewAuthHandler(db)
+	protected := r.Group("")
+	protected.Use(func(c *gin.Context) {
+		c.Set("userID", 1)
+		c.Next()
+	})
+	protected.DELETE("/api/users/avatar", h.DeleteAvatarHandler)
+	return r
+}
+
+func TestDeleteAvatarHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockDeleteAvatar: func(userID int) error {
+			return nil
+		},
+	}
+	r := setupDeleteAvatarRouter(mock)
+
+	req := httptest.NewRequest("DELETE", "/api/users/avatar", nil)
+	resp := httptest.NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+	}
+
+	var body map[string]string
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if body["image"] != "" {
+		t.Errorf("expected empty image, got %s", body["image"])
+	}
+}
+
+func TestDeleteAvatarHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockDeleteAvatar: func(userID int) error {
+			return fmt.Errorf("db error")
+		},
+	}
+	r := setupDeleteAvatarRouter(mock)
+
+	req := httptest.NewRequest("DELETE", "/api/users/avatar", nil)
+	resp := httptest.NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", resp.Code)
 	}
 }
 
