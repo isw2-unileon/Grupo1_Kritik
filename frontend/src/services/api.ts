@@ -294,6 +294,20 @@ export async function deleteAvatar(): Promise<string> {
   return data.image as string;
 }
 
+export async function getRecommendations(
+  limit?: number,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const url = limit
+    ? `${BASE}/api/recommendations?limit=${limit}`
+    : `${BASE}/api/recommendations`;
+  const res = await authedFetch(url, { signal });
+  if (!res.ok) {
+    throw new Error("could not load recommendations");
+  }
+  return res.json();
+}
+
 export async function getUserReviews(userId: number, signal?: AbortSignal): Promise<Review[]> {
   const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
   if (!res.ok) {
