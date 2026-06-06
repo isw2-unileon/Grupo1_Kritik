@@ -165,6 +165,8 @@ func (h *ReviewHandler) GetUserReviewsHandler(c *gin.Context) {
 }
 
 // GetRecommendationsHandler returns recommended products for the authenticated user.
+//
+//nolint:dupl
 func (h *ReviewHandler) GetRecommendationsHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
@@ -189,6 +191,8 @@ func (h *ReviewHandler) GetRecommendationsHandler(c *gin.Context) {
 }
 
 // GetInfluencerRecommendationHandler returns products recommended by influencers the user follows.
+//
+//nolint:dupl
 func (h *ReviewHandler) GetInfluencerRecommendationHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
@@ -213,6 +217,8 @@ func (h *ReviewHandler) GetInfluencerRecommendationHandler(c *gin.Context) {
 }
 
 // GetInfluencerNotRecommendationHandler returns products NOT recommended by influencers the user follows.
+//
+//nolint:dupl
 func (h *ReviewHandler) GetInfluencerNotRecommendationHandler(c *gin.Context) {
 	userID := c.GetInt("userID")
 	if userID == 0 {
