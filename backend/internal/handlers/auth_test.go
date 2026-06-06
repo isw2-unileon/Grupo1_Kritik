@@ -243,7 +243,9 @@ func TestUpdateAvatarHandler_Success(t *testing.T) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 	part, _ := w.CreateFormFile("avatar", "test.jpg")
-	part.Write([]byte("fake-image-bytes"))
+	if _, err := part.Write([]byte("fake-image-bytes")); err != nil {
+		t.Fatal(err)
+	}
 	w.Close()
 
 	req := httptest.NewRequest("POST", "/api/users/avatar", &buf)
