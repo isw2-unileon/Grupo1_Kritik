@@ -4,9 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
-import { searchProducts, searchUsers, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
+import { searchProducts, searchUsers, getReviews, getFollowers, getFollowing, unfollowUser, getRecommendations, type Product, type Review, type ProfileUser } from "@/services/api";
 
-/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -15,7 +14,6 @@ const CATS = {
 } as const;
 type CatKey = keyof typeof CATS;
 
-// type label for the example recommendations (when opening their profile)
 const CAT_TO_TYPE: Record<CatKey, string> = {
   game: "Videojuego",
   book: "Libro",
@@ -23,23 +21,8 @@ const CAT_TO_TYPE: Record<CatKey, string> = {
   film: "Película",
 };
 
-type Reco = { name: string; cat: CatKey; verdict: boolean; who: string; text: string };
 type Circle = { name: string; cat: CatKey; n: number };
 
-const RECOS: Reco[] = [
-  { name: "Severance", cat: "series", verdict: true, who: "@lucia", text: "Tensión perfecta, dirección impecable." },
-  { name: "Tunic", cat: "game", verdict: true, who: "@dani", text: "Un secreto detrás de cada esquina." },
-  { name: "Poor Things", cat: "film", verdict: false, who: "@sara", text: "Visualmente bella, narrativamente fría." },
-  { name: "Pachinko", cat: "book", verdict: true, who: "@marco", text: "Generaciones que se te quedan dentro." },
-  { name: "Hollow Knight", cat: "game", verdict: true, who: "@nuria", text: "Atmósfera y control impecables." },
-  { name: "Starfall VII", cat: "game", verdict: false, who: "@bruno", text: "Bonito, pero repetitivo a las pocas horas." },
-  { name: "Klara y el Sol", cat: "book", verdict: true, who: "@elena", text: "Ternura y melancolía a partes iguales." },
-  { name: "La carretera", cat: "book", verdict: false, who: "@hugo", text: "Brillante, pero durísima de releer." },
-  { name: "Shogun", cat: "series", verdict: true, who: "@aitor", text: "Producción enorme y muy bien contada." },
-  { name: "Última señal", cat: "series", verdict: false, who: "@vera", text: "Empieza fuerte y se desinfla al final." },
-  { name: "Oppenheimer", cat: "film", verdict: true, who: "@pablo", text: "Tres horas que se pasan volando." },
-  { name: "Dune: Parte Dos", cat: "film", verdict: true, who: "@noa", text: "Espectáculo y fondo, por fin juntos." },
-];
 const FRIENDS_YES: Circle[] = [
   { name: "Shogun", cat: "series", n: 4 },
   { name: "Klara y el Sol", cat: "book", n: 3 },
@@ -93,18 +76,6 @@ function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; clas
         </div>
       )}
     </div>
-  );
-}
-
-function VerdictChip({ yes }: { yes: boolean }) {
-  return yes ? (
-    <span className="rounded-full border-[1.5px] border-acid bg-acid/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-acid">
-      Sí
-    </span>
-  ) : (
-    <span className="rounded-full border-[1.5px] border-coral bg-coral/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-coral">
-      No
-    </span>
   );
 }
 
@@ -188,28 +159,40 @@ const RECO_CATS = [
 ] as const;
 type RecoCatId = (typeof RECO_CATS)[number]["id"];
 
+function catKey(type?: string): CatKey {
+  if (type && type.toLowerCase() in CATS) return type.toLowerCase() as CatKey;
+  return "game";
+}
+
 function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
   const navigate = useNavigate();
-  const preview = typeof limit === "number"; // Home = preview; tab = full view
+  const preview = typeof limit === "number";
   const [cat, setCat] = useState<RecoCatId>("all");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // preview: the first N. Full view: all, with filter by category.
-  const list = !preview && cat !== "all" ? RECOS.filter((r) => r.cat === cat) : RECOS;
-  const visible = preview ? RECOS.slice(0, limit) : list;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    (async () => {
+      try {
+        const data = await getRecommendations(preview ? limit : undefined);
+        if (active) setProducts(data);
+      } catch {
+        /* empty state handled by UI */
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [limit, preview]);
 
-  // opens the profile of the title with its data (example) via router state
-  const open = (r: Reco) =>
-    navigate(`/product/${encodeURIComponent(r.name)}`, {
-      state: {
-        product: {
-          id: r.name,
-          Name: r.name,
-          Type: CAT_TO_TYPE[r.cat],
-          Genre: [] as string[],
-          Description: r.text,
-        },
-      },
-    });
+  const visible = cat !== "all" && !preview
+    ? products.filter((p) => p.Type?.toLowerCase() === cat)
+    : products;
+
+  const open = (p: Product) =>
+    navigate(`/product/${p.id}`, { state: { product: p } });
 
   return (
     <Card as="section" className={`p-7 sm:p-8 ${preview ? "ring-1 ring-inset ring-acid/30" : ""}`}>
@@ -262,44 +245,39 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         </div>
       )}
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="mt-6 flex justify-center py-12">
+          <svg className="h-6 w-6 animate-spin text-acid" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+            <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+      ) : visible.length === 0 ? (
         <div className="mt-6 rounded-[1.75rem] border border-dashed border-line bg-ink/40 p-8 text-center">
           <p className="text-dim">No hay recomendaciones en esta categoría todavía.</p>
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visible.map((r) => (
+          {visible.map((p) => (
             <article
-              key={r.name}
+              key={p.id}
               role="button"
               tabIndex={0}
-              onClick={() => open(r)}
+              onClick={() => open(p)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  open(r);
+                  open(p);
                 }
               }}
               className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
             >
-              <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
+              <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[16/10]" />
               <div className="p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <VerdictChip yes={r.verdict} />
-                  <span className="text-xs text-faint">{r.who}</span>
-                </div>
-                <p className="mt-3 text-sm text-dim">"{r.text}"</p>
+                <p className="line-clamp-3 text-sm text-dim">{p.Description || "Sin descripción disponible."}</p>
                 <Link
                   to="/publish-review"
-                  state={{
-                    product: {
-                      id: r.name,
-                      Name: r.name,
-                      Type: CAT_TO_TYPE[r.cat],
-                      Genre: [] as string[],
-                      Description: r.text,
-                    },
-                  }}
+                  state={{ product: p }}
                   onClick={(e) => e.stopPropagation()}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-cream transition hover:border-acid/40 hover:bg-cream/5"
                 >
@@ -316,13 +294,13 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
       )}
 
       {/* Preview: link to the full list if there are more */}
-      {preview && onSeeAll && RECOS.length > (limit ?? 0) && (
+      {preview && onSeeAll && products.length > (limit ?? 0) && (
         <button
           type="button"
           onClick={onSeeAll}
           className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-3 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
         >
-          Ver todas las recomendaciones ({RECOS.length}) →
+          Ver todas las recomendaciones ({products.length}) →
         </button>
       )}
     </Card>

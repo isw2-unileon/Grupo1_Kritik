@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { login, register, searchProducts, createReview, getReviews } from "./api";
+import { login, register, searchProducts, createReview, getReviews, getRecommendations } from "./api";
 
 function mockFetch(data: unknown, ok = true) {
   return vi.stubGlobal("fetch", vi.fn(() =>
@@ -135,5 +135,35 @@ describe("getReviews", () => {
   it("throws on non-ok", async () => {
     mockFetch(undefined, false);
     await expect(getReviews()).rejects.toThrow("could not load reviews");
+  });
+});
+
+describe("getRecommendations", () => {
+  it("sends GET to /api/recommendations with auth header and returns products", async () => {
+    localStorage.setItem("token", "t3");
+    const fake = [{ id: 1, Name: "Game", Type: "game" }];
+    mockFetch(fake);
+
+    const result = await getRecommendations();
+    expect(result).toEqual(fake);
+
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("/api/recommendations");
+    expect(callArgs[1]!.headers.Authorization).toBe("Bearer t3");
+  });
+
+  it("sends limit query param when provided", async () => {
+    localStorage.setItem("token", "t");
+    mockFetch([]);
+
+    await getRecommendations(5);
+
+    const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(callArgs[0]!).toContain("?limit=5");
+  });
+
+  it("throws on non-ok", async () => {
+    mockFetch(undefined, false);
+    await expect(getRecommendations()).rejects.toThrow("could not load recommendations");
   });
 });

@@ -273,3 +273,13 @@ export async function getUserReviews(userId: number, signal?: AbortSignal): Prom
   }
   return res.json();
 }
+
+export async function getRecommendations(
+  limit?: number,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const query = limit ? `?limit=${limit}` : "";
+  const res = await authedFetch(`${BASE}/api/recommendations${query}`, { signal });
+  if (!res.ok) throw new Error("could not load recommendations");
+  return res.json();
+}
