@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
+import EditableAvatar from "@/components/EditableAvatar";
 import { searchProducts, searchUsers, getReviews, getFollowers, getFollowing, unfollowUser, type Product, type Review, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
@@ -535,6 +536,7 @@ function FollowingList({
    calculated from your reviews. Followers/following will be available when the
    backend exposes the following/followers arrays. */
 function ProfilePanel({ user }: { user: SessionUser }) {
+  const { updateUser } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [followers, setFollowers] = useState<ProfileUser[]>([]);
@@ -599,7 +601,11 @@ function ProfilePanel({ user }: { user: SessionUser }) {
     <Card as="article" className="p-7 sm:p-8">
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-4 min-w-0">
-          <UserAvatar image={user?.image} name={user?.name ?? ""} size="lg" />
+          <EditableAvatar
+            image={user?.image}
+            name={user?.name ?? ""}
+            onUpdate={(url) => updateUser({ image: url })}
+          />
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
             <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
