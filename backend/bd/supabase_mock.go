@@ -13,6 +13,7 @@ type MockDatabase struct {
 	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
 	MockUpdateUserImage   func(userID int, imageURL string) (*User, error)
 	MockUploadAvatar      func(userID int, fileBytes []byte, ext string, contentType string) (string, error)
+	MockDeleteAvatar      func(userID int) error
 
 	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
@@ -79,6 +80,11 @@ func (m *MockDatabase) UpdateUserImage(userID int, imageURL string) (*User, erro
 // UploadAvatar mock
 func (m *MockDatabase) UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error) {
 	return m.MockUploadAvatar(userID, fileBytes, ext, contentType)
+}
+
+// DeleteAvatar mock
+func (m *MockDatabase) DeleteAvatar(userID int) error {
+	return m.MockDeleteAvatar(userID)
 }
 
 // GetProductsByName mock

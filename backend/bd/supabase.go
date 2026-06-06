@@ -74,6 +74,7 @@ type Database interface {
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
 	UpdateUserImage(userID int, imageURL string) (*User, error)
 	UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error)
+	DeleteAvatar(userID int) error
 
 	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
@@ -343,6 +344,28 @@ func (db *SupabaseDB) UploadAvatar(userID int, fileBytes []byte, ext string, con
 	}
 
 	return publicURL, nil
+}
+
+// DeleteAvatar removes the user's avatar from Storage and clears the Image
+// column in the DB. If the user has no avatar, it's a no-op.
+func (db *SupabaseDB) DeleteAvatar(userID int) error {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Image != "" {
+		oldPath := extractStoragePath(user.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
+		}
+	}
+
+	_, err = db.UpdateUserImage(userID, "")
+	if err != nil {
+		return fmt.Errorf("failed to clear image: %w", err)
+	}
+	return nil
 }
 
 // extractStoragePath extracts the relative file path from a Supabase Storage

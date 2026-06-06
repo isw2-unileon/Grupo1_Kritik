@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import UserAvatar from "@/components/UserAvatar";
-import { uploadAvatar } from "@/services/api";
+import { uploadAvatar, deleteAvatar } from "@/services/api";
 
 interface Props {
   image?: string | null;
@@ -13,14 +13,17 @@ export default function EditableAvatar({ image, name, onUpdate }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const busy = uploading || deleting;
 
   const handleClose = useCallback(() => {
     setOpen(false);
     setFile(null);
     setPreview(null);
+    setDeleting(false);
     setError(null);
   }, []);
 
@@ -75,6 +78,20 @@ export default function EditableAvatar({ image, name, onUpdate }: Props) {
       setUploading(false);
     }
   }, [file, onUpdate, handleClose]);
+
+  const handleDelete = useCallback(async () => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteAvatar();
+      onUpdate("");
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al borrar la imagen");
+    } finally {
+      setDeleting(false);
+    }
+  }, [onUpdate, handleClose]);
 
   return (
     <>
@@ -167,7 +184,7 @@ export default function EditableAvatar({ image, name, onUpdate }: Props) {
               <button
                 type="button"
                 onClick={handleClose}
-                disabled={uploading}
+                disabled={busy}
                 className="flex-1 rounded-xl border border-line bg-ink py-2.5 text-sm font-medium text-dim transition hover:bg-surface2 hover:text-cream disabled:opacity-50"
               >
                 Cancelar
@@ -175,12 +192,25 @@ export default function EditableAvatar({ image, name, onUpdate }: Props) {
               <button
                 type="button"
                 onClick={handleUpload}
-                disabled={!file || uploading}
+                disabled={!file || busy}
                 className="flex-1 rounded-xl bg-acid py-2.5 text-sm font-semibold text-ink transition hover:brightness-110 disabled:opacity-50"
               >
                 {uploading ? "Subiendo…" : "Guardar"}
               </button>
             </div>
+
+            {image && (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={busy}
+                  className="text-xs text-faint transition hover:text-coral disabled:opacity-50"
+                >
+                  {deleting ? "Borrando…" : "Borrar foto actual"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

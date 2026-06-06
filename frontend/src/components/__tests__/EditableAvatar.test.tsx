@@ -2,12 +2,14 @@ import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-const { mockUploadAvatar } = vi.hoisted(() => ({
+const { mockUploadAvatar, mockDeleteAvatar } = vi.hoisted(() => ({
   mockUploadAvatar: vi.fn(),
+  mockDeleteAvatar: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
   uploadAvatar: mockUploadAvatar,
+  deleteAvatar: mockDeleteAvatar,
 }));
 
 import EditableAvatar from "@/components/EditableAvatar";
@@ -96,6 +98,47 @@ describe("EditableAvatar", () => {
 
     await waitFor(() => {
       expect(screen.getByText("upload error")).toBeInTheDocument();
+    });
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("shows Borrar foto actual button only when image is provided", async () => {
+    const { unmount } = render(<EditableAvatar image="https://example.com/avatar.jpg" name="Test" onUpdate={onUpdate} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByText("✎ Editar"));
+    expect(screen.getByText("Borrar foto actual")).toBeInTheDocument();
+    unmount();
+
+    render(<EditableAvatar image={null} name="Test" onUpdate={onUpdate} />);
+    await user.click(screen.getByText("✎ Editar"));
+    expect(screen.queryByText("Borrar foto actual")).not.toBeInTheDocument();
+  });
+
+  it("calls deleteAvatar and onUpdate on successful delete", async () => {
+    mockDeleteAvatar.mockResolvedValue("");
+    render(<EditableAvatar image="https://example.com/avatar.jpg" name="Test" onUpdate={onUpdate} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByText("✎ Editar"));
+
+    await user.click(screen.getByText("Borrar foto actual"));
+
+    await waitFor(() => {
+      expect(mockDeleteAvatar).toHaveBeenCalled();
+    });
+    expect(onUpdate).toHaveBeenCalledWith("");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows error message when delete fails", async () => {
+    mockDeleteAvatar.mockRejectedValue(new Error("delete error"));
+    render(<EditableAvatar image="https://example.com/avatar.jpg" name="Test" onUpdate={onUpdate} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByText("✎ Editar"));
+
+    await user.click(screen.getByText("Borrar foto actual"));
+
+    await waitFor(() => {
+      expect(screen.getByText("delete error")).toBeInTheDocument();
     });
     expect(onUpdate).not.toHaveBeenCalled();
   });
