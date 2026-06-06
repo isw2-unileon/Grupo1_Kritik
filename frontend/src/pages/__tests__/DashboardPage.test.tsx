@@ -5,13 +5,14 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser, mockGetRecommendations } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
   mockGetFollowers: vi.fn(),
   mockGetFollowing: vi.fn(),
   mockUnfollowUser: vi.fn(),
+  mockGetRecommendations: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -22,9 +23,11 @@ vi.mock("@/services/api", () => ({
   getFollowers: mockGetFollowers,
   getFollowing: mockGetFollowing,
   unfollowUser: mockUnfollowUser,
+  getRecommendations: mockGetRecommendations,
 }));
 
-function renderDashboard(followingOverride?: unknown[]) {
+function renderDashboard(followingOverride?: unknown[], recommendations?: unknown[]) {
+  mockGetRecommendations.mockResolvedValue(recommendations ?? []);
   mockGetFollowers.mockResolvedValue([]);
   mockGetFollowing.mockResolvedValue(followingOverride ?? []);
   localStorage.setItem("token", "t");
@@ -59,10 +62,12 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Publicar reseña")).toBeInTheDocument();
   });
 
-  it("renders suggestions and sidebar sections", () => {
+  it("renders suggestions and sidebar sections", async () => {
     mockGetReviews.mockResolvedValue([]);
     renderDashboard();
-    expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
+    });
     expect(screen.getByText("A tus amigos les gustó")).toBeInTheDocument();
     expect(screen.getByText("No les convenció")).toBeInTheDocument();
   });
@@ -81,7 +86,9 @@ describe("DashboardPage", () => {
       const user = userEvent.setup();
       const tabs = screen.getAllByText("Recomendaciones");
       await user.click(tabs[0]!);
-      expect(screen.getByText("Recomendaciones para ti")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Recomendaciones para ti")).toBeInTheDocument();
+      });
 
       await user.click(screen.getByText("Reseñas hechas"));
       expect(screen.getByText("Tu actividad")).toBeInTheDocument();
@@ -342,34 +349,63 @@ describe("DashboardPage", () => {
   });
 
   describe("recommendations filter", () => {
+    const mockProducts = [
+      { id: 1, Name: "Severance", Type: "series", Description: "Tensión perfecta." },
+      { id: 2, Name: "Shogun", Type: "series", Description: "Producción enorme." },
+      { id: 3, Name: "Última señal", Type: "series", Description: "Se desinfla." },
+      { id: 4, Name: "Tunic", Type: "game", Description: "Un secreto detrás de cada esquina." },
+      { id: 5, Name: "Poor Things", Type: "film", Description: "Visualmente bella." },
+    ];
+
+    function clickRecomendacionesTab(user: ReturnType<typeof userEvent.setup>) {
+      const tabs = screen.getAllByText("Recomendaciones");
+      return user.click(tabs[0]!);
+    }
+
     it("filters by category and shows only matching items", async () => {
       mockGetReviews.mockResolvedValue([]);
-      renderDashboard();
+      renderDashboard(undefined, mockProducts);
+      await waitFor(() => {
+        expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
+      });
 
       const user = userEvent.setup();
-      await user.click(screen.getAllByText("Recomendaciones")[0]);
-
+      await clickRecomendacionesTab(user);
+      await waitFor(() => {
+        expect(screen.getByText("Series")).toBeInTheDocument();
+      });
       await user.click(screen.getByText("Series"));
 
-      expect(screen.getByText("Severance")).toBeInTheDocument();
-      expect(screen.getByText("Shogun")).toBeInTheDocument();
-      expect(screen.getByText("Última señal")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Shogun")).toBeInTheDocument();
+        expect(screen.getByText("Última señal")).toBeInTheDocument();
+      });
       expect(screen.queryByText("Tunic")).not.toBeInTheDocument();
     });
 
     it("resets filter to show all when clicking Todas", async () => {
       mockGetReviews.mockResolvedValue([]);
-      renderDashboard();
+      renderDashboard(undefined, mockProducts);
+      await waitFor(() => {
+        expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
+      });
 
       const user = userEvent.setup();
-      await user.click(screen.getAllByText("Recomendaciones")[0]);
+      await clickRecomendacionesTab(user);
+      await waitFor(() => {
+        expect(screen.getByText("Tunic")).toBeInTheDocument();
+      });
 
       await user.click(screen.getByText("Series"));
-      await user.click(screen.getByText("Todas"));
+      await waitFor(() => {
+        expect(screen.queryByText("Tunic")).not.toBeInTheDocument();
+      });
 
-      expect(screen.getByText("Severance")).toBeInTheDocument();
-      expect(screen.getByText("Tunic")).toBeInTheDocument();
-      expect(screen.getByText("Poor Things")).toBeInTheDocument();
+      await user.click(screen.getByText("Todas"));
+      await waitFor(() => {
+        expect(screen.getByText("Tunic")).toBeInTheDocument();
+        expect(screen.getByText("Poor Things")).toBeInTheDocument();
+      });
     });
   });
 });
