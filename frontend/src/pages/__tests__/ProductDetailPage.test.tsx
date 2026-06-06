@@ -1,14 +1,16 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 
-const { mockSearchProducts } = vi.hoisted(() => ({
+const { mockSearchProducts, mockGetProductReviews } = vi.hoisted(() => ({
   mockSearchProducts: vi.fn(),
+  mockGetProductReviews: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
   searchProducts: mockSearchProducts,
+  getProductReviews: mockGetProductReviews,
 }));
 
 type DetailProduct = {
@@ -54,6 +56,11 @@ function renderByUrl(name: string) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  // por defecto, una ficha sin reseñas (cada test puede sobreescribirlo)
+  mockGetProductReviews.mockResolvedValue([]);
 });
 
 describe("ProductDetailPage", () => {
@@ -214,13 +221,18 @@ describe("ProductDetailPage", () => {
       expect(screen.getByText("La comunidad opina")).toBeInTheDocument();
     });
 
-    it("shows review verdicts", () => {
+    it("shows review verdicts", async () => {
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
+      mockGetProductReviews.mockResolvedValue([
+        { id: 1, recommended: true, description: "Buenísimo", user_name: "ana" },
+        { id: 2, recommended: false, description: "No me convenció", user_name: "luis" },
+      ]);
       renderWithState(SAMPLE_PRODUCT);
-      const yesChips = screen.getAllByText("Sí");
-      const noChips = screen.getAllByText("No");
-      expect(yesChips.length).toBeGreaterThan(0);
-      expect(noChips.length).toBeGreaterThan(0);
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Sí").length).toBeGreaterThan(0);
+      });
+      expect(screen.getAllByText("No").length).toBeGreaterThan(0);
     });
   });
 

@@ -443,6 +443,7 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
 /* ---------- People list modal (followers / following) ---------- */
 function PeopleModal({
   title,
+  ariaLabel,
   users,
   emptyText,
   unfollowingIds,
@@ -451,6 +452,7 @@ function PeopleModal({
   onUnfollow,
 }: {
   title: string;
+  ariaLabel?: string;
   users: ProfileUser[];
   emptyText: string;
   unfollowingIds?: Set<number>;
@@ -476,7 +478,7 @@ function PeopleModal({
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={ariaLabel ?? title}
       className={`fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
@@ -522,13 +524,19 @@ function PeopleModal({
                   key={u.id}
                   className="flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 ring-transparent transition hover:bg-ink/40 hover:ring-line"
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                    {u.Name?.charAt(0)?.toUpperCase() ?? "?"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
-                    <p className="truncate text-xs text-faint">@{u.UserName}</p>
-                  </div>
+                  <Link
+                    to={`/user/${u.id}`}
+                    onClick={onClose}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
+                      {u.Name?.charAt(0)?.toUpperCase() ?? "?"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
+                      <p className="truncate text-xs text-faint">@{u.UserName}</p>
+                    </div>
+                  </Link>
                   {onUnfollow && (
                     <button
                       type="button"
@@ -537,7 +545,7 @@ function PeopleModal({
                       className="group/unf shrink-0 rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-dim transition hover:border-coral hover:bg-coral/10 hover:text-coral disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {loading ? (
-                        "…"
+                        "Dejando de seguir…"
                       ) : (
                         <>
                           <span className="inline group-hover/unf:hidden">Siguiendo</span>
@@ -696,6 +704,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
       {showFollowers && (
         <PeopleModal
           title="Seguidores"
+          ariaLabel="Usuarios que te siguen"
           users={followers}
           emptyText="Aún no tienes seguidores."
           onClose={() => setShowFollowers(false)}
@@ -704,6 +713,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
       {showFollowing && (
         <PeopleModal
           title="Siguiendo"
+          ariaLabel="Usuarios que sigues"
           users={following}
           emptyText="No sigues a nadie todavía."
           unfollowingIds={unfollowingIds}
