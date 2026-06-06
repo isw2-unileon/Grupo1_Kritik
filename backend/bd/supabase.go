@@ -96,6 +96,8 @@ type Database interface {
 	UnfollowSomeone(fanID int, influencerID int) (bool, error)
 
 	GetRecommendations(userID int, limit int) ([]Product, error)
+	GetInfluencerRecommendation(userID int, limit int) ([]Product, error)
+	GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error)
 }
 
 // SupabaseDB client struct
@@ -736,6 +738,52 @@ func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, erro
 	}
 
 	body := db.client.Rpc("get_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
+	}
+
+	return products, nil
+}
+
+func (db *SupabaseDB) GetInfluencerRecommendation(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	body := db.client.Rpc("get_influencer_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
+	}
+
+	return products, nil
+}
+
+func (db *SupabaseDB) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	body := db.client.Rpc("get_influencer_not_recommended_products", "exact", map[string]interface{}{
 		"user_id_param": userID,
 		"lim":           limit,
 	})

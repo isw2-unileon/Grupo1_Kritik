@@ -1207,3 +1207,19 @@ func TestHashEmptyPassword(t *testing.T) {
 		t.Error("Password should be empty")
 	}
 }
+
+func GetInfluencerRecommendation(t *testing.T) {
+
+}
+
+func GetInfluencerRecommendationError(t *testing.T) {
+
+}
+
+func GetInfluencerNotRecommendation(t *testing.T) {
+
+}
+
+func GetInfluencerNotRecommendationError(t *testing.T) {
+
+}
