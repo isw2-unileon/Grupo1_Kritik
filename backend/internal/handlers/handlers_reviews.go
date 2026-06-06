@@ -54,6 +54,17 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		return
 	}
 
+	// Check for duplicate: same user + same product
+	if existing, err := h.DB.GetReviewsByProductID(req.ProductID); err == nil {
+		for _, r := range existing {
+			if r.UserID == user.ID {
+				slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
+				c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"}) //nolint:misspell
+				return
+			}
+		}
+	}
+
 	review, err := h.DB.AddReview(bd.Review{
 		Description: req.Description,
 		Recommended: req.Recommended,
@@ -61,6 +72,11 @@ func (h *ReviewHandler) CreateReviewHandler(c *gin.Context) {
 		UserID:      user.ID,
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "(23505)") {
+			slog.Warn("create review: duplicate", "user_id", userID, "product_id", req.ProductID)
+			c.JSON(http.StatusConflict, gin.H{"error": "El producto ya fue valorado"}) //nolint:misspell
+			return
+		}
 		slog.Error("create review: insert failed", "user_id", userID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create review"})
 		return
