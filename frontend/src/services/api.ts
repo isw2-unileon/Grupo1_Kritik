@@ -5,6 +5,7 @@ export interface UserData {
   surname: string;
   user_name: string;
   image?: string;
+  is_admin: boolean;
 }
 
 // Matches backend bd.User PascalCase JSON response
@@ -312,6 +313,81 @@ export async function getUserReviews(userId: number, signal?: AbortSignal): Prom
   const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
   if (!res.ok) {
     throw new Error("could not load user reviews");
+  }
+  return res.json();
+}
+
+export interface ProductFormData {
+  Name: string;
+  Type?: string;
+  Description?: string;
+  Release?: string;
+  Genre?: string[];
+  Image?: string;
+}
+
+export async function createProduct(data: ProductFormData): Promise<Product> {
+  const res = await authedFetch(`${BASE}/api/products`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not create product" }));
+    throw new Error(err.error || "could not create product");
+  }
+  return res.json();
+}
+
+export async function updateProduct(id: number, data: ProductFormData): Promise<Product> {
+  const res = await authedFetch(`${BASE}/api/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not update product" }));
+    throw new Error(err.error || "could not update product");
+  }
+  return res.json();
+}
+
+export async function uploadProductImage(id: number, file: File): Promise<string> {
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await fetch(`${BASE}/api/products/${id}/image`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not upload product image" }));
+    throw new Error(err.error || "could not upload product image");
+  }
+  const data = await res.json();
+  return data.image as string;
+}
+
+export async function getTopRated(limit = 5, signal?: AbortSignal): Promise<Product[]> {
+  const res = await authedFetch(`${BASE}/api/products/top?limit=${limit}`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load top rated products");
+  }
+  return res.json();
+}
+
+export async function getWorstRated(limit = 5, signal?: AbortSignal): Promise<Product[]> {
+  const res = await authedFetch(`${BASE}/api/products/worst?limit=${limit}`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load worst rated products");
+  }
+  return res.json();
+}
+
+export async function getAllProducts(signal?: AbortSignal): Promise<Product[]> {
+  const res = await authedFetch(`${BASE}/api/products`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load products");
   }
   return res.json();
 }
