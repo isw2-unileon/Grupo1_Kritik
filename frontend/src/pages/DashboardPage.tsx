@@ -406,7 +406,7 @@ function FriendsNo() {
 }
 
 type SessionUser = {
-  name?: string;
+  name: string;
   surname?: string;
   user_name?: string;
   email?: string;
@@ -420,7 +420,7 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
     <Card as="article" className="p-6">
       <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
       <div className="mt-4 flex items-center gap-3">
-        <UserAvatar image={user?.image} name={user?.name} size="md" />
+        <UserAvatar image={user?.image} name={user?.name ?? ""} size="md" />
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-semibold text-cream">
             {fullName || "Tu perfil"}
@@ -599,7 +599,7 @@ function ProfilePanel({ user }: { user: SessionUser }) {
     <Card as="article" className="p-7 sm:p-8">
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-4 min-w-0">
-          <UserAvatar image={user?.image} name={user?.name} size="lg" />
+          <UserAvatar image={user?.image} name={user?.name ?? ""} size="lg" />
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
             <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">

@@ -56,7 +56,7 @@ function Header() {
               </NavLink>
 
               <span className="hidden text-sm text-dim sm:block">{user?.name}</span>
-              <UserAvatar image={user?.image} name={user?.name} size="xs" />
+              {user && <UserAvatar image={user.image} name={user.name} size="xs" />}
               <button
                 type="button"
                 onClick={logout}
