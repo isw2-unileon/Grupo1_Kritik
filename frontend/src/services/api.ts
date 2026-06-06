@@ -327,7 +327,7 @@ export interface ProductFormData {
 }
 
 export async function createProduct(data: ProductFormData): Promise<Product> {
-  const res = await authedFetch(`${BASE}/api/products`, {
+  const res = await authedFetch(`${BASE}/api/admin/products`, {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -339,7 +339,7 @@ export async function createProduct(data: ProductFormData): Promise<Product> {
 }
 
 export async function updateProduct(id: number, data: ProductFormData): Promise<Product> {
-  const res = await authedFetch(`${BASE}/api/products/${id}`, {
+  const res = await authedFetch(`${BASE}/api/admin/products/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -355,7 +355,7 @@ export async function uploadProductImage(id: number, file: File): Promise<string
   const formData = new FormData();
   formData.append("image", file);
 
-  const res = await fetch(`${BASE}/api/products/${id}/image`, {
+  const res = await fetch(`${BASE}/api/admin/products/${id}/image`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
@@ -385,9 +385,10 @@ export async function getWorstRated(limit = 5, signal?: AbortSignal): Promise<Pr
 }
 
 export async function getAllProducts(signal?: AbortSignal): Promise<Product[]> {
-  const res = await authedFetch(`${BASE}/api/products`, { signal });
+  const res = await authedFetch(`${BASE}/api/admin/products`, { signal });
   if (!res.ok) {
     throw new Error("could not load products");
   }
-  return res.json();
+  const body = await res.json();
+  return (body.products as Product[]) ?? [];
 }

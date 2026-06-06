@@ -238,7 +238,7 @@ func (h *AdminHandler) UploadProductImageHandler(c *gin.Context) {
 		return
 	}
 
-	file, header, err := c.Request.FormFile("product_image")
+	file, header, err := c.Request.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "se requiere un archivo de imagen"})
 		return
