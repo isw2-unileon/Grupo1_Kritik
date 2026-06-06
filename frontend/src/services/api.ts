@@ -266,6 +266,24 @@ export async function followUser(influencerId: number, signal?: AbortSignal): Pr
   }
 }
 
+export async function uploadAvatar(file: File): Promise<string> {
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const res = await fetch(`${BASE}/api/users/avatar`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not upload avatar" }));
+    throw new Error(err.error || "could not upload avatar");
+  }
+  const data = await res.json();
+  return data.image as string;
+}
+
 export async function getUserReviews(userId: number, signal?: AbortSignal): Promise<Review[]> {
   const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
   if (!res.ok) {

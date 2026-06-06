@@ -65,6 +65,7 @@ func newRouter(db bd.Database) *gin.Engine {
 	api.GET("/users/:id/profile", middleware.RequireAuth(), reviewH.GetUserProfileHandler)
 	api.GET("/users/:id/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsByIDHandler)
 	api.GET("/users/search", middleware.RequireAuth(), reviewH.SearchUsersHandler)
+	api.POST("/users/avatar", middleware.RequireAuth(), authH.UpdateAvatarHandler)
 
 	return r
 }

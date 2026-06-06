@@ -1,15 +1,19 @@
 package bd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/civil"
 	"github.com/bytedance/gopkg/util/logger"
 	"github.com/joho/godotenv"
+	storage_go "github.com/supabase-community/storage-go"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -68,6 +72,8 @@ type Database interface {
 	AddUser(newUser User) (*User, error)
 	DeleteUserByEmail(userEmail string) (bool, error)
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
+	UpdateUserImage(userID int, imageURL string) (*User, error)
+	UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error)
 
 	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
@@ -286,6 +292,68 @@ func (db *SupabaseDB) UpdateUserInfo(userEmail string, newUserInfo User) (*User,
 	}
 
 	return &updatedUsers[0], nil
+}
+
+// UpdateUserImage updates only the Image field for a given user ID.
+// Returns the updated User or an error.
+func (db *SupabaseDB) UpdateUserImage(userID int, imageURL string) (*User, error) {
+	var updatedUsers []User
+	_, err := db.client.From("Users").
+		Update(map[string]string{"Image": imageURL}, "", "").
+		Eq("id", strconv.Itoa(userID)).
+		ExecuteTo(&updatedUsers)
+	if err != nil {
+		return nil, fmt.Errorf("error updating user image: %w", err)
+	}
+	if len(updatedUsers) == 0 {
+		return nil, fmt.Errorf("user with id %d not found", userID)
+	}
+	return &updatedUsers[0], nil
+}
+
+// UploadAvatar uploads a user's avatar file to Supabase Storage, deletes the
+// old one if present, updates the Image column in the DB, and returns the
+// public URL.
+func (db *SupabaseDB) UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Image != "" {
+		oldPath := extractStoragePath(user.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
+		}
+	}
+
+	fileName := fmt.Sprintf("%d_%d%s", userID, time.Now().UnixNano(), ext)
+	_, err = db.client.Storage.UploadFile("avatars", fileName, bytes.NewReader(fileBytes), storage_go.FileOptions{
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload avatar: %w", err)
+	}
+
+	publicURL := db.client.Storage.GetPublicUrl("avatars", fileName).SignedURL
+
+	_, err = db.UpdateUserImage(userID, publicURL)
+	if err != nil {
+		return "", err
+	}
+
+	return publicURL, nil
+}
+
+// extractStoragePath extracts the relative file path from a Supabase Storage
+// public URL. Returns empty string if the URL does not match the expected
+// pattern (so we don't try to delete external URLs).
+func extractStoragePath(imageURL string) string {
+	const marker = "/avatars/"
+	if idx := strings.Index(imageURL, marker); idx >= 0 {
+		return imageURL[idx+len(marker):]
+	}
+	return ""
 }
 
 /*
