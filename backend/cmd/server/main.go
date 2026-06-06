@@ -24,6 +24,7 @@ import (
 func newRouter(db bd.Database) *gin.Engine {
 	authH := handlers.NewAuthHandler(db)
 	reviewH := handlers.NewReviewHandler(db)
+	adminH := handlers.NewAdminHandler(db)
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -63,12 +64,24 @@ func newRouter(db bd.Database) *gin.Engine {
 	api.GET("/recommendations/influencer", middleware.RequireAuth(), reviewH.GetInfluencerRecommendationHandler)
 	api.GET("/recommendations/influencer/not", middleware.RequireAuth(), reviewH.GetInfluencerNotRecommendationHandler)
 	api.GET("/products/random", reviewH.GetRandomProductsHandler)
+	api.GET("/products/top", middleware.RequireAuth(), adminH.TopRatedHandler)
+	api.GET("/products/worst", middleware.RequireAuth(), adminH.WorstRatedHandler)
 
 	api.GET("/users/:id/profile", middleware.RequireAuth(), reviewH.GetUserProfileHandler)
 	api.GET("/users/:id/reviews", middleware.RequireAuth(), reviewH.GetUserReviewsByIDHandler)
 	api.GET("/users/search", middleware.RequireAuth(), reviewH.SearchUsersHandler)
 	api.POST("/users/avatar", middleware.RequireAuth(), authH.UpdateAvatarHandler)
 	api.DELETE("/users/avatar", middleware.RequireAuth(), authH.DeleteAvatarHandler)
+
+	admin := r.Group("/api/admin")
+	admin.Use(middleware.RequireAdmin())
+	admin.GET("/products", adminH.ListProductsHandler)
+	admin.GET("/products/:id", adminH.GetProductHandler)
+	admin.POST("/products", adminH.CreateProductHandler)
+	admin.PUT("/products/:id", adminH.UpdateProductHandler)
+	admin.DELETE("/products/:id", adminH.DeleteProductHandler)
+	admin.POST("/products/:id/image", adminH.UploadProductImageHandler)
+	admin.DELETE("/products/:id/image", adminH.DeleteProductImageHandler)
 
 	return r
 }

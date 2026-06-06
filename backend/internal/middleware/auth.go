@@ -27,6 +27,35 @@ func RequireAuth() gin.HandlerFunc {
 		}
 
 		c.Set("userID", claims.UserID)
+		c.Set("isAdmin", claims.IsAdmin)
+		c.Next()
+	}
+}
+
+// RequireAdmin validates the JWT and ensures the user has admin privileges.
+// Returns 403 Forbidden if the user is not an admin.
+func RequireAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		if header == "" || !strings.HasPrefix(header, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid authorization header"})
+			return
+		}
+
+		tokenString := strings.TrimPrefix(header, "Bearer ")
+		claims, err := auth.ValidateToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			return
+		}
+
+		if !claims.IsAdmin {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin access required"})
+			return
+		}
+
+		c.Set("userID", claims.UserID)
+		c.Set("isAdmin", claims.IsAdmin)
 		c.Next()
 	}
 }

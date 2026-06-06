@@ -13,7 +13,7 @@ import UserProfilePage from "./pages/UserProfilePage";
 function Header() {
   const { isAuthenticated, user, logout } = useAuth();
 
-  // Reusable classes of the new theme
+  //   Reusable classes of the new theme
   const ghost =
     "rounded-full px-4 py-2 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream";
   const primary =
@@ -37,8 +37,7 @@ function Header() {
               <NavLink
                 to="/dashboard"
                 className={({ isActive }) =>
-                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
-                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${isActive ? "text-acid" : "text-dim hover:text-cream"
                   }`
                 }
               >
@@ -47,8 +46,7 @@ function Header() {
               <NavLink
                 to="/publish-review"
                 className={({ isActive }) =>
-                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
-                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${isActive ? "text-acid" : "text-dim hover:text-cream"
                   }`
                 }
               >
