@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"cloud.google.com/go/civil"
@@ -196,4 +199,63 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+var allowedAvatarExts = map[string]string{
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png":  "image/png",
+	".webp": "image/webp",
+	".gif":  "image/gif",
+}
+
+const maxAvatarSize = 5 << 20 // 5 MB
+
+// UpdateAvatarHandler handles avatar upload for the authenticated user.
+// Accepts multipart/form-data with an "avatar" field containing the image file.
+func (h *AuthHandler) UpdateAvatarHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "se requiere un archivo de imagen"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > maxAvatarSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "la imagen no puede superar los 5 MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	contentType, ok := allowedAvatarExts[ext]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("formato no soportado: %s. Usa jpg, png, webp o gif", ext)})
+		return
+	}
+
+	if contentType == "" {
+		contentType = mime.TypeByExtension(ext)
+	}
+
+	fileBytes := make([]byte, header.Size)
+	if _, err := file.Read(fileBytes); err != nil {
+		slog.Error("avatar: failed to read file", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error al leer el archivo"})
+		return
+	}
+
+	publicURL, err := h.DB.UploadAvatar(userID, fileBytes, ext, contentType)
+	if err != nil {
+		slog.Error("avatar: upload failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"image": publicURL})
 }
