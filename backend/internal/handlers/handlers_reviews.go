@@ -360,6 +360,7 @@ type UserProfileResponse struct {
 	FansCount        int    `json:"FansCount"`
 	InfluencersCount int    `json:"InfluencersCount"`
 	IsFollowing      bool   `json:"IsFollowing"`
+	Image            string `json:"Image,omitempty"`
 }
 
 // GetUserProfileHandler returns public profile info for the given user.
@@ -404,6 +405,7 @@ func (h *ReviewHandler) GetUserProfileHandler(c *gin.Context) {
 		FansCount:        len(fans),
 		InfluencersCount: len(influencers),
 		IsFollowing:      isFollowing,
+		Image:            user.Image,
 	})
 }
 

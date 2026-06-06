@@ -42,6 +42,7 @@ type UserResponse struct {
 	Name     string `json:"name"`
 	Surname  string `json:"surname"`
 	UserName string `json:"user_name"`
+	Image    string `json:"image,omitempty"`
 }
 
 // AuthHandler struct
@@ -104,6 +105,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		Surname:  req.Surname,
 		UserName: req.UserName,
 		Birth:    req.Birth,
+		Image:    req.Image,
 	}
 
 	addedUser, err := h.DB.AddUser(newUser)
@@ -121,6 +123,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		Name:     addedUser.Name,
 		Surname:  addedUser.Surname,
 		UserName: addedUser.UserName,
+		Image:    addedUser.Image,
 	}
 
 	c.JSON(http.StatusCreated, response)
@@ -188,6 +191,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 			Name:     user.Name,
 			Surname:  user.Surname,
 			UserName: user.UserName,
+			Image:    user.Image,
 		},
 	}
 

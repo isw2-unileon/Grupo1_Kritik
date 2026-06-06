@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, Link } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserAvatar from "@/components/UserAvatar";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -55,9 +56,7 @@ function Header() {
               </NavLink>
 
               <span className="hidden text-sm text-dim sm:block">{user?.name}</span>
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                {user?.name?.charAt(0).toUpperCase() ?? "K"}
-              </span>
+              {user && <UserAvatar image={user.image} name={user.name} size="xs" />}
               <button
                 type="button"
                 onClick={logout}

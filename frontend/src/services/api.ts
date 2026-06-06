@@ -4,6 +4,7 @@ export interface UserData {
   name: string;
   surname: string;
   user_name: string;
+  image?: string;
 }
 
 // Matches backend bd.User PascalCase JSON response
@@ -12,6 +13,7 @@ export interface ProfileUser {
   Email: string;
   Name: string;
   UserName: string;
+  Image?: string;
 }
 
 export interface LoginResponse {
@@ -224,6 +226,7 @@ export interface UserProfile {
   FansCount: number;
   InfluencersCount: number;
   IsFollowing: boolean;
+  Image?: string;
 }
 
 export async function getUserProfile(id: number, signal?: AbortSignal): Promise<UserProfile> {

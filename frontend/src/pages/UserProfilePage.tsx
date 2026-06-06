@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Card from "@/components/Card";
+import UserAvatar from "@/components/UserAvatar";
 import {
   getUserProfile,
   getUserReviews,
@@ -92,8 +93,6 @@ export default function UserProfilePage() {
     );
   }
 
-  const initial = profile.Name?.charAt(0)?.toUpperCase() ?? "?";
-
   return (
     <div className="space-y-6">
       <Link
@@ -110,9 +109,7 @@ export default function UserProfilePage() {
       <Card as="article" className="p-7 sm:p-8">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4 min-w-0">
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
-              {initial}
-            </span>
+            <UserAvatar image={profile.Image} name={profile.Name} size="lg" />
             <div className="min-w-0">
               <h2 className="truncate font-display text-2xl font-semibold text-cream">
                 {profile.Name || "Usuario"}
