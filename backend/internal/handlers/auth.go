@@ -46,6 +46,7 @@ type UserResponse struct {
 	Surname  string `json:"surname"`
 	UserName string `json:"user_name"`
 	Image    string `json:"image,omitempty"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 // AuthHandler struct
@@ -177,7 +178,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	token, err := auth.GenerateToken(user.ID, user.Email, user.IsAdmin)
 	if err != nil {
 		slog.Error("login: token generation failed", "user_id", user.ID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
@@ -195,6 +196,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 			Surname:  user.Surname,
 			UserName: user.UserName,
 			Image:    user.Image,
+			IsAdmin:  user.IsAdmin,
 		},
 	}
 

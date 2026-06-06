@@ -13,6 +13,7 @@ import (
 	"cloud.google.com/go/civil"
 	"github.com/bytedance/gopkg/util/logger"
 	"github.com/joho/godotenv"
+	"github.com/supabase-community/postgrest-go"
 	storage_go "github.com/supabase-community/storage-go"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
@@ -83,6 +84,13 @@ type Database interface {
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
+	DeleteProductByID(productID int) (bool, error)
+	UpdateProductByID(productID int, newProductInfo Product) (*Product, error)
+	GetAllProducts() ([]Product, error)
+	GetTopRated(limit int) ([]Product, error)
+	GetWorstRated(limit int) ([]Product, error)
+	UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error)
+	DeleteProductImage(productID int) error
 
 	GetReviewByID(reviewID int) (*Review, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
@@ -325,7 +333,7 @@ func (db *SupabaseDB) UploadAvatar(userID int, fileBytes []byte, ext string, con
 	}
 
 	if user.Image != "" {
-		oldPath := extractStoragePath(user.Image)
+		oldPath := extractStoragePath("avatars", user.Image)
 		if oldPath != "" {
 			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
 		}
@@ -358,7 +366,7 @@ func (db *SupabaseDB) DeleteAvatar(userID int) error {
 	}
 
 	if user.Image != "" {
-		oldPath := extractStoragePath(user.Image)
+		oldPath := extractStoragePath("avatars", user.Image)
 		if oldPath != "" {
 			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
 		}
@@ -372,10 +380,10 @@ func (db *SupabaseDB) DeleteAvatar(userID int) error {
 }
 
 // extractStoragePath extracts the relative file path from a Supabase Storage
-// public URL. Returns empty string if the URL does not match the expected
-// pattern (so we don't try to delete external URLs).
-func extractStoragePath(imageURL string) string {
-	const marker = "/avatars/"
+// public URL for the given bucket. Returns empty string if the URL does not
+// match the expected pattern (so we don't try to delete external URLs).
+func extractStoragePath(bucket, imageURL string) string {
+	marker := "/" + bucket + "/"
 	if idx := strings.Index(imageURL, marker); idx >= 0 {
 		return imageURL[idx+len(marker):]
 	}
@@ -511,6 +519,153 @@ func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Produ
 	}
 
 	return &updatedProducts[0], nil
+}
+
+// GetAllProducts returns all products from the database
+func (db *SupabaseDB) GetAllProducts() ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting all products: %w", err)
+	}
+
+	return products, nil
+}
+
+// GetTopRated returns the top N products ordered by AverageGrade descending
+func (db *SupabaseDB) GetTopRated(limit int) ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		Order("AverageGrade", &postgrest.OrderOpts{Ascending: false}).
+		Limit(limit, "").
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting top rated products: %w", err)
+	}
+
+	return products, nil
+}
+
+// GetWorstRated returns the bottom N products ordered by AverageGrade ascending
+func (db *SupabaseDB) GetWorstRated(limit int) ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		Order("AverageGrade", &postgrest.OrderOpts{Ascending: true}).
+		Limit(limit, "").
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting worst rated products: %w", err)
+	}
+
+	return products, nil
+}
+
+// DeleteProductByID deletes the Product associated with the given ID
+func (db *SupabaseDB) DeleteProductByID(productID int) (bool, error) {
+	var deletedProduct []Product
+
+	_, err := db.client.From("Product").
+		Delete("", "representation").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(&deletedProduct)
+
+	if err != nil {
+		return false, fmt.Errorf("error deleting product:\n%w", err)
+	}
+
+	if len(deletedProduct) == 0 {
+		return false, fmt.Errorf("not found any product with id %d to delete", productID)
+	}
+
+	return true, nil
+}
+
+// UpdateProductByID updates 1 or more parameters of the Product identified by its ID
+func (db *SupabaseDB) UpdateProductByID(productID int, newProductInfo Product) (*Product, error) {
+	var updatedProducts []Product
+
+	_, err := db.client.From("Product").
+		Update(newProductInfo, "", "").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(&updatedProducts)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the product: %w", err)
+	}
+
+	if len(updatedProducts) == 0 {
+		return nil, fmt.Errorf("not found any product with id %d to update", productID)
+	}
+
+	return &updatedProducts[0], nil
+}
+
+// UploadProductImage uploads a product image file to Supabase Storage, deletes
+// the old one if present, updates the Image column in the DB, and returns the
+// public URL.
+func (db *SupabaseDB) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if product.Image != "" {
+		oldPath := extractStoragePath("products", product.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("products", []string{oldPath})
+		}
+	}
+
+	fileName := fmt.Sprintf("product_%d_%d%s", productID, time.Now().UnixNano(), ext)
+	_, err = db.client.Storage.UploadFile("products", fileName, bytes.NewReader(fileBytes), storage_go.FileOptions{
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload product image: %w", err)
+	}
+
+	publicURL := db.client.Storage.GetPublicUrl("products", fileName).SignedURL
+
+	updated := *product
+	updated.Image = publicURL
+	_, err = db.UpdateProductByID(productID, updated)
+	if err != nil {
+		return "", err
+	}
+
+	return publicURL, nil
+}
+
+// DeleteProductImage removes the product image from Storage and clears the
+// Image column in the DB. If the product has no image, it's a no-op.
+func (db *SupabaseDB) DeleteProductImage(productID int) error {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if product.Image != "" {
+		oldPath := extractStoragePath("products", product.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("products", []string{oldPath})
+		}
+	}
+
+	updated := *product
+	updated.Image = ""
+	_, err = db.UpdateProductByID(productID, updated)
+	if err != nil {
+		return fmt.Errorf("failed to clear product image: %w", err)
+	}
+
+	return nil
 }
 
 /*

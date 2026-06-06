@@ -9,7 +9,7 @@ func init() {
 }
 
 func TestGenerateAndValidateToken(t *testing.T) {
-	token, err := GenerateToken(42, "test@example.com")
+	token, err := GenerateToken(42, "test@example.com", false)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestValidateExpiredToken(t *testing.T) {
 	oldSecret := jwtSecret
 	Initialize("test-secret-key")
 
-	token, err := GenerateToken(1, "expired@test.com")
+	token, err := GenerateToken(1, "expired@test.com", false)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestValidateTokenWrongSecret(t *testing.T) {
 	originalSecret := jwtSecret
 
 	Initialize("first-secret")
-	token, err := GenerateToken(1, "test@test.com")
+	token, err := GenerateToken(1, "test@test.com", false)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}
