@@ -16,7 +16,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 type DetailProduct = {
-  id: number | string;
+  id: number;
   Name: string;
   Type?: string;
   Genre?: string[];

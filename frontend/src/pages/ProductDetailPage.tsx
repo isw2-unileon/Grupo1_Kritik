@@ -26,7 +26,7 @@ import { searchProducts } from "@/services/api";
    ============================================================ */
 
 type DetailProduct = {
-  id: number | string;
+  id: number;
   Name: string;
   Type?: string;
   Genre?: string[];
