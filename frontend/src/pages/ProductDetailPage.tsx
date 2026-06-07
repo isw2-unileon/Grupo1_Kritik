@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import Card from "@/components/Card";
+import ProductEditModal from "@/components/ProductEditModal";
+import { useAuth } from "@/contexts/AuthContext";
 import { searchProducts } from "@/services/api";
 
 /* ============================================================
@@ -24,7 +26,7 @@ import { searchProducts } from "@/services/api";
    ============================================================ */
 
 type DetailProduct = {
-  id: number | string;
+  id: number;
   Name: string;
   Type?: string;
   Genre?: string[];
@@ -288,12 +290,15 @@ export default function ProductDetailPage() {
   const location = useLocation();
   const stateProduct = (location.state as { product?: DetailProduct } | null)?.product;
 
+  const { isAdmin } = useAuth();
+
   // The name comes from the state (when clicking a card) or from the URL (/product/<name>).
   const name = stateProduct?.Name ?? (id ? decodeURIComponent(id) : "");
 
   const [product, setProduct] = useState<DetailProduct | null>(stateProduct ?? null);
   const [loading, setLoading] = useState(!stateProduct);
   const [notFound, setNotFound] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // WITHOUT TOUCHING THE BACKEND: we request the REAL product by name using the existing
   // endpoint (GET /api/products?q=). The product from state, if available, renders instantly;
@@ -444,18 +449,42 @@ export default function ProductDetailPage() {
         <aside className="space-y-6">
           <RecommendationCard pct={pct} tier={tier} positives={positives} total={total} />
           <DetailsCard product={product} release={release} typeLabel={style.label} />
-          <Link
-            to="/publish-review"
-            state={{ product }}
-            className="flex items-center justify-center gap-2 rounded-full bg-acid px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Publica tu veredicto
-          </Link>
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={() => setShowEditModal(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-acid px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Modificar producto
+            </button>
+          ) : (
+            <Link
+              to="/publish-review"
+              state={{ product }}
+              className="flex items-center justify-center gap-2 rounded-full bg-acid px-6 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Publica tu veredicto
+            </Link>
+          )}
         </aside>
       </div>
+
+      {showEditModal && product && (
+        <ProductEditModal
+          product={product}
+          onSave={(updated) => {
+            setProduct(updated);
+            setShowEditModal(false);
+          }}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
     </div>
   );
 }
