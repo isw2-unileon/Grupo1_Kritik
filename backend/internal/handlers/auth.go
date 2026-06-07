@@ -80,6 +80,11 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	if len([]rune(req.UserName)) < 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "el nombre de usuario debe tener al menos 2 caracteres"})
+		return
+	}
+
 	existingUser, err := h.DB.GetUserByEmail(req.Email)
 	if err != nil {
 		slog.Warn("register: email lookup failed", "email", req.Email, "error", err)

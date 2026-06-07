@@ -557,7 +557,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const q = query.trim();
-    if (searchMode !== "products" || q.length < 2) {
+    if (searchMode !== "products" || q.length < 1) {
       setResults([]);
       setSearching(false);
       return;
@@ -584,7 +584,7 @@ export default function DashboardPage() {
   // User search — debounced; runs only when the bar is in "users" mode
   useEffect(() => {
     const q = query.trim();
-    if (searchMode !== "users" || q.length < 2) {
+    if (searchMode !== "users" || q.length < 1) {
       setUserResults([]);
       setUserSearching(false);
       return;
@@ -618,7 +618,7 @@ export default function DashboardPage() {
     tabsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, [activeTab]);
 
-  const isSearching = query.trim().length >= 2;
+  const isSearching = query.trim().length >= 1;
 
   const renderTab = () => {
     switch (activeTab) {
