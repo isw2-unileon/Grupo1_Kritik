@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
@@ -384,6 +384,70 @@ function CircleRow({ product, accent }: { product: Product; accent: string }) {
 // shared list for the two circle blocks. Pulls the real products that the people
 // you follow recommended / did not recommend. Shows a preview (limit) with a
 // link to the full circle tab, and picks the empty message by follow state.
+/* Area con scroll interno y barra oculta. Muestra un degradado + chevron arriba
+   y abajo solo cuando hay mas contenido en esa direccion (se desvanecen al
+   llegar al borde), como pista visual de que se puede hacer scroll. */
+function ScrollArea({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [up, setUp] = useState(false);
+  const [down, setDown] = useState(false);
+
+  const update = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setUp(el.scrollTop > 4);
+    setDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
+  useEffect(() => {
+    update();
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    ro.observe(content);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [update]);
+
+  return (
+    <div className="relative mt-5">
+      <div
+        ref={scrollRef}
+        onScroll={update}
+        className="max-h-[28rem] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div ref={contentRef} className={className}>
+          {children}
+        </div>
+      </div>
+
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 top-0 flex h-10 items-start justify-center bg-gradient-to-b from-surface to-transparent transition-opacity duration-200 ${up ? "opacity-100" : "opacity-0"}`}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="mt-0.5 text-dim">
+          <path d="m18 15-6-6-6 6" />
+        </svg>
+      </div>
+
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-surface to-transparent transition-opacity duration-200 ${down ? "opacity-100" : "opacity-0"}`}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="mb-0.5 animate-bounce text-dim">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function CircleList({
   title,
   heading,
@@ -450,7 +514,7 @@ function CircleList({
     <Card as="article" className="p-6">
       <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentText}`}>{title}</p>
       <h2 className="mt-2 font-display text-2xl font-semibold">{heading}</h2>
-      <div className="mt-5 space-y-3">
+      <ScrollArea className="space-y-3">
         {loading ? (
           <div className="flex justify-center py-6 text-faint">
             <Spinner />
@@ -475,7 +539,7 @@ function CircleList({
         ) : (
           visible.map((p) => <CircleRow key={p.id} product={p} accent={rowAccent} />)
         )}
-      </div>
+      </ScrollArea>
       {preview && onSeeAll && items.length > (limit ?? 0) && (
         <button
           type="button"
@@ -659,7 +723,7 @@ function CircleFeed({ limit = 12 }: { limit?: number }) {
     <Card as="section" className="p-6">
       <p className="text-xs font-medium uppercase tracking-[0.34em] text-dim">Actividad reciente</p>
       <h2 className="mt-2 font-display text-2xl font-semibold">Últimas reseñas de tu círculo</h2>
-      <div className="mt-5 space-y-3">
+      <ScrollArea className="space-y-3">
         {loading ? (
           <div className="flex justify-center py-6 text-faint">
             <Spinner />
@@ -719,7 +783,7 @@ function CircleFeed({ limit = 12 }: { limit?: number }) {
             </article>
           ))
         )}
-      </div>
+      </ScrollArea>
     </Card>
   );
 }

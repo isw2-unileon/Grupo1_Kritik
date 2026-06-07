@@ -5,14 +5,18 @@ import type { ProfileUser } from "@/services/api";
 
 interface Props {
   users: ProfileUser[];
-  unfollowingIds: Set<number>;
-  error: string | null;
+  title?: string;
+  emptyText?: string;
+  unfollowingIds?: Set<number>;
+  error?: string | null;
   onClose: () => void;
-  onUnfollow: (id: number) => Promise<void>;
+  onUnfollow?: (id: number) => Promise<void>;
 }
 
 export default function FollowingList({
   users,
+  title = "Siguiendo",
+  emptyText = "No sigues a nadie todavía.",
   unfollowingIds,
   error,
   onClose,
@@ -33,13 +37,13 @@ export default function FollowingList({
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Usuarios que sigues"
+      aria-label={title}
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className="w-full max-w-md rounded-[2rem] border border-line bg-surface p-6 shadow-2xl">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="font-display text-xl font-semibold text-cream">Siguiendo</h2>
+          <h2 className="font-display text-xl font-semibold text-cream">{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -58,10 +62,10 @@ export default function FollowingList({
 
         <div className="mt-4 max-h-80 space-y-1 overflow-y-auto">
           {users.length === 0 ? (
-            <p className="py-8 text-center text-dim">No sigues a nadie todavía.</p>
+            <p className="py-8 text-center text-dim">{emptyText}</p>
           ) : (
             users.map((u) => {
-              const loading = unfollowingIds.has(u.id);
+              const loading = unfollowingIds?.has(u.id) ?? false;
               return (
                 <div
                   key={u.id}
@@ -78,14 +82,16 @@ export default function FollowingList({
                       <p className="truncate text-xs text-faint">@{u.UserName}</p>
                     </div>
                   </Link>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => onUnfollow(u.id)}
-                    className="shrink-0 rounded-full border border-coral px-3.5 py-1.5 text-xs font-semibold text-coral transition hover:bg-coral/10 disabled:opacity-40"
-                  >
-                    {loading ? "Dejando de seguir…" : "Dejar de seguir"}
-                  </button>
+                  {onUnfollow && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => onUnfollow?.(u.id)}
+                      className="shrink-0 rounded-full border border-coral px-3.5 py-1.5 text-xs font-semibold text-coral transition hover:bg-coral/10 disabled:opacity-40"
+                    >
+                      {loading ? "Dejando de seguir…" : "Dejar de seguir"}
+                    </button>
+                  )}
                 </div>
               );
             })

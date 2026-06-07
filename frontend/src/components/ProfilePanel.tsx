@@ -30,6 +30,7 @@ export default function ProfilePanel({ user, showTitle = true }: Props) {
   const [followers, setFollowers] = useState<ProfileUser[]>([]);
   const [following, setFollowing] = useState<ProfileUser[]>([]);
   const [followLoading, setFollowLoading] = useState(true);
+  const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [unfollowingIds, setUnfollowingIds] = useState<Set<number>>(new Set());
   const [unfollowError, setUnfollowError] = useState<string | null>(null);
@@ -105,10 +106,14 @@ export default function ProfilePanel({ user, showTitle = true }: Props) {
             </div>
           </div>
           <div className="flex items-start gap-6 shrink-0">
-            <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowFollowers(true)}
+              className="text-center transition hover:opacity-80"
+            >
               <p className="font-display text-2xl font-bold text-cream">{followLoading ? "…" : followers.length}</p>
               <p className="text-xs text-faint">seguidores</p>
-            </div>
+            </button>
             <button
               type="button"
               onClick={() => setShowFollowing(true)}
@@ -156,9 +161,19 @@ export default function ProfilePanel({ user, showTitle = true }: Props) {
         )}
       </Card>
 
+      {showFollowers && (
+        <FollowingList
+          users={followers}
+          title="Seguidores"
+          emptyText="Aún no tienes seguidores."
+          onClose={() => setShowFollowers(false)}
+        />
+      )}
+
       {showFollowing && (
         <FollowingList
           users={following}
+          title="Siguiendo"
           unfollowingIds={unfollowingIds}
           error={unfollowError}
           onClose={() => { setShowFollowing(false); setUnfollowError(null); }}
