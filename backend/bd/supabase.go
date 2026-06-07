@@ -727,7 +727,7 @@ func (db *SupabaseDB) GetReviewsByProductID(productID int) ([]Review, error) {
 
 	_, err = db.client.From("Review").
 		Select("*", "exact", false).
-		Eq("ProductID", fmt.Sprintf("%d", product.ID)).
+		Eq("ProductId", fmt.Sprintf("%d", product.ID)).
 		ExecuteTo(&reviews)
 
 	if err != nil {
