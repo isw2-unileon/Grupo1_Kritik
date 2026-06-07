@@ -350,6 +350,16 @@ export async function updateProduct(id: number, data: ProductFormData): Promise<
   return res.json();
 }
 
+export async function deleteProductImage(id: number): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/admin/products/${id}/image`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not delete product image" }));
+    throw new Error(err.error || "could not delete product image");
+  }
+}
+
 export async function uploadProductImage(id: number, file: File): Promise<string> {
   const token = localStorage.getItem("token");
   const formData = new FormData();

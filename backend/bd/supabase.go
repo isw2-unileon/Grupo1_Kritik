@@ -658,9 +658,10 @@ func (db *SupabaseDB) DeleteProductImage(productID int) error {
 		}
 	}
 
-	updated := *product
-	updated.Image = ""
-	_, err = db.UpdateProductByID(productID, updated)
+	_, err = db.client.From("Product").
+		Update(map[string]interface{}{"Image": nil}, "", "").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(nil)
 	if err != nil {
 		return fmt.Errorf("failed to clear product image: %w", err)
 	}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
+  deleteProductImage,
   updateProduct,
   uploadProductImage,
   type Product,
@@ -8,7 +9,7 @@ import {
 
 interface Props {
   product: Product;
-  onSave: () => void;
+  onSave: (updated: Product) => void;
   onClose: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function ProductEditModal({ product, onSave, onClose }: Props) {
   const [genreStr, setGenreStr] = useState((product.Genre ?? []).join(", "));
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageDeleted, setImageDeleted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,7 @@ export default function ProductEditModal({ product, onSave, onClose }: Props) {
     }
     setImageFile(f);
     setImagePreview(URL.createObjectURL(f));
+    setImageDeleted(false);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -74,21 +77,25 @@ export default function ProductEditModal({ product, onSave, onClose }: Props) {
         Genre: genres.length > 0 ? genres : undefined,
       };
 
-      await updateProduct(product.id, data);
+      const updated = await updateProduct(product.id, data);
 
       if (imageFile) {
-        await uploadProductImage(product.id, imageFile);
+        const imageUrl = await uploadProductImage(product.id, imageFile);
+        onSave({ ...updated, Image: imageUrl });
+      } else if (imageDeleted) {
+        await deleteProductImage(product.id);
+        onSave({ ...updated, Image: undefined });
+      } else {
+        onSave(updated);
       }
-
-      onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al guardar");
     } finally {
       setSaving(false);
     }
-  }, [name, type, description, release, genreStr, imageFile, product.id, onSave]);
+  }, [name, type, description, release, genreStr, imageFile, imageDeleted, product.id, onSave]);
 
-  const currentImage = imagePreview ?? product.Image;
+  const currentImage = imagePreview ?? (imageDeleted ? null : product.Image);
 
   return (
     <div
@@ -189,11 +196,27 @@ export default function ProductEditModal({ product, onSave, onClose }: Props) {
               {currentImage ? "Cambiar imagen" : "Seleccionar imagen"}
             </button>
             {currentImage && (
-              <img
-                src={currentImage}
-                alt="Vista previa"
-                className="mt-2 h-24 w-24 rounded-xl object-cover ring-1 ring-line"
-              />
+              <div className="mt-2 flex items-end gap-3">
+                <img
+                  src={currentImage}
+                  alt="Vista previa"
+                  className="h-24 w-24 rounded-xl object-cover ring-1 ring-line"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageDeleted(true);
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="rounded-lg border border-coral/40 px-3 py-1.5 text-xs font-medium text-coral transition hover:bg-coral/10"
+                >
+                  Borrar imagen
+                </button>
+              </div>
+            )}
+            {imageDeleted && !imageFile && !imagePreview && (
+              <p className="mt-2 text-xs text-coral">Imagen eliminada</p>
             )}
           </div>
         </div>

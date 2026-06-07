@@ -11,6 +11,10 @@ vi.mock("@/services/api", () => ({
   searchProducts: mockSearchProducts,
 }));
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({ isAdmin: false }),
+}));
+
 type DetailProduct = {
   id: number | string;
   Name: string;
