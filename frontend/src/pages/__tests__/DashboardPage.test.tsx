@@ -5,7 +5,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser, mockGetRecommendations } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser, mockGetRecommendations, mockGetRandomProducts, mockGetInfluencerRecommendations, mockGetInfluencerNotRecommendations } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
@@ -13,6 +13,9 @@ const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGet
   mockGetFollowing: vi.fn(),
   mockUnfollowUser: vi.fn(),
   mockGetRecommendations: vi.fn(),
+  mockGetRandomProducts: vi.fn(),
+  mockGetInfluencerRecommendations: vi.fn(),
+  mockGetInfluencerNotRecommendations: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -24,10 +27,16 @@ vi.mock("@/services/api", () => ({
   getFollowing: mockGetFollowing,
   unfollowUser: mockUnfollowUser,
   getRecommendations: mockGetRecommendations,
+  getRandomProducts: mockGetRandomProducts,
+  getInfluencerRecommendations: mockGetInfluencerRecommendations,
+  getInfluencerNotRecommendations: mockGetInfluencerNotRecommendations,
 }));
 
 function renderDashboard(followingOverride?: unknown[], recommendations?: unknown[]) {
   mockGetRecommendations.mockResolvedValue(recommendations ?? []);
+  mockGetRandomProducts.mockResolvedValue([]);
+  mockGetInfluencerRecommendations.mockResolvedValue([]);
+  mockGetInfluencerNotRecommendations.mockResolvedValue([]);
   mockGetFollowers.mockResolvedValue([]);
   mockGetFollowing.mockResolvedValue(followingOverride ?? []);
   localStorage.setItem("token", "t");

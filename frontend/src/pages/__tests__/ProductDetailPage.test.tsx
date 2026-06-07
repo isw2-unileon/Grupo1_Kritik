@@ -1,14 +1,16 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 
-const { mockSearchProducts } = vi.hoisted(() => ({
+const { mockSearchProducts, mockGetProductReviews } = vi.hoisted(() => ({
   mockSearchProducts: vi.fn(),
+  mockGetProductReviews: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
   searchProducts: mockSearchProducts,
+  getProductReviews: mockGetProductReviews,
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
@@ -25,6 +27,11 @@ type DetailProduct = {
   AverageGrade?: number;
   Image?: string;
 };
+
+const MOCK_REVIEWS = [
+  { id: 1, Description: "Increíble juego, muy recomendado.", Recommended: true, ProductName: "Hollow Knight", UserName: "lucia" },
+  { id: 2, Description: "Bueno pero podría mejorar.", Recommended: false, ProductName: "Hollow Knight", UserName: "dani" },
+];
 
 const SAMPLE_PRODUCT: DetailProduct = {
   id: 42,
@@ -54,6 +61,10 @@ function renderByUrl(name: string) {
     </MemoryRouter>,
   );
 }
+
+beforeEach(() => {
+  mockGetProductReviews.mockResolvedValue([]);
+});
 
 afterEach(() => {
   cleanup();
@@ -212,19 +223,25 @@ describe("ProductDetailPage", () => {
   });
 
   describe("community reviews section", () => {
-    it("renders the community reviews header", () => {
+    it("renders the community reviews header", async () => {
+      mockGetProductReviews.mockResolvedValue(MOCK_REVIEWS);
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
       renderWithState(SAMPLE_PRODUCT);
-      expect(screen.getByText("La comunidad opina")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("La comunidad opina")).toBeInTheDocument();
+      });
     });
 
-    it("shows review verdicts", () => {
+    it("shows review verdicts", async () => {
+      mockGetProductReviews.mockResolvedValue(MOCK_REVIEWS);
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
       renderWithState(SAMPLE_PRODUCT);
-      const yesChips = screen.getAllByText("Sí");
-      const noChips = screen.getAllByText("No");
-      expect(yesChips.length).toBeGreaterThan(0);
-      expect(noChips.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const yesChips = screen.getAllByText("Sí");
+        const noChips = screen.getAllByText("No");
+        expect(yesChips.length).toBeGreaterThan(0);
+        expect(noChips.length).toBeGreaterThan(0);
+      });
     });
   });
 
