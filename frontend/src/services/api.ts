@@ -309,6 +309,14 @@ export async function getRecommendations(
   return res.json();
 }
 
+export async function getRandomProducts(limit = 10, signal?: AbortSignal): Promise<Product[]> {
+  const res = await authedFetch(`${BASE}/api/products/random?limit=${limit}`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load random products");
+  }
+  return res.json();
+}
+
 export async function getUserReviews(userId: number, signal?: AbortSignal): Promise<Review[]> {
   const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
   if (!res.ok) {

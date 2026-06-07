@@ -5,7 +5,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
-import { searchProducts, searchUsers, getRecommendations, type Product, type ProfileUser } from "@/services/api";
+import { searchProducts, searchUsers, getRecommendations, getRandomProducts, type Product, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
@@ -63,19 +63,40 @@ function Spinner() {
   );
 }
 
-function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; className?: string }) {
+function Cover({
+  cat,
+  name,
+  image,
+  className = "",
+}: {
+  cat: CatKey;
+  name?: string;
+  image?: string;
+  className?: string;
+}) {
   const c = CATS[cat];
   return (
     <div className={`relative overflow-hidden bg-gradient-to-br ${c.grad} ${className}`}>
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-35"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-          backgroundSize: "14px 14px",
-        }}
-      />
+      {image ? (
+        // portada real del producto (columna Image); si no hay, se ve el gradiente
+        <img
+          src={image}
+          alt={name ?? ""}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
+            backgroundSize: "14px 14px",
+          }}
+        />
+      )}
+      {/* velo oscuro inferior: mantiene el texto legible sobre imagen o gradiente */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -124,22 +145,35 @@ function shuffle<T>(arr: T[]): T[] {
 
 function FeaturedStrip() {
   const navigate = useNavigate();
-  const items = useMemo(() => shuffle(FEATURED), []);
-  // We duplicate the list so the loop is continuous and seamless.
-  const loop = [...items, ...items];
+  // Seed with shuffled sample covers so the strip is never empty; swap in the
+  // real random products from the backend (GET /api/products/random) on mount.
+  const [items, setItems] = useState<Product[]>(() =>
+    shuffle(
+      FEATURED.map((f, i) => ({
+        id: -(i + 1), // negative ids: placeholders that never collide with real ones
+        Name: f.name,
+        Type: CAT_TO_TYPE[f.cat],
+      })),
+    ),
+  );
 
-  const open = (it: { name: string; cat: CatKey }) =>
-    navigate(`/product/${encodeURIComponent(it.name)}`, {
-      state: {
-        product: {
-          id: it.name,
-          Name: it.name,
-          Type: CAT_TO_TYPE[it.cat],
-          Genre: [] as string[],
-          Description: "",
-        },
-      },
-    });
+  useEffect(() => {
+    const controller = new AbortController();
+    getRandomProducts(12, controller.signal)
+      .then((data) => {
+        if (data.length > 0) setItems(data); // si viene vacío, se quedan las de ejemplo
+      })
+      .catch(() => {
+        /* error de red o RPC get_random_products inexistente -> se mantiene el ejemplo */
+      });
+    return () => controller.abort();
+  }, []);
+
+  // We duplicate the list so the loop is continuous and seamless.
+  const loop = useMemo(() => [...items, ...items], [items]);
+
+  const open = (p: Product) =>
+    navigate(`/product/${encodeURIComponent(p.Name)}`, { state: { product: p } });
 
   return (
     <div className="group relative overflow-hidden">
@@ -147,15 +181,15 @@ function FeaturedStrip() {
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
-        {loop.map((it, i) => (
+        {loop.map((p, i) => (
           <button
-            key={`${it.name}-${i}`}
+            key={`${p.id}-${i}`}
             type="button"
-            onClick={() => open(it)}
-            aria-label={`Ver ${it.name}`}
+            onClick={() => open(p)}
+            aria-label={`Ver ${p.Name}`}
             className="mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:-translate-y-1 hover:border-acid/40"
           >
-            <Cover cat={it.cat} name={it.name} className="aspect-[2/3]" />
+            <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} className="aspect-[2/3]" />
           </button>
         ))}
       </div>
@@ -295,7 +329,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
               }}
               className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
             >
-              <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[16/10]" />
+              <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} className="aspect-[16/10]" />
               <div className="p-4">
                 <p className="text-sm text-dim">"{p.Description}"</p>
                 <Link
