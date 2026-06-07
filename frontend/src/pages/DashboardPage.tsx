@@ -5,7 +5,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
-import { searchProducts, searchUsers, getRecommendations, getRandomProducts, getInfluencerRecommendations, getInfluencerNotRecommendations, getFollowing, type Product, type ProfileUser } from "@/services/api";
+import { searchProducts, searchUsers, getRecommendations, getRandomProducts, getInfluencerRecommendations, getInfluencerNotRecommendations, getFollowing, getUserReviews, type Product, type ProfileUser, type Review } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
@@ -500,6 +500,179 @@ function FriendsNo({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void 
   );
 }
 
+/* Avatares de la gente a la que sigues (cabecera de la pestaña Tu círculo). */
+function FollowingStrip() {
+  const [people, setPeople] = useState<ProfileUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    getFollowing(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setPeople(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setPeople([]);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <Card as="section" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-dim">Sigues a</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">
+        Tu círculo{!loading && people.length > 0 ? ` · ${people.length}` : ""}
+      </h2>
+      <div className="mt-5">
+        {loading ? (
+          <div className="flex justify-center py-4 text-faint">
+            <Spinner />
+          </div>
+        ) : people.length === 0 ? (
+          <p className="py-2 text-sm text-faint">
+            Aún no sigues a nadie. Busca usuarios y síguelos para empezar a construir tu círculo.
+          </p>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {people.map((u) => (
+              <Link
+                key={u.id}
+                to={`/user/${u.id}`}
+                title={`@${u.UserName}`}
+                className="flex w-16 shrink-0 flex-col items-center gap-2 text-center transition hover:-translate-y-0.5"
+              >
+                <UserAvatar image={u.Image} name={u.Name} size="md" />
+                <span className="w-full truncate text-xs text-dim">{u.Name}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/* Chip de veredicto compacto para el feed (lima = sí, coral = no). */
+function FeedVerdict({ recommended }: { recommended: boolean }) {
+  return recommended ? (
+    <span className="shrink-0 rounded-full border border-acid bg-acid/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-acid">
+      Recomienda
+    </span>
+  ) : (
+    <span className="shrink-0 rounded-full border border-coral bg-coral/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-coral">
+      No recomienda
+    </span>
+  );
+}
+
+type FeedItem = { review: Review; author: ProfileUser };
+
+/* Ultimas resenas de la gente a la que sigues. El backend no tiene endpoint de
+   feed, asi que se compone juntando getFollowing + las resenas de cada uno y se
+   ordena por id descendente (no hay fecha; el id es autoincremental, asi que el
+   mas alto es el mas reciente). Son N+1 peticiones: ok con circulos pequenos. */
+function CircleFeed({ limit = 12 }: { limit?: number }) {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [followsAnyone, setFollowsAnyone] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    (async () => {
+      try {
+        const following = await getFollowing(controller.signal);
+        if (controller.signal.aborted) return;
+        setFollowsAnyone(following.length > 0);
+        if (following.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+        const perUser = await Promise.all(
+          following.map((u) =>
+            getUserReviews(u.id, controller.signal)
+              .then((revs) => revs.map((review) => ({ review, author: u })))
+              .catch(() => [] as FeedItem[]),
+          ),
+        );
+        if (controller.signal.aborted) return;
+        const all = perUser.flat().sort((a, b) => b.review.id - a.review.id);
+        setItems(all.slice(0, limit));
+        setLoading(false);
+      } catch {
+        if (controller.signal.aborted) return;
+        setItems([]);
+        setLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [limit]);
+
+  return (
+    <Card as="section" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-dim">Actividad reciente</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">Últimas reseñas de tu círculo</h2>
+      <div className="mt-5 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6 text-faint">
+            <Spinner />
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-4 text-sm text-faint">
+            {followsAnyone
+              ? "La gente que sigues aún no ha publicado reseñas."
+              : "Aún no sigues a nadie. Sigue a gente para ver aquí sus reseñas."}
+          </p>
+        ) : (
+          items.map(({ review, author }) => (
+            <article
+              key={review.id}
+              className="rounded-2xl border border-line bg-ink/60 p-4 transition hover:border-acid/35"
+            >
+              <div className="flex items-start gap-3">
+                <Link to={`/user/${author.id}`} className="shrink-0">
+                  <UserAvatar image={author.Image} name={author.Name} size="sm" />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link
+                      to={`/user/${author.id}`}
+                      className="font-semibold text-cream transition hover:text-acid"
+                    >
+                      {author.Name}
+                    </Link>
+                    <span className="text-xs text-faint">@{author.UserName}</span>
+                    <FeedVerdict recommended={review.Recommended} />
+                  </div>
+                  {review.ProductName && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/product/${encodeURIComponent(review.ProductName)}`)}
+                      className="mt-1 block text-sm text-dim transition hover:text-cream"
+                    >
+                      sobre <span className="font-medium">{review.ProductName}</span>
+                    </button>
+                  )}
+                  {review.Description && (
+                    <p className="mt-2 text-sm leading-relaxed text-cream/90">{review.Description}</p>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </Card>
+  );
+}
+
 type SessionUser = {
   name: string;
   surname?: string;
@@ -646,9 +819,13 @@ export default function DashboardPage() {
         return <ReviewsSection />;
       case "circulo":
         return (
-          <div className="grid gap-6 md:grid-cols-2">
-            <FriendsYes />
-            <FriendsNo />
+          <div className="space-y-6">
+            <FollowingStrip />
+            <div className="grid gap-6 md:grid-cols-2">
+              <FriendsYes />
+              <FriendsNo />
+            </div>
+            <CircleFeed />
           </div>
         );
       case "perfil":
