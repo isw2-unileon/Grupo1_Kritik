@@ -505,6 +505,24 @@ func (h *ReviewHandler) GetUserReviewsByIDHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, h.enrichReviews(reviews))
 }
 
+// GetProductReviewsHandler returns all reviews written about a given product.
+func (h *ReviewHandler) GetProductReviewsHandler(c *gin.Context) {
+	productID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || productID < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+
+	reviews, err := h.DB.GetReviewsByProductID(productID)
+	if err != nil {
+		slog.Error("get product reviews: query failed", "productID", productID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reviews"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.enrichReviews(reviews))
+}
+
 // GetRandomProductsHandler returns a random selection of products (for discovery).
 func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 	limit := 10

@@ -5,7 +5,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
-import { searchProducts, searchUsers, getRecommendations, getRandomProducts, type Product, type ProfileUser } from "@/services/api";
+import { searchProducts, searchUsers, getRecommendations, getRandomProducts, getInfluencerRecommendations, getInfluencerNotRecommendations, getFollowing, type Product, type ProfileUser } from "@/services/api";
 
 /* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
@@ -33,16 +33,6 @@ function catKey(type?: string): CatKey {
   return "game";
 }
 
-type Circle = { name: string; cat: CatKey; n: number };
-
-const FRIENDS_YES: Circle[] = [
-  { name: "Shogun", cat: "series", n: 4 },
-  { name: "Klara y el Sol", cat: "book", n: 3 },
-];
-const FRIENDS_NO: Circle[] = [
-  { name: "Starfall VII", cat: "game", n: 3 },
-  { name: "Oppenheimer", cat: "film", n: 2 },
-];
 
 const TABS = [
   { id: "inicio", label: "Inicio" },
@@ -363,21 +353,11 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
-// clickable row of the circle: opens the product profile (sample data) via router state
-function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
+// one clickable row of the circle: opens the real product profile via router state
+function CircleRow({ product, accent }: { product: Product; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
-    navigate(`/product/${encodeURIComponent(f.name)}`, {
-      state: {
-        product: {
-          id: f.name,
-          Name: f.name,
-          Type: CAT_TO_TYPE[f.cat],
-          Genre: [] as string[],
-          Description: "",
-        },
-      },
-    });
+    navigate(`/product/${encodeURIComponent(product.Name)}`, { state: { product } });
 
   return (
     <div
@@ -392,50 +372,131 @@ function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: strin
       }}
       className={`flex cursor-pointer items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line transition hover:-translate-y-0.5 ${accent}`}
     >
-      <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+      <Cover cat={catKey(product.Type)} image={product.Image} className="h-12 w-12 shrink-0 rounded-lg" />
       <div className="min-w-0">
-        <p className="truncate font-semibold">{f.name}</p>
-        <p className="text-xs text-faint">{note}</p>
+        <p className="truncate font-semibold">{product.Name}</p>
+        <p className="text-xs text-faint">{product.Type || CATS[catKey(product.Type)].label}</p>
       </div>
     </div>
   );
 }
 
-function FriendsYes() {
+// shared list for the two circle blocks. Pulls the real products that the people
+// you follow recommended / did not recommend. Shows a preview (limit) with a
+// link to the full circle tab, and picks the empty message by follow state.
+function CircleList({
+  title,
+  heading,
+  accentText,
+  rowAccent,
+  fetcher,
+  emptyFollowing,
+  emptyNoFollows,
+  limit,
+  onSeeAll,
+}: {
+  title: string;
+  heading: string;
+  accentText: string;
+  rowAccent: string;
+  fetcher: (limit?: number, signal?: AbortSignal) => Promise<Product[]>;
+  emptyFollowing: string;
+  emptyNoFollows: string;
+  limit?: number;
+  onSeeAll?: () => void;
+}) {
+  const preview = typeof limit === "number";
+  const [items, setItems] = useState<Product[]>([]);
+  const [followsAnyone, setFollowsAnyone] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetcher(undefined, controller.signal)
+      .then(async (data) => {
+        setItems(data);
+        // Solo cuando no hay nada que mostrar necesitamos saber si sigues a
+        // alguien, para elegir el mensaje de vacío correcto.
+        if (data.length === 0) {
+          try {
+            const following = await getFollowing(controller.signal);
+            setFollowsAnyone(following.length > 0);
+          } catch {
+            setFollowsAnyone(null);
+          }
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setItems([]);
+        setFollowsAnyone(null);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [fetcher]);
+
+  const visible = preview ? items.slice(0, limit) : items;
+
   return (
     <Card as="article" className="p-6">
-      <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu círculo · Sí</p>
-      <h2 className="mt-2 font-display text-2xl font-semibold">A tus amigos les gustó</h2>
+      <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentText}`}>{title}</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">{heading}</h2>
       <div className="mt-5 space-y-3">
-        {FRIENDS_YES.map((f) => (
-          <CircleRow
-            key={f.name}
-            f={f}
-            accent="hover:ring-acid/35"
-            note={`Recomendado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
-          />
-        ))}
+        {loading ? (
+          <div className="flex justify-center py-6 text-faint">
+            <Spinner />
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-4 text-sm text-faint">
+            {followsAnyone ? emptyFollowing : emptyNoFollows}
+          </p>
+        ) : (
+          visible.map((p) => <CircleRow key={p.id} product={p} accent={rowAccent} />)
+        )}
       </div>
+      {preview && onSeeAll && items.length > (limit ?? 0) && (
+        <button
+          type="button"
+          onClick={onSeeAll}
+          className="mt-4 w-full rounded-2xl border border-line py-2.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+        >
+          Ver más
+        </button>
+      )}
     </Card>
   );
 }
 
-function FriendsNo() {
+function FriendsYes({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
   return (
-    <Card as="article" className="p-6">
-      <p className="text-xs font-medium uppercase tracking-[0.34em] text-coral">Tu círculo · No</p>
-      <h2 className="mt-2 font-display text-2xl font-semibold">No les convenció</h2>
-      <div className="mt-5 space-y-3">
-        {FRIENDS_NO.map((f) => (
-          <CircleRow
-            key={f.name}
-            f={f}
-            accent="hover:ring-coral/35"
-            note={`Descartado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
-          />
-        ))}
-      </div>
-    </Card>
+    <CircleList
+      title="Tu círculo · Sí"
+      heading="A tu círculo le gustó"
+      accentText="text-acid"
+      rowAccent="hover:ring-acid/35"
+      fetcher={getInfluencerRecommendations}
+      emptyFollowing="La gente que sigues aún no ha recomendado nada."
+      emptyNoFollows="Aún no sigues a nadie. Sigue a gente para ver lo que recomienda tu círculo."
+      limit={limit}
+      onSeeAll={onSeeAll}
+    />
+  );
+}
+
+function FriendsNo({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
+  return (
+    <CircleList
+      title="Tu círculo · No"
+      heading="No les convenció"
+      accentText="text-coral"
+      rowAccent="hover:ring-coral/35"
+      fetcher={getInfluencerNotRecommendations}
+      emptyFollowing="La gente que sigues aún no ha descartado nada."
+      emptyNoFollows="Aún no sigues a nadie. Sigue a gente para ver lo que recomienda tu círculo."
+      limit={limit}
+      onSeeAll={onSeeAll}
+    />
   );
 }
 
@@ -572,8 +633,8 @@ export default function DashboardPage() {
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
-                <FriendsYes />
-                <FriendsNo />
+                <FriendsYes limit={3} onSeeAll={() => setActiveTab("circulo")} />
+                <FriendsNo limit={3} onSeeAll={() => setActiveTab("circulo")} />
                 <ProfileCard user={user} onOpen={() => setActiveTab("perfil")} />
               </aside>
             </div>
