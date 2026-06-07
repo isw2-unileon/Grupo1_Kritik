@@ -4,12 +4,6 @@ package bd
 //
 //nolint:dupl // DO NOT remove this
 type MockDatabase struct {
-	MockGetUserByEmail    func(userEmail string) (*User, error)
-	MockGetUserByUserName func(userName string) (*User, error)
-	MockGetUserByID       func(userID int) (*User, error)
-	MockAddUser           func(newUser User) (*User, error)
-	MockDeleteUserByEmail func(userEmail string) (bool, error)
-	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
 	MockGetUserByEmail     func(userEmail string) (*User, error)
 	MockGetUserByUserName  func(userName string) (*User, error)
 	MockGetUserByID        func(userID int) (*User, error)
@@ -23,7 +17,6 @@ type MockDatabase struct {
 
 	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
-	MockGetRandomProducts   func(limit int) ([]Product, error)
 	MockAddProduct          func(newProduct Product) (*Product, error)
 	MockDeleteProductByName func(productName string) (bool, error)
 	MockUpdateProductInfo   func(productName string, newProductInfo Product) (*Product, error)
@@ -34,23 +27,19 @@ type MockDatabase struct {
 	MockGetWorstRated       func(limit int) ([]Product, error)
 	MockUploadProductImage  func(productID int, fileBytes []byte, ext string, contentType string) (string, error)
 	MockDeleteProductImage  func(productID int) error
-	MockUploadProductImage   func(productID int, fileBytes []byte, ext string, contentType string) (string, error)
-	MockDeleteProductImage   func(productID int) error
 
 	MockGetReviewByID         func(reviewID int) (*Review, error)
+	MockAddReview             func(newReview Review) (*Review, error)
+	MockDeleteReviewByName    func(reviewName string) (bool, error)
 	MockGetReviewsByUserID    func(userID int) ([]Review, error)
 	MockGetReviewsByProductID func(productID int) ([]Review, error)
-	MockAddReview             func(newReview Review) (*Review, error)
-	MockDeleteReviewByID      func(reviewID int) (bool, error)
-	MockUpdateReviewInfo      func(reviewID int, newReview Review) (*Review, error)
 
-	MockGetAllFans        func(influencerID int) ([]User, error)
-	MockGetAllInfluencers func(fanID int) ([]User, error)
-	MockFollowSomeone     func(newRelation FollowerRelation) (*FollowerRelation, error)
-	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
+	MockGetRelationByUserID    func(userID int) (*FriendRelation, error)
+	MockAddRelation            func(newRelation FriendRelation) (*FriendRelation, error)
+	MockDeleteRelationByUserID func(userID int) (bool, error)
 
-	MockGetFriendsByUserID func(userID int) ([]User, error)
-	MockGetRecommendations              func(userID int, limit int) ([]Product, error)
+	MockGetFriendsByUserID             func(userID int) ([]User, error)
+	MockGetRecommendations             func(userID int, limit int) ([]Product, error)
 	MockGetInfluencerRecommendation    func(userID int, limit int) ([]Product, error)
 	MockGetInfluencerNotRecommendation func(userID int, limit int) ([]Product, error)
 }
@@ -61,18 +50,13 @@ func (m *MockDatabase) GetUserByEmail(userEmail string) (*User, error) {
 }
 
 // GetUserByUserName mock
-func (m *MockDatabase) GetUserByUserName(userName string) (*User, error) {
-	return m.MockGetUserByUserName(userName)
+func (m *MockDatabase) GetUserByUserName(n string) (*User, error) {
+	return m.MockGetUserByUserName(n)
 }
 
 // GetUserByID mock
-func (m *MockDatabase) GetUserByID(userID int) (*User, error) {
-	return m.MockGetUserByID(userID)
-}
-
-// GetUsersByUserName mock
-func (m *MockDatabase) GetUsersByUserName(userName string) ([]User, error) {
-	return m.MockGetUsersByUserName(userName)
+func (m *MockDatabase) GetUserByID(id int) (*User, error) {
+	return m.MockGetUserByID(id)
 }
 
 // AddUser mock
@@ -81,13 +65,88 @@ func (m *MockDatabase) AddUser(newUser User) (*User, error) {
 }
 
 // DeleteUserByEmail mock
-func (m *MockDatabase) DeleteUserByEmail(userEmail string) (bool, error) {
-	return m.MockDeleteUserByEmail(userEmail)
+func (m *MockDatabase) DeleteUserByEmail(e string) (bool, error) {
+	return m.MockDeleteUserByEmail(e)
 }
 
 // UpdateUserInfo mock
-func (m *MockDatabase) UpdateUserInfo(userEmail string, newUserInfo User) (*User, error) {
-	return m.MockUpdateUserInfo(userEmail, newUserInfo)
+func (m *MockDatabase) UpdateUserInfo(e string, u User) (*User, error) {
+	return m.MockUpdateUserInfo(e, u)
+}
+
+// GetProductsByName mock
+func (m *MockDatabase) GetProductsByName(n string) ([]Product, error) {
+	return m.MockGetProductsByName(n)
+}
+
+// GetProductByID mock
+func (m *MockDatabase) GetProductByID(id int) (*Product, error) {
+	return m.MockGetProductByID(id)
+}
+
+// AddProduct mock
+func (m *MockDatabase) AddProduct(p Product) (*Product, error) {
+	return m.MockAddProduct(p)
+}
+
+// DeleteProductByName mock
+func (m *MockDatabase) DeleteProductByName(n string) (bool, error) {
+	return m.MockDeleteProductByName(n)
+}
+
+// UpdateProductInfo mock
+func (m *MockDatabase) UpdateProductInfo(n string, p Product) (*Product, error) {
+	return m.MockUpdateProductInfo(n, p)
+}
+
+// GetReviewByID mock
+func (m *MockDatabase) GetReviewByID(id int) (*Review, error) {
+	return m.MockGetReviewByID(id)
+}
+
+// AddReview mock
+func (m *MockDatabase) AddReview(r Review) (*Review, error) {
+	return m.MockAddReview(r)
+}
+
+// DeleteReviewByName mock
+func (m *MockDatabase) DeleteReviewByName(n string) (bool, error) {
+	return m.MockDeleteReviewByName(n)
+}
+
+// GetReviewsByUserID mock
+func (m *MockDatabase) GetReviewsByUserID(id int) ([]Review, error) {
+	return m.MockGetReviewsByUserID(id)
+}
+
+// GetReviewsByProductID mock
+func (m *MockDatabase) GetReviewsByProductID(id int) ([]Review, error) {
+	return m.MockGetReviewsByProductID(id)
+}
+
+// GetRelationByUserID mock
+func (m *MockDatabase) GetRelationByUserID(id int) (*FriendRelation, error) {
+	return m.MockGetRelationByUserID(id)
+}
+
+// AddRelation mock
+func (m *MockDatabase) AddRelation(f FriendRelation) (*FriendRelation, error) {
+	return m.MockAddRelation(f)
+}
+
+// DeleteRelationByUserID mock
+func (m *MockDatabase) DeleteRelationByUserID(userID int) (bool, error) {
+	return m.MockDeleteRelationByUserID(userID)
+}
+
+// GetFriendsByUserID mock
+func (m *MockDatabase) GetFriendsByUserID(userID int) ([]User, error) {
+	return m.MockGetFriendsByUserID(userID)
+}
+
+// GetUsersByUserName mock
+func (m *MockDatabase) GetUsersByUserName(userName string) ([]User, error) {
+	return m.MockGetUsersByUserName(userName)
 }
 
 // UpdateUserImage mock
@@ -103,36 +162,6 @@ func (m *MockDatabase) UploadAvatar(userID int, fileBytes []byte, ext string, co
 // DeleteAvatar mock
 func (m *MockDatabase) DeleteAvatar(userID int) error {
 	return m.MockDeleteAvatar(userID)
-}
-
-// GetProductsByName mock
-func (m *MockDatabase) GetProductsByName(productName string) ([]Product, error) {
-	return m.MockGetProductsByName(productName)
-}
-
-// GetProductByID mock
-func (m *MockDatabase) GetProductByID(productID int) (*Product, error) {
-	return m.MockGetProductByID(productID)
-}
-
-// GetRandomProducts mock
-func (m *MockDatabase) GetRandomProducts(limit int) ([]Product, error) {
-	return m.MockGetRandomProducts(limit)
-}
-
-// AddProduct mock
-func (m *MockDatabase) AddProduct(newProduct Product) (*Product, error) {
-	return m.MockAddProduct(newProduct)
-}
-
-// DeleteProductByName mock
-func (m *MockDatabase) DeleteProductByName(productName string) (bool, error) {
-	return m.MockDeleteProductByName(productName)
-}
-
-// UpdateProductInfo mock
-func (m *MockDatabase) UpdateProductInfo(productName string, newProductInfo Product) (*Product, error) {
-	return m.MockUpdateProductInfo(productName, newProductInfo)
 }
 
 // DeleteProductByID mock
@@ -160,54 +189,14 @@ func (m *MockDatabase) GetWorstRated(limit int) ([]Product, error) {
 	return m.MockGetWorstRated(limit)
 }
 
-// GetReviewByID mock
-func (m *MockDatabase) GetReviewByID(reviewID int) (*Review, error) {
-	return m.MockGetReviewByID(reviewID)
+// UploadProductImage mock
+func (m *MockDatabase) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	return m.MockUploadProductImage(productID, fileBytes, ext, contentType)
 }
 
-// GetReviewsByUserID mock
-func (m *MockDatabase) GetReviewsByUserID(userID int) ([]Review, error) {
-	return m.MockGetReviewsByUserID(userID)
-}
-
-// GetReviewsByProductID mock
-func (m *MockDatabase) GetReviewsByProductID(productID int) ([]Review, error) {
-	return m.MockGetReviewsByProductID(productID)
-}
-
-// AddReview mock
-func (m *MockDatabase) AddReview(newReview Review) (*Review, error) {
-	return m.MockAddReview(newReview)
-}
-
-// DeleteReviewByID mock
-func (m *MockDatabase) DeleteReviewByID(reviewID int) (bool, error) {
-	return m.MockDeleteReviewByID(reviewID)
-}
-
-// UpdateReviewInfo mock
-func (m *MockDatabase) UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error) {
-	return m.MockUpdateReviewInfo(reviewID, newReviewInfo)
-}
-
-// GetAllFans mock
-func (m *MockDatabase) GetAllFans(influencerID int) ([]User, error) {
-	return m.MockGetAllFans(influencerID)
-}
-
-// GetAllInfluencers mock
-func (m *MockDatabase) GetAllInfluencers(fanID int) ([]User, error) {
-	return m.MockGetAllInfluencers(fanID)
-}
-
-// FollowSomeone mock
-func (m *MockDatabase) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
-	return m.MockFollowSomeone(newRelation)
-}
-
-// UnfollowSomeone mock
-func (m *MockDatabase) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
-	return m.MockUnfollowSomeone(fanID, influencerID)
+// DeleteProductImage mock
+func (m *MockDatabase) DeleteProductImage(productID int) error {
+	return m.MockDeleteProductImage(productID)
 }
 
 // GetRecommendations mock
@@ -223,14 +212,4 @@ func (m *MockDatabase) GetInfluencerRecommendation(userID int, limit int) ([]Pro
 // GetInfluencerNotRecommendation mock
 func (m *MockDatabase) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
 	return m.MockGetInfluencerNotRecommendation(userID, limit)
-}
-
-// UploadProductImage mock
-func (m *MockDatabase) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
-	return m.MockUploadProductImage(productID, fileBytes, ext, contentType)
-}
-
-// DeleteProductImage mock
-func (m *MockDatabase) DeleteProductImage(productID int) error {
-	return m.MockDeleteProductImage(productID)
 }
