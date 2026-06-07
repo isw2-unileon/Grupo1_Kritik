@@ -453,17 +453,16 @@ export default function DashboardPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
+  // which entity the single search bar targets
+  const [searchMode, setSearchMode] = useState<"products" | "users">("products");
 
-  // User search (real API: searchUsers)
-  const [userQuery, setUserQuery] = useState("");
+  // User search (real API: searchUsers) — shares the single search input
   const [userResults, setUserResults] = useState<ProfileUser[]>([]);
   const [userSearching, setUserSearching] = useState(false);
-  const [userSearchOpen, setUserSearchOpen] = useState(false);
-  const userSearchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const q = query.trim();
-    if (q.length < 2) {
+    if (searchMode !== "products" || q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
@@ -485,12 +484,12 @@ export default function DashboardPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, searchMode]);
 
-  // User search — debounced, with click-outside close
+  // User search — debounced; runs only when the bar is in "users" mode
   useEffect(() => {
-    const q = userQuery.trim();
-    if (q.length < 2) {
+    const q = query.trim();
+    if (searchMode !== "users" || q.length < 2) {
       setUserResults([]);
       setUserSearching(false);
       return;
@@ -512,18 +511,7 @@ export default function DashboardPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [userQuery]);
-
-  useEffect(() => {
-    if (!userSearchOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (userSearchRef.current && !userSearchRef.current.contains(e.target as Node)) {
-        setUserSearchOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [userSearchOpen]);
+  }, [query, searchMode]);
 
 // When changing tabs, smoothly scroll to the tabs so the 
 // content doesn't "jump" if a tab is shorter than the previous one
@@ -588,83 +576,56 @@ export default function DashboardPage() {
           </h1>
         </div>
 
-        <div className="flex justify-end">
-          <div ref={userSearchRef} className="relative w-64">
-            <input
-              type="text"
-              value={userQuery}
-              onChange={(e) => { setUserQuery(e.target.value); setUserSearchOpen(true); }}
-              onFocus={() => userQuery.trim().length >= 2 && setUserSearchOpen(true)}
-              placeholder="Buscar usuarios…"
-              autoComplete="off"
-              aria-label="Buscar usuarios"
-              className="w-full rounded-full border border-line bg-surface py-2 pl-4 pr-10 text-sm text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_3px_rgba(203,242,78,0.14)]"
-            />
-            {userQuery ? (
-              <button
-                type="button"
-                onClick={() => { setUserQuery(""); setUserResults([]); }}
-                aria-label="Limpiar búsqueda de usuarios"
-                className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            ) : (
-              <svg
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint"
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-              </svg>
-            )}
-            {userSearchOpen && userQuery.trim().length >= 2 && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-full rounded-2xl border border-line bg-surface py-2 shadow-xl">
-                {userSearching ? (
-                  <p className="px-4 py-2 text-sm text-faint">Buscando…</p>
-                ) : userResults.length === 0 ? (
-                  <p className="px-4 py-2 text-sm text-faint">Ningún usuario encontrado</p>
-                ) : (
-                  userResults.map((u) => (
-                    <Link
-                      key={u.id}
-                      to={`/user/${u.id}`}
-                      onClick={() => { setUserQuery(""); setUserResults([]); setUserSearchOpen(false); }}
-                      className="flex items-center gap-3 px-4 py-2 transition hover:bg-cream/5"
-                    >
-                      <UserAvatar image={u.Image} name={u.Name} size="xs" />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
-                        <p className="truncate text-xs text-faint">@{u.UserName}</p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* catalog search */}
           <div className="relative flex-1">
-            <svg
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
-              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m21 21-4.3-4.3" strokeLinecap="round" />
-            </svg>
+            {/* mode toggles: products (default) / users */}
+            <div className="absolute left-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setSearchMode("products")}
+                aria-label="Buscar productos"
+                aria-pressed={searchMode === "products"}
+                title="Buscar productos"
+                className={
+                  searchMode === "products"
+                    ? "grid h-8 w-8 place-items-center rounded-full bg-acid text-ink"
+                    : "grid h-8 w-8 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+                }
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchMode("users")}
+                aria-label="Buscar usuarios"
+                aria-pressed={searchMode === "users"}
+                title="Buscar usuarios"
+                className={
+                  searchMode === "users"
+                    ? "grid h-8 w-8 place-items-center rounded-full bg-acid text-ink"
+                    : "grid h-8 w-8 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+                }
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </button>
+            </div>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Busca una serie, película, videojuego o libro…"
+              placeholder={searchMode === "products" ? "Busca una serie, película, videojuego o libro…" : "Buscar usuarios…"}
               autoComplete="off"
-              aria-label="Buscar en el catálogo"
-              className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-11 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)]"
+              aria-label={searchMode === "products" ? "Buscar en el catálogo" : "Buscar usuarios"}
+              className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-24 pr-11 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)]"
             />
             {query && (
               <button
@@ -694,6 +655,48 @@ export default function DashboardPage() {
       </div>
 
       {isSearching ? (
+        searchMode === "users" ? (
+          /* ---------- user search results ---------- */
+          <Card as="section" className="p-7 sm:p-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
+                  Búsqueda de usuarios
+                </p>
+                <h2 className="mt-2 font-display text-3xl font-semibold">
+                  Resultados para “{query.trim()}”
+                </h2>
+              </div>
+              {userSearching && (
+                <span className="text-acid">
+                  <Spinner />
+                </span>
+              )}
+            </div>
+
+            {userResults.length > 0 ? (
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {userResults.map((u) => (
+                  <Link
+                    key={u.id}
+                    to={`/user/${u.id}`}
+                    className="flex items-center gap-3 rounded-2xl border border-line bg-ink/60 p-3 transition hover:-translate-y-0.5 hover:border-acid/35"
+                  >
+                    <UserAvatar image={u.Image} name={u.Name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-cream">{u.Name}</p>
+                      <p className="truncate text-xs text-faint">@{u.UserName}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : userSearching ? (
+              <p className="mt-6 text-dim">Buscando…</p>
+            ) : (
+              <p className="mt-6 text-dim">No se encontró ningún usuario con ese nombre.</p>
+            )}
+          </Card>
+        ) : (
         /* ---------- search results ---------- */
         <Card as="section" className="p-7 sm:p-8">
           <div className="flex items-center justify-between gap-4">
@@ -755,6 +758,7 @@ export default function DashboardPage() {
             </p>
           )}
         </Card>
+        )
       ) : (
         /* ---------- normal view with tabs ---------- */
         <>
