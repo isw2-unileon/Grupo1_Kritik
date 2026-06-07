@@ -81,6 +81,7 @@ type Database interface {
 	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
 	GetRandomProducts(limit int) ([]Product, error)
+	GetProductsFilter(typeFilter string, genreFilter []string, limit int) ([]Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
@@ -434,6 +435,37 @@ func (db *SupabaseDB) GetProductByID(productID int) (*Product, error) {
 	}
 
 	return &products[0], nil
+}
+
+// GetProductsFilter returns random products filtered by type and genres
+func (db *SupabaseDB) GetProductsFilter(typeFilter string, genreFilter []string, limit int) ([]Product, error) {
+
+	var finalType interface{} = typeFilter
+	if typeFilter == "" {
+		finalType = nil
+	}
+
+	finalGenres := genreFilter
+	if finalGenres == nil {
+		finalGenres = []string{}
+	}
+
+	body := db.client.Rpc("get_random_products_advanced", "exact", map[string]interface{}{
+		"lim":          limit,
+		"type_filter":  finalType,
+		"genre_filter": finalGenres,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting filtered products: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting random products: %s", body)
+	}
+
+	return products, nil
 }
 
 // GetRandomProducts returns random products limited by the limit parameter
