@@ -417,11 +417,12 @@ func TestGetProductsFilter(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(products) != 2 {
+	switch {
+	case len(products) != 2:
 		t.Errorf("Function returned wrong number of products: got %d, want 2", len(products))
-	} else if products[0].ID != 1 {
+	case products[0].ID != 1:
 		t.Errorf("Expected product ID 1, got %d", products[0].ID)
-	} else if products[0].Type != "Videojuego" {
+	case products[0].Type != "Videojuego":
 		t.Errorf("Expected type 'Videojuego', got '%s'", products[0].Type)
 	}
 }
