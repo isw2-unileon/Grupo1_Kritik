@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { getReviews, type Review } from "@/services/api";
+import { getReviews, deleteReview, updateReview, type Review } from "@/services/api";
 import Card from "@/components/Card";
 
 type ReviewsSectionProps = {
-  /** Modo "vistazo": muestra como mucho N reseñas (las más recientes) y oculta los filtros. */
+  /** "Vistazo": muestra como mucho N reseñas (las más recientes) y oculta los filtros. */
   limit?: number;
-  /** Acción del enlace "Ver todas" (p. ej. cambiar a la pestaña de reseñas). */
+  /** Acción del enlace "Ver todo" (p. ej. cambiar a la pestaña de reseñas). */
   onSeeAll?: () => void;
 };
 
-/* Sello del veredicto, en el sistema de diseño (lime = sí, coral = no). */
+/* Sello de veredicto, en el sistema de diseño (lima = sí, coral = no). */
 function RecommendedBadge({ recommended }: { recommended: boolean }) {
   return recommended ? (
     <span className="shrink-0 rounded-full border-[1.5px] border-acid bg-acid/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-acid">
@@ -22,7 +22,7 @@ function RecommendedBadge({ recommended }: { recommended: boolean }) {
   );
 }
 
-/* Filtro por veredicto: cada estado activo se tiñe con su color de marca. */
+/* Filtro de veredicto: cada estado activo se tiñe con su color de marca. */
 const VERDICTS = [
   {
     id: "all",
@@ -45,14 +45,200 @@ type VerdictId = (typeof VERDICTS)[number]["id"];
 const idle =
   "rounded-full px-3 py-1 text-xs font-semibold text-faint transition hover:text-cream";
 
-function ReviewItem({ review }: { review: Review }) {
+function Spinner() {
+  return (
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+type ReviewItemProps = {
+  review: Review;
+  onDelete: (id: number) => Promise<void>;
+  onUpdate: (id: number, data: { description: string; recommended: boolean }) => Promise<void>;
+};
+
+function ReviewItem({ review, onDelete, onUpdate }: ReviewItemProps) {
+  const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
+  const [draft, setDraft] = useState(review.Description ?? "");
+  const [draftRec, setDraftRec] = useState<boolean>(review.Recommended);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const startEdit = () => {
+    setDraft(review.Description ?? "");
+    setDraftRec(review.Recommended);
+    setErr("");
+    setMode("edit");
+  };
+
+  const cancel = () => {
+    setErr("");
+    setMode("view");
+  };
+
+  const save = async () => {
+    if (!draft.trim()) {
+      setErr("La reseña no puede estar vacía.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await onUpdate(review.id, { description: draft.trim(), recommended: draftRec });
+      setMode("view");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "No se pudo guardar.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      await onDelete(review.id);
+      // el padre lo quita de la lista, así que este componente se desmonta
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "No se pudo borrar.");
+      setBusy(false);
+      setMode("view");
+    }
+  };
+
+  /* ---- MODO EDICIÓN ---- */
+  if (mode === "edit") {
+    return (
+      <article className="rounded-2xl border border-acid/40 bg-ink/60 p-5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDraftRec(true)}
+            aria-pressed={draftRec === true}
+            className={`rounded-full border-[1.5px] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
+              draftRec ? "border-acid bg-acid/10 text-acid" : "border-line text-faint hover:text-cream"
+            }`}
+          >
+            Recomiendo
+          </button>
+          <button
+            type="button"
+            onClick={() => setDraftRec(false)}
+            aria-pressed={draftRec === false}
+            className={`rounded-full border-[1.5px] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
+              !draftRec ? "border-coral bg-coral/10 text-coral" : "border-line text-faint hover:text-cream"
+            }`}
+          >
+            No recomiendo
+          </button>
+        </div>
+
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={4}
+          disabled={busy}
+          className="mt-3 w-full resize-y rounded-2xl border border-line bg-ink px-4 py-3 text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_4px_rgba(203,242,78,0.14)] disabled:opacity-60"
+        />
+
+        {err && <p className="mt-2 text-xs text-coral">{err}</p>}
+
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={busy}
+            className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-cream transition hover:border-cream/35 hover:bg-cream/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-full bg-acid px-5 py-2 text-sm font-semibold text-ink transition hover:bg-[#d7f56e] disabled:opacity-70"
+          >
+            {busy && <Spinner />}
+            <span>{busy ? "Guardando…" : "Guardar"}</span>
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  /* ---- MODO CONFIRMAR BORRADO ---- */
+  if (mode === "confirm") {
+    return (
+      <article className="rounded-2xl border border-coral/40 bg-coral/5 p-5">
+        <p className="font-semibold text-cream">¿Seguro que quieres borrar esta reseña?</p>
+        <p className="mt-1 text-sm text-faint">Esta acción no se puede deshacer.</p>
+        {err && <p className="mt-2 text-xs text-coral">{err}</p>}
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={busy}
+            className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-cream transition hover:border-cream/35 hover:bg-cream/5 disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={confirmDelete}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-full bg-coral px-5 py-2 text-sm font-semibold text-ink transition hover:bg-[#ff6f5e] disabled:opacity-70"
+          >
+            {busy && <Spinner />}
+            <span>{busy ? "Borrando…" : "Sí, borrar"}</span>
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  /* ---- MODO VISTA ---- */
   return (
     <article className="rounded-2xl border border-line bg-ink/60 p-5 transition hover:border-acid/35">
-      <div className="flex items-center justify-between gap-3">
-        <RecommendedBadge recommended={review.Recommended} />
-        {review.ProductName && (
-          <span className="truncate text-sm text-faint">sobre {review.ProductName}</span>
-        )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <RecommendedBadge recommended={review.Recommended} />
+          {review.ProductName && (
+            <span className="truncate text-sm text-faint">sobre {review.ProductName}</span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label="Editar reseña"
+            title="Editar"
+            className="grid h-8 w-8 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setErr("");
+              setMode("confirm");
+            }}
+            aria-label="Borrar reseña"
+            title="Borrar"
+            className="grid h-8 w-8 place-items-center rounded-full text-faint transition hover:bg-coral/10 hover:text-coral"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 6h18" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </button>
+        </div>
       </div>
       <p className="mt-3 leading-relaxed text-dim">
         {review.Description || "Sin descripción."}
@@ -87,6 +273,25 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
     };
   }, []);
 
+  // borra en el backend y quita de la lista local
+  const handleDelete = async (id: number) => {
+    await deleteReview(id);
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // actualiza en el backend y refleja los cambios en la lista local
+  const handleUpdate = async (
+    id: number,
+    data: { description: string; recommended: boolean },
+  ) => {
+    await updateReview(id, data);
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, Description: data.description, Recommended: data.recommended } : r,
+      ),
+    );
+  };
+
   const preview = typeof limit === "number";
   const count = reviews.length;
 
@@ -120,7 +325,6 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
           </h2>
         </div>
 
-        {/* derecha: en vistazo, enlace "ver todo"; en completo, contador */}
         {preview
           ? !loading && !error && count > 0 && onSeeAll && (
               <button
@@ -138,7 +342,6 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
             )}
       </div>
 
-      {/* filtros: solo en modo completo y si hay reseñas que filtrar */}
       {!preview && !loading && !error && count > 0 && (
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div
@@ -227,11 +430,15 @@ export default function ReviewsSection({ limit, onSeeAll }: ReviewsSectionProps)
         <>
           <div className="mt-6 grid gap-4">
             {visible.map((review) => (
-              <ReviewItem key={review.id} review={review} />
+              <ReviewItem
+                key={review.id}
+                review={review}
+                onDelete={handleDelete}
+                onUpdate={handleUpdate}
+              />
             ))}
           </div>
 
-          {/* en vistazo, si hay más de las mostradas, CTA en cascada hacia el listado completo */}
           {hasMore && (
             <button
               type="button"

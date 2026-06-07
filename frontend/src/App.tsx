@@ -1,17 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, Link } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import UserAvatar from "@/components/UserAvatar";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PublishReviewPage from "./pages/PublishReviewPage";
+import PublishProductPage from "./pages/PublishProductPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, isAdmin, user, logout } = useAuth();
 
-  // clases reutilizables del nuevo tema
+  //   Reusable classes of the new theme
   const ghost =
     "rounded-full px-4 py-2 text-sm font-medium text-dim transition hover:bg-cream/5 hover:text-cream";
   const primary =
@@ -35,18 +39,16 @@ function Header() {
               <NavLink
                 to="/dashboard"
                 className={({ isActive }) =>
-                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
-                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${isActive ? "text-acid" : "text-dim hover:text-cream"
                   }`
                 }
               >
                 Inicio
               </NavLink>
               <NavLink
-                to="/publish-review"
+                to={isAdmin ? "/publish-product" : "/publish-review"}
                 className={({ isActive }) =>
-                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${
-                    isActive ? "text-acid" : "text-dim hover:text-cream"
+                  `hidden rounded-full px-4 py-2 text-sm font-medium transition sm:block ${isActive ? "text-acid" : "text-dim hover:text-cream"
                   }`
                 }
               >
@@ -54,9 +56,7 @@ function Header() {
               </NavLink>
 
               <span className="hidden text-sm text-dim sm:block">{user?.name}</span>
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                {user?.name?.charAt(0).toUpperCase() ?? "K"}
-              </span>
+              {user && <UserAvatar image={user.image} name={user.name} size="xs" />}
               <button
                 type="button"
                 onClick={logout}
@@ -88,6 +88,11 @@ function Header() {
   );
 }
 
+function DashboardGate() {
+  const { isAdmin } = useAuth();
+  return isAdmin ? <AdminDashboardPage /> : <DashboardPage />;
+}
+
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
@@ -107,7 +112,7 @@ function AppContent() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <DashboardGate />
               </ProtectedRoute>
             }
           />
@@ -120,10 +125,26 @@ function AppContent() {
             }
           />
           <Route
+            path="/publish-product"
+            element={
+              <ProtectedRoute>
+                <PublishProductPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/product/:id"
             element={
               <ProtectedRoute>
                 <ProductDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/:id"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
               </ProtectedRoute>
             }
           />

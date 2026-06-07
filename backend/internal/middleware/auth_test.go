@@ -59,7 +59,7 @@ func TestRequireAuthInvalidToken(t *testing.T) {
 }
 
 func TestRequireAuthValidToken(t *testing.T) {
-	token, err := auth.GenerateToken(42, "test@test.com")
+	token, err := auth.GenerateToken(42, "test@test.com", false)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
 	}

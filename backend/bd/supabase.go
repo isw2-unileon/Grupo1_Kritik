@@ -1,13 +1,20 @@
 package bd
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"cloud.google.com/go/civil"
+	"github.com/bytedance/gopkg/util/logger"
 	"github.com/joho/godotenv"
+	"github.com/supabase-community/postgrest-go"
+	storage_go "github.com/supabase-community/storage-go"
 	"github.com/supabase-community/supabase-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -22,6 +29,7 @@ type User struct {
 	Password string      `json:"Password,omitempty"`
 	Birth    *civil.Date `json:"Birth,omitempty"`
 	Image    string      `json:"Image,omitempty"`
+	IsAdmin  bool        `json:"IsAdmin,omitempty"`
 }
 
 // Product struct
@@ -42,15 +50,17 @@ type Review struct {
 	Recommended bool   `json:"Recommended"`
 	Description string `json:"Description,omitempty"`
 
-	ProductID int `json:"ProductId,omitempty"`
-	UserID    int `json:"UserId,omitempty"`
+	ProductID   int    `json:"ProductId,omitempty"`
+	UserID      int    `json:"UserId,omitempty"`
+	ProductName string `json:"ProductName,omitempty"`
+	UserName    string `json:"UserName,omitempty"`
 }
 
-// FriendRelation struct
-type FriendRelation struct {
-	ID      int `json:"id,omitempty"`
-	Friend1 int `json:"Friend1,omitempty"`
-	Friend2 int `json:"Friend2,omitempty"`
+// FollowerRelation struct
+type FollowerRelation struct {
+	ID         int `json:"id,omitempty"`
+	Fan        int `json:"Fan,omitempty"`        // User who follows another User
+	Influencer int `json:"Influencer,omitempty"` // User who is followed by another user
 }
 
 // Database interface
@@ -60,27 +70,43 @@ type Database interface {
 	GetUserByEmail(userEmail string) (*User, error)
 	GetUserByUserName(userName string) (*User, error)
 	GetUserByID(userID int) (*User, error)
+	GetUsersByUserName(userName string) ([]User, error)
 	AddUser(newUser User) (*User, error)
 	DeleteUserByEmail(userEmail string) (bool, error)
 	UpdateUserInfo(userEmail string, newUserInfo User) (*User, error)
+	UpdateUserImage(userID int, imageURL string) (*User, error)
+	UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error)
+	DeleteAvatar(userID int) error
 
 	GetProductsByName(productName string) ([]Product, error)
 	GetProductByID(productID int) (*Product, error)
+	GetRandomProducts(limit int) ([]Product, error)
 	AddProduct(newProduct Product) (*Product, error)
 	DeleteProductByName(productName string) (bool, error)
 	UpdateProductInfo(productName string, newProductInfo Product) (*Product, error)
+	DeleteProductByID(productID int) (bool, error)
+	UpdateProductByID(productID int, newProductInfo Product) (*Product, error)
+	GetAllProducts() ([]Product, error)
+	GetTopRated(limit int) ([]Product, error)
+	GetWorstRated(limit int) ([]Product, error)
+	UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error)
+	DeleteProductImage(productID int) error
 
 	GetReviewByID(reviewID int) (*Review, error)
-	AddReview(newReview Review) (*Review, error)
-	DeleteReviewByName(reviewName string) (bool, error)
 	GetReviewsByUserID(userID int) ([]Review, error)
 	GetReviewsByProductID(productID int) ([]Review, error)
+	AddReview(newReview Review) (*Review, error)
+	DeleteReviewByID(reviewID int) (bool, error)
+	UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error)
 
-	GetRelationByUserID(userID int) (*FriendRelation, error)
-	AddRelation(newRelation FriendRelation) (*FriendRelation, error)
-	DeleteRelationByUserID(userID int) (bool, error)
+	GetAllFans(influencerID int) ([]User, error)
+	GetAllInfluencers(fanID int) ([]User, error)
+	FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error)
+	UnfollowSomeone(fanID int, influencerID int) (bool, error)
 
-	GetFriendsByUserID(userID int) ([]User, error)
+	GetRecommendations(userID int, limit int) ([]Product, error)
+	GetInfluencerRecommendation(userID int, limit int) ([]Product, error)
+	GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error)
 }
 
 // SupabaseDB client struct
@@ -153,7 +179,7 @@ func (db *SupabaseDB) GetUserByUserName(userName string) (*User, error) {
 	}
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("not found user with userName %s", userName)
+		return nil, fmt.Errorf("not found user with username %s", userName)
 	}
 
 	return &users[0], nil
@@ -177,6 +203,21 @@ func (db *SupabaseDB) GetUserByID(userID int) (*User, error) {
 	}
 
 	return &users[0], nil
+}
+
+// GetUsersByUserName returns users whose UserName contains the given string (case-insensitive).
+func (db *SupabaseDB) GetUsersByUserName(userName string) ([]User, error) {
+	var users []User
+	_, err := db.client.From("Users").
+		Select("*", "exact", false).
+		Ilike("UserName", "*"+userName+"*").
+		ExecuteTo(&users)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 // AddUser adds a new User to the database
@@ -265,6 +306,90 @@ func (db *SupabaseDB) UpdateUserInfo(userEmail string, newUserInfo User) (*User,
 	return &updatedUsers[0], nil
 }
 
+// UpdateUserImage updates only the Image field for a given user ID.
+// Returns the updated User or an error.
+func (db *SupabaseDB) UpdateUserImage(userID int, imageURL string) (*User, error) {
+	var updatedUsers []User
+	_, err := db.client.From("Users").
+		Update(map[string]string{"Image": imageURL}, "", "").
+		Eq("id", strconv.Itoa(userID)).
+		ExecuteTo(&updatedUsers)
+	if err != nil {
+		return nil, fmt.Errorf("error updating user image: %w", err)
+	}
+	if len(updatedUsers) == 0 {
+		return nil, fmt.Errorf("user with id %d not found", userID)
+	}
+	return &updatedUsers[0], nil
+}
+
+// UploadAvatar uploads a user's avatar file to Supabase Storage, deletes the
+// old one if present, updates the Image column in the DB, and returns the
+// public URL.
+func (db *SupabaseDB) UploadAvatar(userID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Image != "" {
+		oldPath := extractStoragePath("avatars", user.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
+		}
+	}
+
+	fileName := fmt.Sprintf("%d_%d%s", userID, time.Now().UnixNano(), ext)
+	_, err = db.client.Storage.UploadFile("avatars", fileName, bytes.NewReader(fileBytes), storage_go.FileOptions{
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload avatar: %w", err)
+	}
+
+	publicURL := db.client.Storage.GetPublicUrl("avatars", fileName).SignedURL
+
+	_, err = db.UpdateUserImage(userID, publicURL)
+	if err != nil {
+		return "", err
+	}
+
+	return publicURL, nil
+}
+
+// DeleteAvatar removes the user's avatar from Storage and clears the Image
+// column in the DB. If the user has no avatar, it's a no-op.
+func (db *SupabaseDB) DeleteAvatar(userID int) error {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if user.Image != "" {
+		oldPath := extractStoragePath("avatars", user.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("avatars", []string{oldPath})
+		}
+	}
+
+	_, err = db.UpdateUserImage(userID, "")
+	if err != nil {
+		return fmt.Errorf("failed to clear image: %w", err)
+	}
+	return nil
+}
+
+// extractStoragePath extracts the relative file path from a Supabase Storage
+// public URL for the given bucket. Returns empty string if the URL does not
+// match the expected pattern (so we don't try to delete external URLs).
+func extractStoragePath(bucket, imageURL string) string {
+	marker := "/" + bucket + "/"
+	if idx := strings.Index(imageURL, marker); idx >= 0 {
+		return imageURL[idx+len(marker):]
+	}
+	return ""
+}
+
 /*
  =========================================================
  Product functions
@@ -277,7 +402,7 @@ func (db *SupabaseDB) GetProductsByName(productName string) ([]Product, error) {
 	var products []Product
 	_, err := db.client.From("Product").
 		Select("*", "exact", false).
-		Eq("Name", productName).
+		Ilike("Name", "*"+productName+"*"). // antes: Eq("Name", productName).
 		ExecuteTo(&products)
 
 	if err != nil {
@@ -309,6 +434,24 @@ func (db *SupabaseDB) GetProductByID(productID int) (*Product, error) {
 	}
 
 	return &products[0], nil
+}
+
+// GetRandomProducts returns random products limited by the limit parameter
+func (db *SupabaseDB) GetRandomProducts(limit int) ([]Product, error) {
+	body := db.client.Rpc("get_random_products", "exact", map[string]interface{}{
+		"lim": limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting random products: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting random products: %s", body)
+	}
+
+	return products, nil
 }
 
 // AddProduct adds a new Product to the database
@@ -376,6 +519,154 @@ func (db *SupabaseDB) UpdateProductInfo(productName string, newProductInfo Produ
 	}
 
 	return &updatedProducts[0], nil
+}
+
+// GetAllProducts returns all products from the database
+func (db *SupabaseDB) GetAllProducts() ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting all products: %w", err)
+	}
+
+	return products, nil
+}
+
+// GetTopRated returns the top N products ordered by AverageGrade descending
+func (db *SupabaseDB) GetTopRated(limit int) ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		Order("AverageGrade", &postgrest.OrderOpts{Ascending: false}).
+		Limit(limit, "").
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting top rated products: %w", err)
+	}
+
+	return products, nil
+}
+
+// GetWorstRated returns the bottom N products ordered by AverageGrade ascending
+func (db *SupabaseDB) GetWorstRated(limit int) ([]Product, error) {
+	var products []Product
+	_, err := db.client.From("Product").
+		Select("*", "exact", false).
+		Order("AverageGrade", &postgrest.OrderOpts{Ascending: true}).
+		Limit(limit, "").
+		ExecuteTo(&products)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting worst rated products: %w", err)
+	}
+
+	return products, nil
+}
+
+// DeleteProductByID deletes the Product associated with the given ID
+func (db *SupabaseDB) DeleteProductByID(productID int) (bool, error) {
+	var deletedProduct []Product
+
+	_, err := db.client.From("Product").
+		Delete("", "representation").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(&deletedProduct)
+
+	if err != nil {
+		return false, fmt.Errorf("error deleting product:\n%w", err)
+	}
+
+	if len(deletedProduct) == 0 {
+		return false, fmt.Errorf("not found any product with id %d to delete", productID)
+	}
+
+	return true, nil
+}
+
+// UpdateProductByID updates 1 or more parameters of the Product identified by its ID
+func (db *SupabaseDB) UpdateProductByID(productID int, newProductInfo Product) (*Product, error) {
+	var updatedProducts []Product
+
+	_, err := db.client.From("Product").
+		Update(newProductInfo, "", "").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(&updatedProducts)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the product: %w", err)
+	}
+
+	if len(updatedProducts) == 0 {
+		return nil, fmt.Errorf("not found any product with id %d to update", productID)
+	}
+
+	return &updatedProducts[0], nil
+}
+
+// UploadProductImage uploads a product image file to Supabase Storage, deletes
+// the old one if present, updates the Image column in the DB, and returns the
+// public URL.
+func (db *SupabaseDB) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if product.Image != "" {
+		oldPath := extractStoragePath("products", product.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("products", []string{oldPath})
+		}
+	}
+
+	fileName := fmt.Sprintf("product_%d_%d%s", productID, time.Now().UnixNano(), ext)
+	_, err = db.client.Storage.UploadFile("products", fileName, bytes.NewReader(fileBytes), storage_go.FileOptions{
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to upload product image: %w", err)
+	}
+
+	publicURL := db.client.Storage.GetPublicUrl("products", fileName).SignedURL
+
+	updated := *product
+	updated.Image = publicURL
+	_, err = db.UpdateProductByID(productID, updated)
+	if err != nil {
+		return "", err
+	}
+
+	return publicURL, nil
+}
+
+// DeleteProductImage removes the product image from Storage and clears the
+// Image column in the DB. If the product has no image, it's a no-op.
+func (db *SupabaseDB) DeleteProductImage(productID int) error {
+	product, err := db.GetProductByID(productID)
+	if err != nil {
+		return fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if product.Image != "" {
+		oldPath := extractStoragePath("products", product.Image)
+		if oldPath != "" {
+			_, _ = db.client.Storage.RemoveFile("products", []string{oldPath})
+		}
+	}
+
+	_, err = db.client.From("Product").
+		Update(map[string]interface{}{"Image": nil}, "", "").
+		Eq("id", strconv.Itoa(productID)).
+		ExecuteTo(nil)
+	if err != nil {
+		return fmt.Errorf("failed to clear product image: %w", err)
+	}
+
+	return nil
 }
 
 /*
@@ -464,16 +755,16 @@ func (db *SupabaseDB) AddReview(newReview Review) (*Review, error) {
 	return &insertedReview[0], nil
 }
 
-// DeleteReviewByName deletes the Review associated with the reviewName
+// DeleteReviewByID deletes the Review associated with the reviewID
 //
 // Returns true if the Review was deleted, false y it could not be deleted or an error if it occurred
-func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
+func (db *SupabaseDB) DeleteReviewByID(reviewID int) (bool, error) {
 
 	var deletedReview []Review
 
 	_, err := db.client.From("Review").
 		Delete("", "representation").
-		Eq("Name", reviewName).
+		Eq("id", strconv.Itoa(reviewID)).
 		ExecuteTo(&deletedReview)
 
 	if err != nil {
@@ -481,10 +772,35 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
 	}
 
 	if len(deletedReview) == 0 {
-		return false, fmt.Errorf("not foud any review with the name %s to delete", reviewName)
+		return false, fmt.Errorf("not foud any review with the id %d to delete", reviewID)
 	}
 
 	return true, nil
+}
+
+// UpdateReviewInfo updates 1 or more parameters from the selected Review
+//
+// Recibes the id from the Review to edit and a Review with the new information
+// (if any parameter is empty, it wont be edited)
+//
+// Returns the edited Review if the info was edited or nil and an error if it could not be edited
+func (db *SupabaseDB) UpdateReviewInfo(reviewID int, newReviewInfo Review) (*Review, error) {
+	var updatedReviews []Review
+
+	_, err := db.client.From("Review").
+		Update(newReviewInfo, "", "").
+		Eq("id", strconv.Itoa(reviewID)).
+		ExecuteTo(&updatedReviews)
+
+	if err != nil {
+		return nil, fmt.Errorf("error updating the review: %w", err)
+	}
+
+	if len(updatedReviews) == 0 {
+		return nil, fmt.Errorf("not foud any product with the id %d to update", reviewID)
+	}
+
+	return &updatedReviews[0], nil
 }
 
 /*
@@ -493,118 +809,184 @@ func (db *SupabaseDB) DeleteReviewByName(reviewName string) (bool, error) {
  =========================================================
 */
 
-// GetRelationByUserID returns the relation between two users or an error if it occurred
-func (db *SupabaseDB) GetRelationByUserID(userID int) (*FriendRelation, error) {
+// GetAllFans returns an array of User that follows the given UserID, or an error if it occurred
+//
+//nolint:dupl // For some reason, lint sees this and GetAllInfluencers as duplicates
+func (db *SupabaseDB) GetAllFans(influencerID int) ([]User, error) {
 
-	var relations []FriendRelation
+	var relations []FollowerRelation
 
-	_, err := db.client.From("Friend_Relations").
+	_, err := db.client.From("Followers").
 		Select("*", "exact", false).
-		Eq("Friend1", strconv.Itoa(userID)).
+		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
 		ExecuteTo(&relations)
 
 	if err != nil {
-		_, err2 := db.client.From("Friend_Relations").
-			Select("*", "exact", false).
-			Eq("Friend2", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
+		return nil, err
+	}
 
+	followedUsers := []User{}
+	for _, rel := range relations {
+		user, err2 := db.GetUserByID(rel.Fan)
 		if err2 != nil {
-			return nil, fmt.Errorf("error getting the relation:\n%w", err2)
+			logger.Errorf("error getting the user\n")
+		}
+
+		if user != nil {
+			followedUsers = append(followedUsers, *user)
+		}
+
+	}
+
+	return followedUsers, nil
+}
+
+// GetAllInfluencers returns an array of User that are followed by the given UserID, or an error if it occurred
+//
+//nolint:dupl // For some reason, lint sees this and GetAllFans as duplicates
+func (db *SupabaseDB) GetAllInfluencers(fanID int) ([]User, error) {
+	var relations []FollowerRelation
+
+	_, err := db.client.From("Followers").
+		Select("*", "exact", false).
+		Eq("Fan", fmt.Sprintf("%d", fanID)).
+		ExecuteTo(&relations)
+
+	if err != nil {
+		return nil, err
+	}
+
+	followedUsers := []User{}
+	for _, rel := range relations {
+		user, err2 := db.GetUserByID(rel.Influencer)
+		if err2 != nil {
+			logger.Errorf("error getting the user\n")
+		}
+
+		if user != nil {
+			followedUsers = append(followedUsers, *user)
 		}
 	}
 
-	return &relations[0], nil
+	return followedUsers, nil
 }
 
-// AddRelation adds a friend relation between two User
-func (db *SupabaseDB) AddRelation(newRelation FriendRelation) (*FriendRelation, error) {
-	var insertedRelation []FriendRelation
+// FollowSomeone adds a follow relation between two Users
+func (db *SupabaseDB) FollowSomeone(newRelation FollowerRelation) (*FollowerRelation, error) {
+	var insertedRelation []FollowerRelation
 
-	_, err := db.client.From("Friend_Relations").
+	_, err := db.client.From("Followers").
 		Insert(newRelation, false, "", "", "").
 		ExecuteTo(&insertedRelation)
 
 	if err != nil {
-		return nil, fmt.Errorf("error inserting review:\n%w", err)
+		return nil, fmt.Errorf("error inserting relation:\n%w", err)
 	}
 
 	return &insertedRelation[0], nil
 }
 
-// DeleteRelationByUserID deletes a friend relation between two User using a userID
-func (db *SupabaseDB) DeleteRelationByUserID(userID int) (bool, error) {
+// UnfollowSomeone deletes a follow relation between two Users using the fanID and influencerID
+func (db *SupabaseDB) UnfollowSomeone(fanID int, influencerID int) (bool, error) {
 
-	var relations []FriendRelation
-
-	_, err := db.client.From("Friend_Relations").
-		Delete("", "representation").
-		Eq("Friend1", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
+	_, _, err := db.client.From("Followers").
+		Delete("", "").
+		Eq("Fan", fmt.Sprintf("%d", fanID)).
+		Eq("Influencer", fmt.Sprintf("%d", influencerID)).
+		Execute()
 
 	if err != nil {
-		_, err2 := db.client.From("Friend_Relations").
-			Delete("", "representation").
-			Eq("Friend2", strconv.Itoa(userID)).
-			ExecuteTo(&relations)
-
-		if err2 != nil {
-			return false, fmt.Errorf("error getting the relation:\n%w", err2)
-		}
+		return false, fmt.Errorf("error deleting relation:\n%w", err)
 	}
 
 	return true, nil
 }
 
-// GetFriendsByUserID returns an array of User that are friends with the given user, or an error if it occurred
-func (db *SupabaseDB) GetFriendsByUserID(userID int) ([]User, error) {
+/*
+ =========================================================
+ Recommender functions
+ =========================================================
+*/
 
-	var relations []FriendRelation
-
-	_, err := db.client.From("Friend_Relations").
-		Select("*", "exact", false).
-		Eq("Friend1", strconv.Itoa(userID)).
-		ExecuteTo(&relations)
+// GetRecommendations returns recommended products based of user and user friends likes
+// userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
+func (db *SupabaseDB) GetRecommendations(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
 	if err != nil {
-		return nil, fmt.Errorf("error getting relations where user is Friend1: %w", err)
+		return nil, err
 	}
 
-	var relations2 []FriendRelation
-	_, err = db.client.From("Friend_Relations").
-		Select("*", "exact", false).
-		Eq("Friend2", strconv.Itoa(userID)).
-		ExecuteTo(&relations2)
+	body := db.client.Rpc("get_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
+	}
+
+	return products, nil
+}
+
+// GetInfluencerRecommendation returns recommended products based of user friends likes
+// userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
+func (db *SupabaseDB) GetInfluencerRecommendation(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
 	if err != nil {
-		return nil, fmt.Errorf("error getting relations where user is Friend2: %w", err)
+		return nil, err
 	}
 
-	relations = append(relations, relations2...)
+	body := db.client.Rpc("get_influencer_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
 
-	seen := make(map[int]bool)
-	var friendIDs []int
-	for _, r := range relations {
-		var otherID int
-		if r.Friend1 == userID {
-			otherID = r.Friend2
-		} else {
-			otherID = r.Friend1
-		}
-		if !seen[otherID] {
-			seen[otherID] = true
-			friendIDs = append(friendIDs, otherID)
-		}
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
 	}
 
-	var friends []User
-	for _, id := range friendIDs {
-		user, err := db.GetUserByID(id)
-		if err != nil {
-			return nil, fmt.Errorf("error getting friend user with id %d: %w", id, err)
-		}
-		friends = append(friends, *user)
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
 	}
 
-	return friends, nil
+	return products, nil
+}
+
+// GetInfluencerNotRecommendation returns recommended products based of user friends dislikes
+// userID is the id of the user and limit is the number of products to recommend
+//
+//nolint:dupl
+func (db *SupabaseDB) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
+	_, err := db.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	body := db.client.Rpc("get_influencer_not_recommended_products", "exact", map[string]interface{}{
+		"user_id_param": userID,
+		"lim":           limit,
+	})
+
+	if body == "" {
+		return nil, fmt.Errorf("error getting recommendations: empty response")
+	}
+
+	var products []Product
+	if err := json.Unmarshal([]byte(body), &products); err != nil {
+		return nil, fmt.Errorf("error getting recommendations: %s", body)
+	}
+
+	return products, nil
 }
 
 /*

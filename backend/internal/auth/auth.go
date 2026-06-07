@@ -11,8 +11,9 @@ import (
 
 // Claims represents the JWT claims structure.
 type Claims struct {
-	UserID int    `json:"user_id"`
-	Email  string `json:"email"`
+	UserID  int    `json:"user_id"`
+	Email   string `json:"email"`
+	IsAdmin bool   `json:"is_admin"`
 	jwt.RegisteredClaims
 }
 
@@ -25,10 +26,11 @@ func Initialize(secret string) {
 
 // GenerateToken creates a signed JWT token for a user.
 // Token expires in 24 hours.
-func GenerateToken(userID int, email string) (string, error) {
+func GenerateToken(userID int, email string, isAdmin bool) (string, error) {
 	claims := Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:  userID,
+		Email:   email,
+		IsAdmin: isAdmin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

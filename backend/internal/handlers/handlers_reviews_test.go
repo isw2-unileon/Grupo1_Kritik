@@ -33,6 +33,17 @@ func setupReviewsRouter(db bd.Database, withAuth bool) *gin.Engine {
 	}
 	protected.POST("/api/reviews", h.CreateReviewHandler)
 	protected.GET("/api/reviews", h.GetUserReviewsHandler)
+	protected.POST("/api/follow", h.FollowSomeoneHandler)
+	protected.POST("/api/unfollow", h.UnfollowSomeoneHandler)
+	protected.GET("/api/fans", h.GetAllFansHandler)
+	protected.GET("/api/influencers", h.GetAllInfluencersHandler)
+	protected.GET("/api/recommendations", h.GetRecommendationsHandler)
+	protected.GET("/api/recommendations/influencer", h.GetInfluencerRecommendationHandler)
+	protected.GET("/api/recommendations/influencer/not", h.GetInfluencerNotRecommendationHandler)
+	protected.GET("/api/users/:id/profile", h.GetUserProfileHandler)
+	protected.GET("/api/users/:id/reviews", h.GetUserReviewsByIDHandler)
+
+	r.GET("/api/products/random", h.GetRandomProductsHandler)
 
 	return r
 }
@@ -101,6 +112,9 @@ func TestCreateReviewHandler_Success(t *testing.T) {
 		MockAddReview: func(r bd.Review) (*bd.Review, error) {
 			return &bd.Review{ID: 1, Description: r.Description, Recommended: r.Recommended, ProductID: r.ProductID, UserID: r.UserID}, nil
 		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
+		},
 	}
 	r := setupReviewsRouter(mock, true)
 
@@ -154,6 +168,42 @@ func TestCreateReviewHandler_InvalidBody(t *testing.T) {
 	}
 }
 
+func TestCreateReviewHandler_Duplicate(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{
+				{ID: 1, Description: "Existing", Recommended: true, ProductID: id, UserID: 1},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"product_id":  5,
+		"description": "Duplicate",
+		"recommended": true,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/reviews", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if resp["error"] != "El producto ya fue valorado" { //nolint:misspell
+		t.Errorf("expected conflict message, got '%s'", resp["error"])
+	}
+}
+
 func TestGetUserReviewsHandler_Success(t *testing.T) {
 	mock := &bd.MockDatabase{
 		MockGetUserByID: func(id int) (*bd.User, error) {
@@ -163,6 +213,9 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 			return []bd.Review{
 				{ID: id, Description: "Desc1", Recommended: true, ProductID: 1, UserID: 1},
 			}, nil
+		},
+		MockGetProductByID: func(id int) (*bd.Product, error) {
+			return &bd.Product{ID: id, Name: "Product1"}, nil
 		},
 	}
 	r := setupReviewsRouter(mock, true)
@@ -181,6 +234,12 @@ func TestGetUserReviewsHandler_Success(t *testing.T) {
 	}
 	if len(reviews) != 1 || reviews[0].ID != 1 {
 		t.Errorf("expected 1 review with id = 1, got %+v", reviews)
+	}
+	if reviews[0].ProductName != "Product1" {
+		t.Errorf("expected ProductName 'Product1', got '%s'", reviews[0].ProductName)
+	}
+	if reviews[0].UserName != "user" {
+		t.Errorf("expected UserName 'user', got '%s'", reviews[0].UserName)
 	}
 }
 
@@ -218,5 +277,1026 @@ func TestCreateReviewHandler_UserLookupFails(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "fan@test.com", UserName: "fan"}, nil
+		},
+		MockFollowSomeone: func(r bd.FollowerRelation) (*bd.FollowerRelation, error) {
+			return &bd.FollowerRelation{ID: 1, Fan: r.Fan, Influencer: r.Influencer}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var relation bd.FollowerRelation
+	if err := json.Unmarshal(w.Body.Bytes(), &relation); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if relation.ID != 1 || relation.Fan != 1 || relation.Influencer != 2 {
+		t.Errorf("unexpected relation: %+v", relation)
+	}
+}
+
+func TestFollowSomeoneHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_InvalidBody(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader([]byte("not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "fan@test.com", UserName: "fan"}, nil
+		},
+		MockFollowSomeone: func(r bd.FollowerRelation) (*bd.FollowerRelation, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestFollowSomeoneHandler_MissingField(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/follow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return true, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_InvalidBody(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader([]byte("not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return false, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 2,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestUnfollowSomeoneHandler_MissingField(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetAllFansHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllFans: func(influencerID int) ([]bd.User, error) {
+			return []bd.User{
+				{ID: 2, Name: "fan1", Email: "fan1@test.com"},
+				{ID: 3, Name: "fan2", Email: "fan2@test.com"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fans", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var fans []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &fans); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(fans) != 2 {
+		t.Errorf("expected 2 fans, got %d", len(fans))
+	}
+	if fans[0].Name != "fan1" {
+		t.Errorf("expected fan name 'fan1', got '%s'", fans[0].Name)
+	}
+}
+
+func TestGetAllFansHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fans", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetAllFansHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllFans: func(influencerID int) ([]bd.User, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fans", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetAllInfluencersHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]bd.User, error) {
+			return []bd.User{
+				{ID: 5, Name: "inf1", Email: "inf1@test.com"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/influencers", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var influencers []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &influencers); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(influencers) != 1 {
+		t.Errorf("expected 1 influencer, got %d", len(influencers))
+	}
+	if influencers[0].Name != "inf1" {
+		t.Errorf("expected influencer name 'inf1', got '%s'", influencers[0].Name)
+	}
+}
+
+func TestGetAllInfluencersHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/influencers", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetAllInfluencersHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]bd.User, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/influencers", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetAllFansHandler_Empty(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllFans: func(influencerID int) ([]bd.User, error) {
+			return []bd.User{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/fans", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var fans []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &fans); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(fans) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(fans))
+	}
+}
+
+func TestGetAllInfluencersHandler_Empty(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetAllInfluencers: func(fanID int) ([]bd.User, error) {
+			return []bd.User{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/influencers", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var influencers []bd.User
+	if err := json.Unmarshal(w.Body.Bytes(), &influencers); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(influencers) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(influencers))
+	}
+}
+
+func TestSearchProductHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetProductsByName: func(name string) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products?q=error", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestSearchProductHandler_WhitespaceQuery(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products?q=%20%20", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(products))
+	}
+}
+
+func TestCreateReviewHandler_AddReviewFails(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockAddReview: func(r bd.Review) (*bd.Review, error) {
+			return nil, errors.New("insert error")
+		},
+		MockGetReviewsByProductID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"product_id":  1,
+		"description": "A review",
+		"recommended": true,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/reviews", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_UserLookupFails(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return nil, errors.New("user not found")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return nil, errors.New("query error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsHandler_EmptyReviews(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Email: "user@test.com", UserName: "user"}, nil
+		},
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var reviews []bd.Review
+	if err := json.Unmarshal(w.Body.Bytes(), &reviews); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(reviews) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(reviews))
+	}
+}
+
+func TestUnfollowSomeoneHandler_RelationNotFound(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockUnfollowSomeone: func(fanID, influencerID int) (bool, error) {
+			return false, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"influencer_id": 999,
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/api/unfollow", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "Rec1", Type: "Videojuego", Genre: []string{"Acción"}},
+				{ID: 2, Name: "Rec2", Type: "Videojuego", Genre: []string{"Aventura"}},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "Rec1" {
+		t.Errorf("expected product name 'Rec1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetRecommendationsHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRecommendationsHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetRecommendations: func(userID int, limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "Rec1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations?limit=5", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 5 {
+		t.Errorf("expected limit=5, got %d", capturedLimit)
+	}
+}
+
+func TestGetInfluencerRecommendationHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetInfluencerRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "InfRec1", Type: "Videojuego", Genre: []string{"Acción"}},
+				{ID: 2, Name: "InfRec2", Type: "Videojuego", Genre: []string{"Aventura"}},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "InfRec1" {
+		t.Errorf("expected product name 'InfRec1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetInfluencerRecommendationHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetInfluencerRecommendationHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetInfluencerRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetInfluencerRecommendationHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetInfluencerRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "InfRec1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer?limit=5", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 5 {
+		t.Errorf("expected limit=5, got %d", capturedLimit)
+	}
+}
+
+func TestGetInfluencerNotRecommendationHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetInfluencerNotRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 3, Name: "NotRec1", Type: "Libro", Genre: []string{"Terror"}},
+				{ID: 4, Name: "NotRec2", Type: "Libro", Genre: []string{"Drama"}},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer/not", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "NotRec1" {
+		t.Errorf("expected product name 'NotRec1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetInfluencerNotRecommendationHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer/not", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetInfluencerNotRecommendationHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetInfluencerNotRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer/not", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetInfluencerNotRecommendationHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetInfluencerNotRecommendation: func(userID int, limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 3, Name: "NotRec1", Type: "Libro"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/recommendations/influencer/not?limit=3", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 3 {
+		t.Errorf("expected limit=3, got %d", capturedLimit)
+	}
+}
+
+func TestGetRandomProductsHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "Rand1", Type: "Videojuego"},
+				{ID: 2, Name: "Rand2", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "Rand1" {
+		t.Errorf("expected product name 'Rand1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetRandomProductsHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetRandomProductsHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetRandomProducts: func(limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "Rand1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/random?limit=7", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 7 {
+		t.Errorf("expected limit=7, got %d", capturedLimit)
+	}
+}
+
+func TestGetUserProfileHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, Name: "Test User", UserName: "testuser"}, nil
+		},
+		// target user (ID=5) has 2 fans
+		MockGetAllFans: func(influencerID int) ([]bd.User, error) {
+			return []bd.User{
+				{ID: 2, Name: "Fan1"},
+				{ID: 3, Name: "Fan2"},
+			}, nil
+		},
+		MockGetAllInfluencers: func(fanID int) ([]bd.User, error) {
+			if fanID == 1 { // current user follows user 5
+				return []bd.User{{ID: 5, Name: "Test User"}}, nil
+			}
+			// target user (ID=5) follows user 1
+			return []bd.User{{ID: 1, Name: "Current"}}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/5/profile", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp UserProfileResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if resp.Name != "Test User" {
+		t.Errorf("expected name 'Test User', got '%s'", resp.Name)
+	}
+	if resp.FansCount != 2 {
+		t.Errorf("expected 2 fans, got %d", resp.FansCount)
+	}
+	if resp.InfluencersCount != 1 {
+		t.Errorf("expected 1 influencer, got %d", resp.InfluencersCount)
+	}
+	if !resp.IsFollowing {
+		t.Errorf("expected is_following = true, got false")
+	}
+}
+
+func TestGetUserProfileHandler_NotFound(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return nil, errors.New("not found")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/999/profile", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserProfileHandler_InvalidID(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/abc/profile", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserProfileHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/1/profile", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsByIDHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return []bd.Review{
+				{ID: 1, Description: "Great", Recommended: true, ProductID: 10, UserID: id},
+				{ID: 2, Description: "Bad", Recommended: false, ProductID: 20, UserID: id},
+			}, nil
+		},
+		MockGetProductByID: func(id int) (*bd.Product, error) {
+			if id == 10 {
+				return &bd.Product{ID: id, Name: "GameX"}, nil
+			}
+			return &bd.Product{ID: id, Name: "BookY"}, nil
+		},
+		MockGetUserByID: func(id int) (*bd.User, error) {
+			return &bd.User{ID: id, UserName: "targetuser"}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/5/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var reviews []bd.Review
+	if err := json.Unmarshal(w.Body.Bytes(), &reviews); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(reviews) != 2 {
+		t.Fatalf("expected 2 reviews, got %d", len(reviews))
+	}
+	if reviews[0].ProductName != "GameX" {
+		t.Errorf("expected ProductName 'GameX', got '%s'", reviews[0].ProductName)
+	}
+	if reviews[0].UserName != "targetuser" {
+		t.Errorf("expected UserName 'targetuser', got '%s'", reviews[0].UserName)
+	}
+	if reviews[1].ProductName != "BookY" {
+		t.Errorf("expected ProductName 'BookY', got '%s'", reviews[1].ProductName)
+	}
+}
+
+func TestGetUserReviewsByIDHandler_InvalidID(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/abc/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsByIDHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetReviewsByUserID: func(id int) ([]bd.Review, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/5/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetUserReviewsByIDHandler_NoAuth(t *testing.T) {
+	mock := &bd.MockDatabase{}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/users/1/reviews", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d: %s", w.Code, w.Body.String())
 	}
 }

@@ -11,9 +11,11 @@ interface AuthContextType {
   user: UserData | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (data: RegisterPayload) => Promise<void>;
   logout: () => void;
+  updateUser: (data: Partial<UserData>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,8 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   }, []);
 
+  const updateUser = useCallback((data: Partial<UserData>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...data };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated, isAdmin: user?.is_admin ?? false, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

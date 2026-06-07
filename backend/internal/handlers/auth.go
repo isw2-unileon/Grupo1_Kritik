@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"cloud.google.com/go/civil"
@@ -42,6 +45,8 @@ type UserResponse struct {
 	Name     string `json:"name"`
 	Surname  string `json:"surname"`
 	UserName string `json:"user_name"`
+	Image    string `json:"image,omitempty"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 // AuthHandler struct
@@ -104,6 +109,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		Surname:  req.Surname,
 		UserName: req.UserName,
 		Birth:    req.Birth,
+		Image:    req.Image,
 	}
 
 	addedUser, err := h.DB.AddUser(newUser)
@@ -121,6 +127,7 @@ func (h *AuthHandler) RegisterHandler(c *gin.Context) {
 		Name:     addedUser.Name,
 		Surname:  addedUser.Surname,
 		UserName: addedUser.UserName,
+		Image:    addedUser.Image,
 	}
 
 	c.JSON(http.StatusCreated, response)
@@ -171,7 +178,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	token, err := auth.GenerateToken(user.ID, user.Email, user.IsAdmin)
 	if err != nil {
 		slog.Error("login: token generation failed", "user_id", user.ID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
@@ -188,8 +195,87 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 			Name:     user.Name,
 			Surname:  user.Surname,
 			UserName: user.UserName,
+			Image:    user.Image,
+			IsAdmin:  user.IsAdmin,
 		},
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+var allowedAvatarExts = map[string]string{
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png":  "image/png",
+	".webp": "image/webp",
+	".gif":  "image/gif",
+}
+
+const maxAvatarSize = 5 << 20 // 5 MB
+
+// UpdateAvatarHandler handles avatar upload for the authenticated user.
+// Accepts multipart/form-data with an "avatar" field containing the image file.
+func (h *AuthHandler) UpdateAvatarHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "se requiere un archivo de imagen"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > maxAvatarSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "la imagen no puede superar los 5 MB"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	contentType, ok := allowedAvatarExts[ext]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("formato no soportado: %s. Usa jpg, png, webp o gif", ext)})
+		return
+	}
+
+	if contentType == "" {
+		contentType = mime.TypeByExtension(ext)
+	}
+
+	fileBytes := make([]byte, header.Size)
+	if _, err := file.Read(fileBytes); err != nil {
+		slog.Error("avatar: failed to read file", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error al leer el archivo"})
+		return
+	}
+
+	publicURL, err := h.DB.UploadAvatar(userID, fileBytes, ext, contentType)
+	if err != nil {
+		slog.Error("avatar: upload failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"image": publicURL})
+}
+
+// DeleteAvatarHandler removes the authenticated user's avatar from Storage and
+// clears the Image field in the DB.
+func (h *AuthHandler) DeleteAvatarHandler(c *gin.Context) {
+	userID := c.GetInt("userID")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	if err := h.DB.DeleteAvatar(userID); err != nil {
+		slog.Error("avatar: delete failed", "userID", userID, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"image": ""})
 }

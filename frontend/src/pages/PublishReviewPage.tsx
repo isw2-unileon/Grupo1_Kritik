@@ -5,13 +5,13 @@ import { searchProducts, createReview, type Product } from "@/services/api";
 import Card from "@/components/Card";
 
 /**
- * PublishReviewPage — versión con timeout REAL.
+ * PublishReviewPage — version with REAL timeout.
  *
- * Como esta página llama a `api.ts` directamente (no a través de AuthContext),
- * el AbortController cancela el fetch HTTP de verdad cuando salta el timeout.
+ * Since this page calls `api.ts` directly (not through AuthContext),
+ * the AbortController actually cancels the HTTP fetch when the timeout triggers.
  *
- * Además, la búsqueda de productos también usa AbortController para evitar
- * respuestas fuera de orden si el usuario escribe rápido.
+ * Additionally, the product search also uses AbortController to avoid
+ * out-of-order responses if the user types quickly.
  */
 
 const SLOW_HINT_MS = 4500;
@@ -33,25 +33,25 @@ export default function PublishReviewPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // estado de búsqueda
+  // search state
   const [productQuery, setProductQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [selected, setSelected] = useState<Product | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // estado de la reseña
+  // review state
   const [description, setDescription] = useState("");
   const [recommended, setRecommended] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [slow, setSlow] = useState(false);
 
-  // refs para timers y el controller del envío
+  // refs for timers and the submission controller
   const submitCtrl = useRef<AbortController | null>(null);
   const slowTimer = useRef<number | null>(null);
   const failTimer = useRef<number | null>(null);
 
-  // búsqueda con AbortController (cancela peticiones obsoletas al cambiar el texto)
+  // product search with AbortController (cancels obsolete requests when the text changes)
   useEffect(() => {
     if (selected || productQuery.trim().length < 2) {
       setResults([]);
@@ -74,7 +74,7 @@ export default function PublishReviewPage() {
     };
   }, [productQuery, selected]);
 
-  // limpieza al desmontar: cancela cualquier envío en curso
+  // cleanup on unmount: cancels any ongoing submission
   useEffect(() => {
     return () => {
       submitCtrl.current?.abort();
@@ -83,8 +83,8 @@ export default function PublishReviewPage() {
     };
   }, []);
 
-  // preselección: si llegamos desde una tarjeta (recomendación o resultado de
-  // búsqueda) con un producto en el router state, lo dejamos ya elegido.
+  // pre-selection: if we arrived from a card (recommendation or search
+  // result) with a product in the router state, we leave it pre-selected.
   useEffect(() => {
     const preset = (location.state as { product?: Product } | null)?.product;
     if (preset && preset.id != null && preset.Name) {
@@ -125,7 +125,7 @@ export default function PublishReviewPage() {
 
     setLoading(true);
 
-    // controller del envío + timers
+    // send controller + timers
     const controller = new AbortController();
     submitCtrl.current = controller;
 
@@ -183,7 +183,7 @@ export default function PublishReviewPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        {/* búsqueda de producto */}
+        {/* product search */}
         <div className="block">
           <span className="text-sm font-medium text-cream">Producto</span>
           <div className="relative mt-2">
@@ -228,6 +228,8 @@ export default function PublishReviewPage() {
                     <li key={product.id}>
                       <button
                         type="button"
+                        // evita que el input pierda el foco antes de registrar el clic
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handlePick(product)}
                         className="block w-full px-4 py-3 text-left text-cream transition hover:bg-cream/5"
                       >
@@ -244,7 +246,7 @@ export default function PublishReviewPage() {
           </p>
         </div>
 
-        {/* veredicto */}
+        {/* veredict */}
         <div className="block">
           <span className="text-sm font-medium text-cream">
             ¿Recomiendas este producto?
@@ -300,7 +302,7 @@ export default function PublishReviewPage() {
           </div>
         </div>
 
-        {/* descripción */}
+        {/* description */}
         <label className="block">
           <span className="text-sm font-medium text-cream">Tu reseña</span>
           <textarea
@@ -313,7 +315,7 @@ export default function PublishReviewPage() {
           />
         </label>
 
-        {/* acciones */}
+        {/* actions */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             to="/dashboard"

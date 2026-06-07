@@ -3,9 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
-import { searchProducts, getReviews, type Product, type Review } from "@/services/api";
+import UserAvatar from "@/components/UserAvatar";
+import ProfilePanel from "@/components/ProfilePanel";
+import { searchProducts, searchUsers, getRecommendations, type Product, type ProfileUser } from "@/services/api";
 
-/* ---------- datos de ejemplo (recomendaciones y círculo: aún no hay API) ---------- */
+/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -14,7 +16,7 @@ const CATS = {
 } as const;
 type CatKey = keyof typeof CATS;
 
-// etiqueta de tipo para las recomendaciones de ejemplo (al abrir su ficha)
+// type label for the example recommendations (when opening their profile)
 const CAT_TO_TYPE: Record<CatKey, string> = {
   game: "Videojuego",
   book: "Libro",
@@ -22,23 +24,17 @@ const CAT_TO_TYPE: Record<CatKey, string> = {
   film: "Película",
 };
 
-type Reco = { name: string; cat: CatKey; verdict: boolean; who: string; text: string };
+function catKey(type?: string): CatKey {
+  const t = (type ?? "").toLowerCase();
+  if (t.includes("serie")) return "series";
+  if (t.includes("film") || t.includes("pelíc") || t.includes("pelic") || t.includes("movie")) return "film";
+  if (t.includes("game") || t.includes("juego") || t.includes("video")) return "game";
+  if (t.includes("libro") || t.includes("book")) return "book";
+  return "game";
+}
+
 type Circle = { name: string; cat: CatKey; n: number };
 
-const RECOS: Reco[] = [
-  { name: "Severance", cat: "series", verdict: true, who: "@lucia", text: "Tensión perfecta, dirección impecable." },
-  { name: "Tunic", cat: "game", verdict: true, who: "@dani", text: "Un secreto detrás de cada esquina." },
-  { name: "Poor Things", cat: "film", verdict: false, who: "@sara", text: "Visualmente bella, narrativamente fría." },
-  { name: "Pachinko", cat: "book", verdict: true, who: "@marco", text: "Generaciones que se te quedan dentro." },
-  { name: "Hollow Knight", cat: "game", verdict: true, who: "@nuria", text: "Atmósfera y control impecables." },
-  { name: "Starfall VII", cat: "game", verdict: false, who: "@bruno", text: "Bonito, pero repetitivo a las pocas horas." },
-  { name: "Klara y el Sol", cat: "book", verdict: true, who: "@elena", text: "Ternura y melancolía a partes iguales." },
-  { name: "La carretera", cat: "book", verdict: false, who: "@hugo", text: "Brillante, pero durísima de releer." },
-  { name: "Shogun", cat: "series", verdict: true, who: "@aitor", text: "Producción enorme y muy bien contada." },
-  { name: "Última señal", cat: "series", verdict: false, who: "@vera", text: "Empieza fuerte y se desinfla al final." },
-  { name: "Oppenheimer", cat: "film", verdict: true, who: "@pablo", text: "Tres horas que se pasan volando." },
-  { name: "Dune: Parte Dos", cat: "film", verdict: true, who: "@noa", text: "Espectáculo y fondo, por fin juntos." },
-];
 const FRIENDS_YES: Circle[] = [
   { name: "Shogun", cat: "series", n: 4 },
   { name: "Klara y el Sol", cat: "book", n: 3 },
@@ -57,7 +53,7 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-/* ---------- piezas reutilizables ---------- */
+/* ---------- Reusable components ---------- */
 function Spinner() {
   return (
     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -95,20 +91,10 @@ function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; clas
   );
 }
 
-function VerdictChip({ yes }: { yes: boolean }) {
-  return yes ? (
-    <span className="rounded-full border-[1.5px] border-acid bg-acid/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-acid">
-      Sí
-    </span>
-  ) : (
-    <span className="rounded-full border-[1.5px] border-coral bg-coral/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-coral">
-      No
-    </span>
-  );
-}
 
-/* ---------- carrusel de portadas (se desliza solo) ---------- */
-// títulos de ejemplo para el carrusel (mientras el backend no dé portadas reales)
+
+/* ---------- Cover carousel (auto-scrolls) ---------- */
+// Sample titles for the carousel (until the backend provides real covers)
 const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Dune: Parte Dos", cat: "film" },
   { name: "The Last of Us", cat: "series" },
@@ -124,7 +110,7 @@ const FEATURED: { name: string; cat: CatKey }[] = [
   { name: "Elden Ring", cat: "game" },
 ];
 
-// baraja (Fisher-Yates): orden aleatorio en cada carga
+// Deck (Fisher-Yates): randomized order on every load
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -139,7 +125,7 @@ function shuffle<T>(arr: T[]): T[] {
 function FeaturedStrip() {
   const navigate = useNavigate();
   const items = useMemo(() => shuffle(FEATURED), []);
-  // duplicamos la lista para que el bucle sea continuo y sin saltos
+  // We duplicate the list so the loop is continuous and seamless.
   const loop = [...items, ...items];
 
   const open = (it: { name: string; cat: CatKey }) =>
@@ -157,7 +143,7 @@ function FeaturedStrip() {
 
   return (
     <div className="group relative overflow-hidden">
-      {/* bordes difuminados para que las tarjetas se fundan con el fondo */}
+      {/* Blurred edges so the cards blend with the background */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
@@ -177,7 +163,7 @@ function FeaturedStrip() {
   );
 }
 
-/* ---------- secciones del panel ---------- */
+/* ---------- sections of the panel ---------- */
 const RECO_CATS = [
   { id: "all", label: "Todas" },
   { id: "game", label: "Juegos" },
@@ -189,26 +175,55 @@ type RecoCatId = (typeof RECO_CATS)[number]["id"];
 
 function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
   const navigate = useNavigate();
-  const preview = typeof limit === "number"; // Inicio = vistazo; pestaña = completa
+  const preview = typeof limit === "number";
   const [cat, setCat] = useState<RecoCatId>("all");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // vistazo: las primeras N. Completa: todas, con filtro por categoría.
-  const list = !preview && cat !== "all" ? RECOS.filter((r) => r.cat === cat) : RECOS;
-  const visible = preview ? RECOS.slice(0, limit) : list;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getRecommendations(preview ? limit : undefined)
+      .then((data) => {
+        if (active) {
+          setProducts(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setProducts([]);
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [limit, preview]);
 
-  // abre la ficha del título con sus datos (de ejemplo) vía router state
-  const open = (r: Reco) =>
-    navigate(`/product/${encodeURIComponent(r.name)}`, {
-      state: {
-        product: {
-          id: r.name,
-          Name: r.name,
-          Type: CAT_TO_TYPE[r.cat],
-          Genre: [] as string[],
-          Description: r.text,
-        },
-      },
+  // preview: first N. Full view: all, filtered by category.
+  const filtered = !preview && cat !== "all"
+    ? products.filter((p) => catKey(p.Type) === cat)
+    : products;
+  const visible = preview ? filtered.slice(0, limit) : filtered;
+
+  const open = (p: Product) =>
+    navigate(`/product/${encodeURIComponent(p.Name)}`, {
+      state: { product: p },
     });
+
+  if (loading) {
+    return (
+      <Card as="section" className={`p-7 sm:p-8 ${preview ? "ring-1 ring-inset ring-acid/30" : ""}`}>
+        <div className="flex items-center justify-center py-12">
+          <svg className="h-6 w-6 animate-spin text-acid" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+            <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card as="section" className={`p-7 sm:p-8 ${preview ? "ring-1 ring-inset ring-acid/30" : ""}`}>
@@ -236,7 +251,6 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         )}
       </div>
 
-      {/* filtros por categoría: solo en la versión completa (pestaña) */}
       {!preview && (
         <div
           role="group"
@@ -267,38 +281,26 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visible.map((r) => (
+          {visible.map((p) => (
             <article
-              key={r.name}
+              key={p.id}
               role="button"
               tabIndex={0}
-              onClick={() => open(r)}
+              onClick={() => open(p)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  open(r);
+                  open(p);
                 }
               }}
               className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
             >
-              <Cover cat={r.cat} name={r.name} className="aspect-[16/10]" />
+              <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[16/10]" />
               <div className="p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <VerdictChip yes={r.verdict} />
-                  <span className="text-xs text-faint">{r.who}</span>
-                </div>
-                <p className="mt-3 text-sm text-dim">"{r.text}"</p>
+                <p className="text-sm text-dim">"{p.Description}"</p>
                 <Link
                   to="/publish-review"
-                  state={{
-                    product: {
-                      id: r.name,
-                      Name: r.name,
-                      Type: CAT_TO_TYPE[r.cat],
-                      Genre: [] as string[],
-                      Description: r.text,
-                    },
-                  }}
+                  state={{ product: p }}
                   onClick={(e) => e.stopPropagation()}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-cream transition hover:border-acid/40 hover:bg-cream/5"
                 >
@@ -314,21 +316,20 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
         </div>
       )}
 
-      {/* vistazo: enlace al listado completo si hay más */}
-      {preview && onSeeAll && RECOS.length > (limit ?? 0) && (
+      {preview && onSeeAll && products.length > (limit ?? 0) && (
         <button
           type="button"
           onClick={onSeeAll}
           className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-3 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
         >
-          Ver todas las recomendaciones ({RECOS.length}) →
+          Ver todas las recomendaciones ({products.length}) →
         </button>
       )}
     </Card>
   );
 }
 
-// fila clicable del círculo: abre la ficha del producto (datos de ejemplo) vía router state
+// clickable row of the circle: opens the product profile (sample data) via router state
 function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
@@ -405,23 +406,21 @@ function FriendsNo() {
 }
 
 type SessionUser = {
-  name?: string;
+  name: string;
   surname?: string;
   user_name?: string;
   email?: string;
+  image?: string;
 } | null;
 
-/* Tarjeta compacta del perfil para la barra lateral de Inicio. */
+/* Compact profile card for the sidebar on the Home page. */
 function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }) {
-  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
   const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
   return (
     <Card as="article" className="p-6">
       <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
       <div className="mt-4 flex items-center gap-3">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface2 font-display text-lg font-bold text-acid ring-1 ring-line">
-          {initial}
-        </span>
+        <UserAvatar image={user?.image} name={user?.name ?? ""} size="md" />
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-semibold text-cream">
             {fullName || "Tu perfil"}
@@ -440,94 +439,9 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
   );
 }
 
-/* Panel completo del perfil (pestaña Perfil): identidad + estadísticas reales
-   calculadas a partir de tus reseñas. Seguidores/seguidos llegarán cuando el
-   backend exponga los arrays following/followers. */
-function ProfilePanel({ user }: { user: SessionUser }) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await getReviews();
-        if (active) setReviews(data);
-      } catch {
-        /* si falla, simplemente no mostramos estadísticas */
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
 
-  const total = reviews.length;
-  const yes = reviews.filter((r) => r.Recommended).length;
-  const pct = total ? Math.round((yes / total) * 100) : 0;
-  const initial = user?.name?.[0]?.toUpperCase() ?? "?";
-  const fullName = user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
-
-  return (
-    <Card as="article" className="p-7 sm:p-8">
-      <div className="flex items-center gap-4">
-        <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-surface2 font-display text-2xl font-bold text-acid ring-1 ring-line">
-          {initial}
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu perfil</p>
-          <h2 className="mt-1 truncate font-display text-2xl font-semibold text-cream">
-            {fullName || "Tu perfil"}
-          </h2>
-          <p className="truncate text-sm text-faint">@{user?.user_name ?? "usuario"}</p>
-        </div>
-      </div>
-
-      <dl className="mt-6 space-y-3 border-t border-line pt-6 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-dim">Correo</dt>
-          <dd className="truncate font-medium text-cream">{user?.email ?? "—"}</dd>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="text-dim">Usuario</dt>
-          <dd className="font-medium text-cream">@{user?.user_name ?? "—"}</dd>
-        </div>
-      </dl>
-
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-line bg-ink/40 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-faint">Veredictos</p>
-          <p className="mt-1 font-display text-3xl font-bold text-acid">{loading ? "…" : total}</p>
-        </div>
-        <div className="rounded-2xl border border-line bg-ink/40 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-faint">Recomienda</p>
-          <p className="mt-1 font-display text-3xl font-bold text-cream">{loading ? "…" : `${pct}%`}</p>
-        </div>
-      </div>
-
-      {!loading && total > 0 && (
-        <div className="mt-4">
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-ink">
-            <div className="bg-acid" style={{ width: `${pct}%` }} />
-            <div className="bg-coral" style={{ width: `${100 - pct}%` }} />
-          </div>
-          <div className="mt-2 flex justify-between text-xs text-faint">
-            <span>{yes} sí</span>
-            <span>{total - yes} no</span>
-          </div>
-        </div>
-      )}
-
-      <p className="mt-6 border-t border-line pt-6 text-xs text-faint">
-        Seguidores y seguidos aparecerán aquí cuando conectemos el backend de seguir.
-      </p>
-    </Card>
-  );
-}
-
-/* ---------- página ---------- */
+/* ---------- page ---------- */
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -535,10 +449,17 @@ export default function DashboardPage() {
   const tabsRef = useRef<HTMLElement>(null);
   const didMount = useRef(false);
 
-  // búsqueda en el catálogo (API real: searchProducts)
+  // Catalog search (real API: searchProducts)
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
+
+  // User search (real API: searchUsers)
+  const [userQuery, setUserQuery] = useState("");
+  const [userResults, setUserResults] = useState<ProfileUser[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const userSearchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const q = query.trim();
@@ -566,8 +487,46 @@ export default function DashboardPage() {
     };
   }, [query]);
 
-  // al cambiar de pestaña, desplaza suavemente hasta las pestañas para que el
-  // contenido no "salte" cuando una pestaña ocupa menos alto que la anterior
+  // User search — debounced, with click-outside close
+  useEffect(() => {
+    const q = userQuery.trim();
+    if (q.length < 2) {
+      setUserResults([]);
+      setUserSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    setUserSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const items = await searchUsers(q, controller.signal);
+        setUserResults(items);
+        setUserSearching(false);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setUserResults([]);
+        setUserSearching(false);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [userQuery]);
+
+  useEffect(() => {
+    if (!userSearchOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (userSearchRef.current && !userSearchRef.current.contains(e.target as Node)) {
+        setUserSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [userSearchOpen]);
+
+// When changing tabs, smoothly scroll to the tabs so the 
+// content doesn't "jump" if a tab is shorter than the previous one
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true;
@@ -583,11 +542,11 @@ export default function DashboardPage() {
       case "inicio":
         return (
           <div className="space-y-6">
-            {/* carrusel de portadas (solo en Inicio) */}
+            {/* featured carousel (only on Home) */}
             <FeaturedStrip />
-            {/* zona protagonista: recomendaciones (vistazo) */}
+            {/* main area: recommendations (preview) */}
             <Recommendations limit={3} onSeeAll={() => setActiveTab("recomendaciones")} />
-            {/* secundario: tus reseñas, tu círculo y tu perfil */}
+            {/* secondary: your reviews, your circle and your profile */}
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
@@ -610,7 +569,7 @@ export default function DashboardPage() {
           </div>
         );
       case "perfil":
-        return <div className="max-w-2xl"><ProfilePanel user={user} /></div>;
+        return         <div className="max-w-2xl"><ProfilePanel user={user} showTitle /></div>;
       default:
         return null;
     }
@@ -618,7 +577,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* cabecera: saludo compacto + barra de acciones (buscar y publicar juntos) */}
+      {/* header: compact greeting + action bar (search and publish together) */}
       <div className="space-y-4">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">
@@ -629,8 +588,67 @@ export default function DashboardPage() {
           </h1>
         </div>
 
+        <div className="flex justify-end">
+          <div ref={userSearchRef} className="relative w-64">
+            <input
+              type="text"
+              value={userQuery}
+              onChange={(e) => { setUserQuery(e.target.value); setUserSearchOpen(true); }}
+              onFocus={() => userQuery.trim().length >= 2 && setUserSearchOpen(true)}
+              placeholder="Buscar usuarios…"
+              autoComplete="off"
+              aria-label="Buscar usuarios"
+              className="w-full rounded-full border border-line bg-surface py-2 pl-4 pr-10 text-sm text-cream placeholder:text-faint outline-none transition focus:border-acid focus:shadow-[0_0_0_3px_rgba(203,242,78,0.14)]"
+            />
+            {userQuery ? (
+              <button
+                type="button"
+                onClick={() => { setUserQuery(""); setUserResults([]); }}
+                aria-label="Limpiar búsqueda de usuarios"
+                className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-faint transition hover:bg-cream/5 hover:text-cream"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            ) : (
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint"
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+              </svg>
+            )}
+            {userSearchOpen && userQuery.trim().length >= 2 && (
+              <div className="absolute right-0 top-full z-50 mt-2 w-full rounded-2xl border border-line bg-surface py-2 shadow-xl">
+                {userSearching ? (
+                  <p className="px-4 py-2 text-sm text-faint">Buscando…</p>
+                ) : userResults.length === 0 ? (
+                  <p className="px-4 py-2 text-sm text-faint">Ningún usuario encontrado</p>
+                ) : (
+                  userResults.map((u) => (
+                    <Link
+                      key={u.id}
+                      to={`/user/${u.id}`}
+                      onClick={() => { setUserQuery(""); setUserResults([]); setUserSearchOpen(false); }}
+                      className="flex items-center gap-3 px-4 py-2 transition hover:bg-cream/5"
+                    >
+                      <UserAvatar image={u.Image} name={u.Name} size="xs" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-cream">{u.Name}</p>
+                        <p className="truncate text-xs text-faint">@{u.UserName}</p>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {/* buscador del catálogo */}
+          {/* catalog search */}
           <div className="relative flex-1">
             <svg
               className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint"
@@ -662,7 +680,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* publicar reseña (junto al buscador) */}
+          {/* publish review (next to the search bar) */}
           <Link
             to="/publish-review"
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-acid px-5 py-3.5 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-[#d7f56e]"
@@ -676,7 +694,7 @@ export default function DashboardPage() {
       </div>
 
       {isSearching ? (
-        /* ---------- resultados de búsqueda ---------- */
+        /* ---------- search results ---------- */
         <Card as="section" className="p-7 sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -738,7 +756,7 @@ export default function DashboardPage() {
           )}
         </Card>
       ) : (
-        /* ---------- vista normal con pestañas ---------- */
+        /* ---------- normal view with tabs ---------- */
         <>
           <nav
             ref={tabsRef}
@@ -760,6 +778,7 @@ export default function DashboardPage() {
                 {t.label}
               </button>
             ))}
+
           </nav>
 
           {renderTab()}
