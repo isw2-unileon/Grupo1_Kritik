@@ -387,6 +387,64 @@ func TestGetProductByIDNotFound(t *testing.T) {
 	}
 }
 
+func TestGetProductsFilter(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]Product, error) {
+			return []Product{
+				{
+					ID:           1,
+					Name:         "Filtered A",
+					Type:         typeFilter,
+					Genre:        genreFilter,
+					AverageGrade: 4,
+					Description:  "Filtered product A",
+				},
+				{
+					ID:           2,
+					Name:         "Filtered B",
+					Type:         typeFilter,
+					Genre:        genreFilter,
+					AverageGrade: 3,
+					Description:  "Filtered product B",
+				},
+			}, nil
+		},
+	}
+
+	products, err := mockDB.GetProductsFilter("Videojuego", []string{"Acción"}, 5)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	switch {
+	case len(products) != 2:
+		t.Errorf("Function returned wrong number of products: got %d, want 2", len(products))
+	case products[0].ID != 1:
+		t.Errorf("Expected product ID 1, got %d", products[0].ID)
+	case products[0].Type != "Videojuego":
+		t.Errorf("Expected type 'Videojuego', got '%s'", products[0].Type)
+	}
+}
+
+func TestGetProductsFilterError(t *testing.T) {
+	mockDB := &MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+
+	products, err := mockDB.GetProductsFilter("", nil, -1)
+
+	if err == nil {
+		t.Error("An error was expected but got nil")
+	}
+
+	if len(products) != 0 {
+		t.Errorf("Function returned %d products, should be 0", len(products))
+	}
+}
+
 func TestGetRandomProducts(t *testing.T) {
 	mockDB := &MockDatabase{
 		MockGetRandomProducts: func(limit int) ([]Product, error) {
