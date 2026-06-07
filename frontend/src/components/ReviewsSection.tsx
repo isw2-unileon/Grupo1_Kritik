@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getReviews, deleteReview, updateReview, type Review } from "@/services/api";
 import Card from "@/components/Card";
 
@@ -206,7 +207,12 @@ function ReviewItem({ review, onDelete, onUpdate }: ReviewItemProps) {
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <RecommendedBadge recommended={review.Recommended} />
           {review.ProductName && (
-            <span className="truncate text-sm text-faint">sobre {review.ProductName}</span>
+            <Link
+              to={`/product/${encodeURIComponent(review.ProductName)}`}
+              className="truncate text-sm text-faint transition hover:text-cream hover:underline"
+            >
+              sobre <span className="font-medium">{review.ProductName}</span>
+            </Link>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">

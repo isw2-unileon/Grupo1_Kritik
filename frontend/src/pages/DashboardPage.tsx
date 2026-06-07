@@ -409,32 +409,40 @@ function CircleList({
   const [items, setItems] = useState<Product[]>([]);
   const [followsAnyone, setFollowsAnyone] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setError(false);
     fetcher(undefined, controller.signal)
       .then(async (data) => {
+        if (controller.signal.aborted) return;
         setItems(data);
         // Solo cuando no hay nada que mostrar necesitamos saber si sigues a
         // alguien, para elegir el mensaje de vacío correcto.
         if (data.length === 0) {
           try {
             const following = await getFollowing(controller.signal);
+            if (controller.signal.aborted) return;
             setFollowsAnyone(following.length > 0);
           } catch {
+            if (controller.signal.aborted) return;
             setFollowsAnyone(null);
           }
         }
         setLoading(false);
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setItems([]);
         setFollowsAnyone(null);
+        setError(true);
         setLoading(false);
       });
     return () => controller.abort();
-  }, [fetcher]);
+  }, [fetcher, reloadKey]);
 
   const visible = preview ? items.slice(0, limit) : items;
 
@@ -446,6 +454,19 @@ function CircleList({
         {loading ? (
           <div className="flex justify-center py-6 text-faint">
             <Spinner />
+          </div>
+        ) : error ? (
+          <div className="py-4">
+            <p className="text-sm text-faint">
+              No se pudieron cargar las recomendaciones de tu círculo.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+            >
+              Reintentar
+            </button>
           </div>
         ) : items.length === 0 ? (
           <p className="py-4 text-sm text-faint">
@@ -504,10 +525,13 @@ function FriendsNo({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void 
 function FollowingStrip() {
   const [people, setPeople] = useState<ProfileUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setError(false);
     getFollowing(controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
@@ -517,10 +541,11 @@ function FollowingStrip() {
       .catch(() => {
         if (controller.signal.aborted) return;
         setPeople([]);
+        setError(true);
         setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [reloadKey]);
 
   return (
     <Card as="section" className="p-6">
@@ -532,6 +557,17 @@ function FollowingStrip() {
         {loading ? (
           <div className="flex justify-center py-4 text-faint">
             <Spinner />
+          </div>
+        ) : error ? (
+          <div className="py-2">
+            <p className="text-sm text-faint">No se pudo cargar tu círculo.</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+            >
+              Reintentar
+            </button>
           </div>
         ) : people.length === 0 ? (
           <p className="py-2 text-sm text-faint">
@@ -581,10 +617,13 @@ function CircleFeed({ limit = 12 }: { limit?: number }) {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [followsAnyone, setFollowsAnyone] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setError(false);
     (async () => {
       try {
         const following = await getFollowing(controller.signal);
@@ -609,11 +648,12 @@ function CircleFeed({ limit = 12 }: { limit?: number }) {
       } catch {
         if (controller.signal.aborted) return;
         setItems([]);
+        setError(true);
         setLoading(false);
       }
     })();
     return () => controller.abort();
-  }, [limit]);
+  }, [limit, reloadKey]);
 
   return (
     <Card as="section" className="p-6">
@@ -623,6 +663,17 @@ function CircleFeed({ limit = 12 }: { limit?: number }) {
         {loading ? (
           <div className="flex justify-center py-6 text-faint">
             <Spinner />
+          </div>
+        ) : error ? (
+          <div className="py-4">
+            <p className="text-sm text-faint">No se pudieron cargar las reseñas de tu círculo.</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+            >
+              Reintentar
+            </button>
           </div>
         ) : items.length === 0 ? (
           <p className="py-4 text-sm text-faint">
