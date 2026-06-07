@@ -1,13 +1,21 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
-import { searchProducts, searchUsers, getRecommendations, type Product, type ProfileUser } from "@/services/api";
+import {
+  searchProducts,
+  searchUsers,
+  getRecommendations,
+  getRandomProducts,
+  getInfluencerRecommendations,
+  getInfluencerNotRecommendations,
+  type Product,
+  type ProfileUser,
+} from "@/services/api";
 
-/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -15,14 +23,6 @@ const CATS = {
   film: { label: "Película", grad: "from-[#6b2d4a] via-[#a32e5e] to-[#3f1b2c]" },
 } as const;
 type CatKey = keyof typeof CATS;
-
-// type label for the example recommendations (when opening their profile)
-const CAT_TO_TYPE: Record<CatKey, string> = {
-  game: "Videojuego",
-  book: "Libro",
-  series: "Serie",
-  film: "Película",
-};
 
 function catKey(type?: string): CatKey {
   const t = (type ?? "").toLowerCase();
@@ -32,17 +32,6 @@ function catKey(type?: string): CatKey {
   if (t.includes("libro") || t.includes("book")) return "book";
   return "game";
 }
-
-type Circle = { name: string; cat: CatKey; n: number };
-
-const FRIENDS_YES: Circle[] = [
-  { name: "Shogun", cat: "series", n: 4 },
-  { name: "Klara y el Sol", cat: "book", n: 3 },
-];
-const FRIENDS_NO: Circle[] = [
-  { name: "Starfall VII", cat: "game", n: 3 },
-  { name: "Oppenheimer", cat: "film", n: 2 },
-];
 
 const TABS = [
   { id: "inicio", label: "Inicio" },
@@ -93,69 +82,45 @@ function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; clas
 
 
 
-/* ---------- Cover carousel (auto-scrolls) ---------- */
-// Sample titles for the carousel (until the backend provides real covers)
-const FEATURED: { name: string; cat: CatKey }[] = [
-  { name: "Dune: Parte Dos", cat: "film" },
-  { name: "The Last of Us", cat: "series" },
-  { name: "Tunic", cat: "game" },
-  { name: "Klara y el Sol", cat: "book" },
-  { name: "Severance", cat: "series" },
-  { name: "Oppenheimer", cat: "film" },
-  { name: "Pachinko", cat: "book" },
-  { name: "Hollow Knight", cat: "game" },
-  { name: "Shogun", cat: "series" },
-  { name: "Poor Things", cat: "film" },
-  { name: "La carretera", cat: "book" },
-  { name: "Elden Ring", cat: "game" },
-];
-
-// Deck (Fisher-Yates): randomized order on every load
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = a[i]!;
-    a[i] = a[j]!;
-    a[j] = tmp;
-  }
-  return a;
-}
-
+/* ---------- Cover carousel (auto-scrolls, real random products) ---------- */
 function FeaturedStrip() {
   const navigate = useNavigate();
-  const items = useMemo(() => shuffle(FEATURED), []);
-  // We duplicate the list so the loop is continuous and seamless.
+  const [items, setItems] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getRandomProducts(12)
+      .then((data) => { if (active) setItems(data); })
+      .catch(() => { /* silently ignore */ })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  // Duplicate the list so the loop is continuous and seamless.
   const loop = [...items, ...items];
 
-  const open = (it: { name: string; cat: CatKey }) =>
-    navigate(`/product/${encodeURIComponent(it.name)}`, {
-      state: {
-        product: {
-          id: it.name,
-          Name: it.name,
-          Type: CAT_TO_TYPE[it.cat],
-          Genre: [] as string[],
-          Description: "",
-        },
-      },
+  const open = (p: Product) =>
+    navigate(`/product/${p.id}`, {
+      state: { product: p },
     });
+
+  if (loading || items.length === 0) return null;
 
   return (
     <div className="group relative overflow-hidden">
-      {/* Blurred edges so the cards blend with the background */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
-        {loop.map((it, i) => (
+        {loop.map((p, i) => (
           <button
-            key={`${it.name}-${i}`}
+            key={`${p.id}-${i}`}
             type="button"
-            onClick={() => open(it)}
-            aria-label={`Ver ${it.name}`}
+            onClick={() => open(p)}
+            aria-label={`Ver ${p.Name}`}
             className="mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:-translate-y-1 hover:border-acid/40"
           >
-            <Cover cat={it.cat} name={it.name} className="aspect-[2/3]" />
+            <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[2/3]" />
           </button>
         ))}
       </div>
@@ -329,20 +294,11 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
-// clickable row of the circle: opens the product profile (sample data) via router state
-function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: string }) {
+function ProductCircleRow({ product, accent }: { product: Product; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
-    navigate(`/product/${encodeURIComponent(f.name)}`, {
-      state: {
-        product: {
-          id: f.name,
-          Name: f.name,
-          Type: CAT_TO_TYPE[f.cat],
-          Genre: [] as string[],
-          Description: "",
-        },
-      },
+    navigate(`/product/${product.id}`, {
+      state: { product },
     });
 
   return (
@@ -358,49 +314,149 @@ function CircleRow({ f, note, accent }: { f: Circle; note: string; accent: strin
       }}
       className={`flex cursor-pointer items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line transition hover:-translate-y-0.5 ${accent}`}
     >
-      <Cover cat={f.cat} className="h-12 w-12 shrink-0 rounded-lg" />
+      <Cover cat={catKey(product.Type)} className="h-12 w-12 shrink-0 rounded-lg" />
       <div className="min-w-0">
-        <p className="truncate font-semibold">{f.name}</p>
-        <p className="text-xs text-faint">{note}</p>
+        <p className="truncate font-semibold">{product.Name}</p>
+        <p className="text-xs text-faint">{product.Description ? `"${product.Description}"` : "—"}</p>
       </div>
     </div>
   );
 }
 
-function FriendsYes() {
-  return (
-    <Card as="article" className="p-6">
-      <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Tu círculo · Sí</p>
-      <h2 className="mt-2 font-display text-2xl font-semibold">A tus amigos les gustó</h2>
-      <div className="mt-5 space-y-3">
-        {FRIENDS_YES.map((f) => (
-          <CircleRow
-            key={f.name}
-            f={f}
-            accent="hover:ring-acid/35"
-            note={`Recomendado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
-          />
-        ))}
-      </div>
-    </Card>
-  );
-}
+function FriendsCircleSection({
+  fetchFn,
+  accentClass,
+  ringAccentClass,
+  subtitle,
+  title,
+  emptyMessage,
+  onExpand,
+}: {
+  fetchFn: (limit: number) => Promise<Product[]>;
+  accentClass: string;
+  ringAccentClass: string;
+  subtitle: string;
+  title: string;
+  emptyMessage: string;
+  onExpand?: () => void;
+}) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [offset, setOffset] = useState(-1);
 
-function FriendsNo() {
+  useEffect(() => {
+    let active = true;
+    fetchFn(50)
+      .then((data) => { if (active) setProducts(data); })
+      .catch(() => { /* silently ignore */ })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [fetchFn]);
+
+  const isExpanded = offset >= 0;
+  const visible = isExpanded ? products.slice(offset, offset + 10) : products.slice(0, 5);
+  const hasNext = offset + 10 < products.length;
+  const hasPrev = offset > 0;
+
+  const handleToggle = () => {
+    if (onExpand) {
+      onExpand();
+    } else if (isExpanded) {
+      setOffset(-1);
+    } else if (products.length > 5) {
+      setOffset(0);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card as="article" className="p-6">
+        <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentClass}`}>{subtitle}</p>
+        <h2 className="mt-2 font-display text-2xl font-semibold">{title}</h2>
+        <p className="mt-5 text-sm text-faint">Cargando…</p>
+      </Card>
+    );
+  }
+
   return (
     <Card as="article" className="p-6">
-      <p className="text-xs font-medium uppercase tracking-[0.34em] text-coral">Tu círculo · No</p>
-      <h2 className="mt-2 font-display text-2xl font-semibold">No les convenció</h2>
-      <div className="mt-5 space-y-3">
-        {FRIENDS_NO.map((f) => (
-          <CircleRow
-            key={f.name}
-            f={f}
-            accent="hover:ring-coral/35"
-            note={`Descartado por ${f.n} ${f.n === 1 ? "amigo" : "amigos"}`}
-          />
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="w-full text-left"
+        aria-expanded={onExpand ? undefined : isExpanded}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentClass}`}>{subtitle}</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold">{title}</h2>
+          </div>
+          {products.length > 5 && (
+            <svg
+              className={`h-5 w-5 shrink-0 text-faint transition-transform duration-200 ${!onExpand && isExpanded ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          )}
+        </div>
+      </button>
+
+      {products.length === 0 ? (
+        <p className="mt-5 text-sm text-faint">{emptyMessage}</p>
+      ) : (
+        <>
+          <div className="mt-5 space-y-3">
+            {visible.map((p) => (
+              <ProductCircleRow key={p.id} product={p} accent={ringAccentClass} />
+            ))}
+          </div>
+
+          {onExpand ? (
+            products.length > 5 && (
+              <button
+                type="button"
+                onClick={onExpand}
+                className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+              >
+                Ir a tu círculo →
+              </button>
+            )
+          ) : (
+            (isExpanded || products.length > 5) && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {isExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setOffset(-1)}
+                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+                  >
+                    Mostrar menos ↑
+                  </button>
+                )}
+                {hasPrev && (
+                  <button
+                    type="button"
+                    onClick={() => setOffset((p) => Math.max(p - 10, 0))}
+                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+                  >
+                    ← Anterior
+                  </button>
+                )}
+                {hasNext && (
+                  <button
+                    type="button"
+                    onClick={() => setOffset((p) => p + 10)}
+                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
+                  >
+                    Siguientes 10 →
+                  </button>
+                )}
+              </div>
+            )
+          )}
+        </>
+      )}
     </Card>
   );
 }
@@ -538,8 +594,24 @@ export default function DashboardPage() {
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
-                <FriendsYes />
-                <FriendsNo />
+                <FriendsCircleSection
+                  fetchFn={getInfluencerRecommendations}
+                  accentClass="text-acid"
+                  ringAccentClass="hover:ring-acid/35"
+                  subtitle="Tu círculo · Sí"
+                  title="A tus amigos les gustó"
+                  emptyMessage="Tus amigos no han recomendado nada todavía."
+                  onExpand={() => setActiveTab("circulo")}
+                />
+                <FriendsCircleSection
+                  fetchFn={getInfluencerNotRecommendations}
+                  accentClass="text-coral"
+                  ringAccentClass="hover:ring-coral/35"
+                  subtitle="Tu círculo · No"
+                  title="No les convenció"
+                  emptyMessage="No hay productos descartados por tu círculo."
+                  onExpand={() => setActiveTab("circulo")}
+                />
                 <ProfileCard user={user} onOpen={() => setActiveTab("perfil")} />
               </aside>
             </div>
@@ -552,8 +624,22 @@ export default function DashboardPage() {
       case "circulo":
         return (
           <div className="grid gap-6 md:grid-cols-2">
-            <FriendsYes />
-            <FriendsNo />
+            <FriendsCircleSection
+              fetchFn={getInfluencerRecommendations}
+              accentClass="text-acid"
+              ringAccentClass="hover:ring-acid/35"
+              subtitle="Tu círculo · Sí"
+              title="A tus amigos les gustó"
+              emptyMessage="Tus amigos no han recomendado nada todavía."
+            />
+            <FriendsCircleSection
+              fetchFn={getInfluencerNotRecommendations}
+              accentClass="text-coral"
+              ringAccentClass="hover:ring-coral/35"
+              subtitle="Tu círculo · No"
+              title="No les convenció"
+              emptyMessage="No hay productos descartados por tu círculo."
+            />
           </div>
         );
       case "perfil":

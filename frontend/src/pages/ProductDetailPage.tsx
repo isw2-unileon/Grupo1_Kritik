@@ -4,26 +4,7 @@ import type { ReactNode } from "react";
 import Card from "@/components/Card";
 import ProductEditModal from "@/components/ProductEditModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { searchProducts } from "@/services/api";
-
-/* ============================================================
-   Title Detail Page — Steam-inspired, with Kritik's identity
-   (the Yes/No verdict as "% recommended").
-
-   HOW THE DATA ARRIVES
-   The product is received via router state when clicking a card
-   (catalog search or recommendations). The page uses that real
-   data (Type, Genre, Release Date, Description, Average Score).
-
-   BACKEND PENDING
-   The reviews and gallery are PLACEHOLDERS: the backend does not
-   yet expose reviews per product (GET /api/reviews only returns
-   those of the logged-in user, and there is no GET /api/products/:id).
-   The % is calculated from the sample reviews to keep the page
-   consistent. To make it real, the backend would simply need to
-   expose GetReviewsByProductName, e.g., GET /api/products/:id/reviews,
-   and replace SAMPLE_REVIEWS with a call to that API.
-   ============================================================ */
+import { searchProducts, getProductReviews, type Review } from "@/services/api";
 
 type DetailProduct = {
   id: number;
@@ -54,23 +35,6 @@ function catFromType(type?: string): CatKey {
   if (t.includes("libro") || t.includes("book")) return "book";
   return "other";
 }
-
-/* ---------- sample reviews (pending backend endpoint) ---------- */
-type CommunityReview = {
-  id: number;
-  author: string;
-  verdict: boolean;
-  title: string;
-  text: string;
-  when: string;
-};
-const SAMPLE_REVIEWS: CommunityReview[] = [
-  { id: 1, author: "@lucia", verdict: true, title: "Una obra maestra de ritmo", text: "Cada capítulo te deja con ganas del siguiente. La dirección no da respiro y el reparto está soberbio.", when: "hace 3 días" },
-  { id: 2, author: "@dani", verdict: true, title: "Me atrapó desde el minuto uno", text: "No esperaba que me gustara tanto. El guion juega contigo y gana siempre.", when: "hace 1 semana" },
-  { id: 3, author: "@sara", verdict: false, title: "Bonita por fuera, vacía por dentro", text: "Visualmente impecable, pero la historia no termina de arrancar. Se me hizo larga.", when: "hace 2 semanas" },
-  { id: 4, author: "@marco", verdict: true, title: "De lo mejor del año", text: "Lo repetiría sin dudarlo. Un final que justifica todo el viaje.", when: "hace 3 semanas" },
-  { id: 5, author: "@nora", verdict: true, title: "Pequeña joya", text: "No es perfecta, pero tiene corazón y se nota el cariño en cada detalle.", when: "hace 1 mes" },
-];
 
 type Tier = { label: string; tone: "acid" | "cream" | "coral" };
 function tierFor(pct: number): Tier {
@@ -187,9 +151,6 @@ function RecommendationCard({
           <span className="h-2 w-2 rounded-full bg-coral" />
         </span>
       </div>
-      <p className="mt-4 border-t border-line pt-4 text-xs text-faint">
-        Cálculo de ejemplo — será real cuando haya reseñas por producto.
-      </p>
     </Card>
   );
 }
@@ -243,20 +204,18 @@ function DetailsCard({
   );
 }
 
-function CommunityReviews({ reviews }: { reviews: CommunityReview[] }) {
+function CommunityReviews({ reviews }: { reviews: Review[] }) {
+  if (reviews.length === 0) return null;
+
   return (
     <Card as="section" className="p-7 sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">La comunidad opina</p>
           <h2 className="mt-2 font-display text-3xl font-semibold">Veredictos</h2>
-          <p className="mt-2 max-w-md text-sm text-faint">
-            Ejemplo por ahora — aquí aparecerán las reseñas reales cuando el backend
-            las exponga por producto.
-          </p>
         </div>
-        <span className="shrink-0 rounded-full border border-acid/30 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
-          Próximamente
+        <span className="shrink-0 rounded-full border border-line bg-ink/50 px-3 py-1 text-xs font-semibold text-dim">
+          {reviews.length} {reviews.length === 1 ? "veredicto" : "veredictos"}
         </span>
       </div>
 
@@ -266,17 +225,15 @@ function CommunityReviews({ reviews }: { reviews: CommunityReview[] }) {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                  {r.author.replace("@", "").charAt(0).toUpperCase()}
+                  {r.UserName.charAt(0).toUpperCase()}
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-cream">{r.author}</p>
-                  <p className="text-xs text-faint">{r.when}</p>
+                  <p className="text-sm font-semibold text-cream">@{r.UserName}</p>
                 </div>
               </div>
-              <VerdictChip yes={r.verdict} />
+              <VerdictChip yes={r.Recommended} />
             </div>
-            <p className="mt-3 font-display text-lg font-semibold">{r.title}</p>
-            <p className="mt-1 text-sm leading-relaxed text-dim">{r.text}</p>
+            <p className="mt-3 text-sm leading-relaxed text-dim">{r.Description}</p>
           </article>
         ))}
       </div>
@@ -299,6 +256,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(!stateProduct);
   const [notFound, setNotFound] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   // WITHOUT TOUCHING THE BACKEND: we request the REAL product by name using the existing
   // endpoint (GET /api/products?q=). The product from state, if available, renders instantly;
@@ -332,6 +290,15 @@ export default function ProductDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
+  useEffect(() => {
+    if (!product?.id) return;
+    const controller = new AbortController();
+    getProductReviews(product.id, controller.signal)
+      .then(setReviews)
+      .catch(() => {});
+    return () => controller.abort();
+  }, [product?.id]);
+
   if (loading && !product) {
     return (
       <div className="mx-auto max-w-xl py-20 text-center">
@@ -364,10 +331,8 @@ export default function ProductDetailPage() {
   const cat = catFromType(product.Type);
   const style = TYPE_STYLES[cat];
 
-  // Reviews by product: pending backend. Example for now.
-  const reviews = SAMPLE_REVIEWS;
   const total = reviews.length;
-  const positives = reviews.filter((r) => r.verdict).length;
+  const positives = reviews.filter((r) => r.Recommended).length;
   const pct = total ? Math.round((positives / total) * 100) : 0;
   const tier = tierFor(pct);
   const recommended = pct >= 50;

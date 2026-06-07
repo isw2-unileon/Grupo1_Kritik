@@ -206,6 +206,18 @@ export async function deleteReview(id: number, signal?: AbortSignal): Promise<vo
   }
 }
 
+export async function getProductReviews(
+  productId: number,
+  signal?: AbortSignal,
+): Promise<Review[]> {
+  const res = await authedFetch(`${BASE}/api/products/${productId}/reviews`, { signal });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "could not load reviews" }));
+    throw new Error(err.error || "could not load reviews");
+  }
+  return res.json();
+}
+
 export async function getFollowers(signal?: AbortSignal): Promise<ProfileUser[]> {
   const res = await authedFetch(`${BASE}/api/fans`, { signal });
   if (!res.ok) {
@@ -293,6 +305,45 @@ export async function deleteAvatar(): Promise<string> {
   }
   const data = await res.json();
   return data.image as string;
+}
+
+export async function getRandomProducts(
+  limit = 12,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const res = await fetch(`${BASE}/api/products/random?limit=${limit}`, { signal });
+  if (!res.ok) {
+    throw new Error("could not load random products");
+  }
+  return res.json();
+}
+
+export async function getInfluencerRecommendations(
+  limit = 5,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const res = await authedFetch(
+    `${BASE}/api/recommendations/influencer?limit=${limit}`,
+    { signal },
+  );
+  if (!res.ok) {
+    throw new Error("could not load influencer recommendations");
+  }
+  return res.json();
+}
+
+export async function getInfluencerNotRecommendations(
+  limit = 5,
+  signal?: AbortSignal,
+): Promise<Product[]> {
+  const res = await authedFetch(
+    `${BASE}/api/recommendations/influencer/not?limit=${limit}`,
+    { signal },
+  );
+  if (!res.ok) {
+    throw new Error("could not load influencer not-recommendations");
+  }
+  return res.json();
 }
 
 export async function getRecommendations(
