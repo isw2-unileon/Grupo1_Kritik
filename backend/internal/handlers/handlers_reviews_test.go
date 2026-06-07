@@ -44,6 +44,7 @@ func setupReviewsRouter(db bd.Database, withAuth bool) *gin.Engine {
 	protected.GET("/api/users/:id/reviews", h.GetUserReviewsByIDHandler)
 
 	r.GET("/api/products/random", h.GetRandomProductsHandler)
+	r.GET("/api/products/filter", h.GetProductsFilterHandler)
 
 	return r
 }
@@ -1118,6 +1119,105 @@ func TestGetRandomProductsHandler_CustomLimit(t *testing.T) {
 	}
 	if capturedLimit != 7 {
 		t.Errorf("expected limit=7, got %d", capturedLimit)
+	}
+}
+
+func TestGetProductsFilterHandler_Success(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]bd.Product, error) {
+			return []bd.Product{
+				{ID: 1, Name: "Filtered1", Type: "Videojuego", Genre: []string{"Acción"}},
+				{ID: 2, Name: "Filtered2", Type: "Videojuego", Genre: []string{"Aventura"}},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/filter?type=Videojuego&genre=Accion", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var products []bd.Product
+	if err := json.Unmarshal(w.Body.Bytes(), &products); err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("expected 2 products, got %d", len(products))
+	}
+	if products[0].Name != "Filtered1" {
+		t.Errorf("expected product name 'Filtered1', got '%s'", products[0].Name)
+	}
+}
+
+func TestGetProductsFilterHandler_EmptyParams(t *testing.T) {
+	var capturedType string
+	var capturedGenres []string
+	mock := &bd.MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]bd.Product, error) {
+			capturedType = typeFilter
+			capturedGenres = genreFilter
+			return []bd.Product{}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/filter", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedType != "" {
+		t.Errorf("expected empty type, got '%s'", capturedType)
+	}
+	if len(capturedGenres) != 0 {
+		t.Errorf("expected empty genres, got %v", capturedGenres)
+	}
+}
+
+func TestGetProductsFilterHandler_DBError(t *testing.T) {
+	mock := &bd.MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]bd.Product, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/filter?type=Videojuego", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestGetProductsFilterHandler_CustomLimit(t *testing.T) {
+	var capturedLimit int
+	mock := &bd.MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]bd.Product, error) {
+			capturedLimit = limit
+			return []bd.Product{
+				{ID: 1, Name: "Filtered1", Type: "Videojuego"},
+			}, nil
+		},
+	}
+	r := setupReviewsRouter(mock, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/products/filter?type=Videojuego&limit=3", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if capturedLimit != 3 {
+		t.Errorf("expected limit=3, got %d", capturedLimit)
 	}
 }
 
