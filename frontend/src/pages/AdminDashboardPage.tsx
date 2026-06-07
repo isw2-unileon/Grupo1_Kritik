@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
 
   const isSearching = query.trim().length >= 2;
 
-  const handleProductUpdated = useCallback((_updated: Product) => {
+  const handleProductUpdated = useCallback(() => {
     setEditingProduct(null);
     getAllProducts().then((data) => setAllProducts(data)).catch(() => {});
   }, []);
@@ -413,7 +413,7 @@ export default function AdminDashboardPage() {
       {editingProduct && (
         <ProductEditModal
           product={editingProduct}
-          onSave={handleProductUpdated}
+          onSave={() => handleProductUpdated()}
           onClose={() => setEditingProduct(null)}
         />
       )}
