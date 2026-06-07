@@ -12,8 +12,8 @@ type MockDatabase struct {
 	MockDeleteUserByEmail  func(userEmail string) (bool, error)
 	MockUpdateUserInfo     func(userEmail string, newUserInfo User) (*User, error)
 	MockUpdateUserImage    func(userID int, imageURL string) (*User, error)
-	MockUploadAvatar      func(userID int, fileBytes []byte, ext string, contentType string) (string, error)
-	MockDeleteAvatar      func(userID int) error
+	MockUploadAvatar       func(userID int, fileBytes []byte, ext string, contentType string) (string, error)
+	MockDeleteAvatar       func(userID int) error
 
 	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
@@ -26,22 +26,22 @@ type MockDatabase struct {
 	MockGetAllProducts      func() ([]Product, error)
 	MockGetTopRated         func(limit int) ([]Product, error)
 	MockGetWorstRated       func(limit int) ([]Product, error)
-	MockUploadProductImage   func(productID int, fileBytes []byte, ext string, contentType string) (string, error)
-	MockDeleteProductImage   func(productID int) error
+	MockUploadProductImage  func(productID int, fileBytes []byte, ext string, contentType string) (string, error)
+	MockDeleteProductImage  func(productID int) error
 
 	MockGetReviewByID         func(reviewID int) (*Review, error)
 	MockGetReviewsByUserID    func(userID int) ([]Review, error)
 	MockGetReviewsByProductID func(productID int) ([]Review, error)
 	MockAddReview             func(newReview Review) (*Review, error)
 	MockDeleteReviewByID      func(reviewID int) (bool, error)
-	MockUpdateReviewInfo      func(reviewID int, newReview Review) (*Review, error)
+	MockUpdateReviewInfo      func(reviewID int, newReviewInfo Review) (*Review, error)
 
 	MockGetAllFans        func(influencerID int) ([]User, error)
 	MockGetAllInfluencers func(fanID int) ([]User, error)
 	MockFollowSomeone     func(newRelation FollowerRelation) (*FollowerRelation, error)
 	MockUnfollowSomeone   func(fanID int, influencerID int) (bool, error)
 
-	MockGetRecommendations              func(userID int, limit int) ([]Product, error)
+	MockGetRecommendations             func(userID int, limit int) ([]Product, error)
 	MockGetInfluencerRecommendation    func(userID int, limit int) ([]Product, error)
 	MockGetInfluencerNotRecommendation func(userID int, limit int) ([]Product, error)
 }
@@ -151,6 +151,16 @@ func (m *MockDatabase) GetWorstRated(limit int) ([]Product, error) {
 	return m.MockGetWorstRated(limit)
 }
 
+// UploadProductImage mock
+func (m *MockDatabase) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
+	return m.MockUploadProductImage(productID, fileBytes, ext, contentType)
+}
+
+// DeleteProductImage mock
+func (m *MockDatabase) DeleteProductImage(productID int) error {
+	return m.MockDeleteProductImage(productID)
+}
+
 // GetReviewByID mock
 func (m *MockDatabase) GetReviewByID(reviewID int) (*Review, error) {
 	return m.MockGetReviewByID(reviewID)
@@ -214,14 +224,4 @@ func (m *MockDatabase) GetInfluencerRecommendation(userID int, limit int) ([]Pro
 // GetInfluencerNotRecommendation mock
 func (m *MockDatabase) GetInfluencerNotRecommendation(userID int, limit int) ([]Product, error) {
 	return m.MockGetInfluencerNotRecommendation(userID, limit)
-}
-
-// UploadProductImage mock
-func (m *MockDatabase) UploadProductImage(productID int, fileBytes []byte, ext string, contentType string) (string, error) {
-	return m.MockUploadProductImage(productID, fileBytes, ext, contentType)
-}
-
-// DeleteProductImage mock
-func (m *MockDatabase) DeleteProductImage(productID int) error {
-	return m.MockDeleteProductImage(productID)
 }

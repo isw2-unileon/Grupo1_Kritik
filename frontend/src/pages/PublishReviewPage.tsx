@@ -38,6 +38,7 @@ export default function PublishReviewPage() {
   const [results, setResults] = useState<Product[]>([]);
   const [selected, setSelected] = useState<Product | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   // review state
   const [description, setDescription] = useState("");
@@ -55,17 +56,22 @@ export default function PublishReviewPage() {
   useEffect(() => {
     if (selected || productQuery.trim().length < 2) {
       setResults([]);
+      setSearching(false);
       return;
     }
     const controller = new AbortController();
+    setSearching(true);
+    setShowDropdown(true);
     const timer = window.setTimeout(async () => {
       try {
         const items = await searchProducts(productQuery.trim(), controller.signal);
         setResults(items);
+        setSearching(false);
         setShowDropdown(true);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setResults([]);
+        setSearching(false);
       }
     }, 300);
     return () => {
@@ -218,7 +224,12 @@ export default function PublishReviewPage() {
 
             {showDropdown && productQuery.trim().length >= 2 && (
               <ul className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-ink shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-                {results.length === 0 ? (
+                {searching ? (
+                  <li className="flex items-center gap-2 px-4 py-3 text-sm text-faint">
+                    <Spinner />
+                    Buscando productos…
+                  </li>
+                ) : results.length === 0 ? (
                   <li className="px-4 py-3 text-sm text-faint">
                     No existe ningún producto con ese nombre. Solo puedes reseñar productos
                     ya registrados.
