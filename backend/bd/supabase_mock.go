@@ -4,18 +4,41 @@ package bd
 //
 //nolint:dupl // DO NOT remove this
 type MockDatabase struct {
+<<<<<<< Updated upstream
 	MockGetUserByEmail    func(userEmail string) (*User, error)
 	MockGetUserByUserName func(userName string) (*User, error)
 	MockGetUserByID       func(userID int) (*User, error)
 	MockAddUser           func(newUser User) (*User, error)
 	MockDeleteUserByEmail func(userEmail string) (bool, error)
 	MockUpdateUserInfo    func(userEmail string, newUserInfo User) (*User, error)
+=======
+	MockGetUserByEmail     func(userEmail string) (*User, error)
+	MockGetUserByUserName  func(userName string) (*User, error)
+	MockGetUserByID        func(userID int) (*User, error)
+	MockGetUsersByUserName func(userName string) ([]User, error)
+	MockAddUser            func(newUser User) (*User, error)
+	MockDeleteUserByEmail  func(userEmail string) (bool, error)
+	MockUpdateUserInfo     func(userEmail string, newUserInfo User) (*User, error)
+	MockUpdateUserImage    func(userID int, imageURL string) (*User, error)
+	MockUploadAvatar       func(userID int, fileBytes []byte, ext string, contentType string) (string, error)
+	MockDeleteAvatar       func(userID int) error
+>>>>>>> Stashed changes
 
 	MockGetProductsByName   func(productName string) ([]Product, error)
 	MockGetProductByID      func(productID int) (*Product, error)
 	MockAddProduct          func(newProduct Product) (*Product, error)
 	MockDeleteProductByName func(productName string) (bool, error)
 	MockUpdateProductInfo   func(productName string, newProductInfo Product) (*Product, error)
+<<<<<<< Updated upstream
+=======
+	MockDeleteProductByID   func(productID int) (bool, error)
+	MockUpdateProductByID   func(productID int, newProductInfo Product) (*Product, error)
+	MockGetAllProducts      func() ([]Product, error)
+	MockGetTopRated         func(limit int) ([]Product, error)
+	MockGetWorstRated       func(limit int) ([]Product, error)
+	MockUploadProductImage  func(productID int, fileBytes []byte, ext string, contentType string) (string, error)
+	MockDeleteProductImage  func(productID int) error
+>>>>>>> Stashed changes
 
 	MockGetReviewByID         func(reviewID int) (*Review, error)
 	MockAddReview             func(newReview Review) (*Review, error)
@@ -27,7 +50,13 @@ type MockDatabase struct {
 	MockAddRelation            func(newRelation FriendRelation) (*FriendRelation, error)
 	MockDeleteRelationByUserID func(userID int) (bool, error)
 
+<<<<<<< Updated upstream
 	MockGetFriendsByUserID func(userID int) ([]User, error)
+=======
+	MockGetRecommendations             func(userID int, limit int) ([]Product, error)
+	MockGetInfluencerRecommendation    func(userID int, limit int) ([]Product, error)
+	MockGetInfluencerNotRecommendation func(userID int, limit int) ([]Product, error)
+>>>>>>> Stashed changes
 }
 
 // GetUserByEmail mock
