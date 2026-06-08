@@ -95,6 +95,38 @@ function Cover({
 
 
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]!;
+    a[i] = a[j]!;
+    a[j] = tmp;
+  }
+  return a;
+}
+
+const CAT_TO_TYPE: Record<CatKey, string> = {
+  game: "game",
+  book: "book",
+  series: "series",
+  film: "film",
+};
+
+const FEATURED: { name: string; cat: CatKey }[] = [
+  { name: "Dune: Parte Dos", cat: "film" },
+  { name: "The Last of Us", cat: "series" },
+  { name: "Tunic", cat: "game" },
+  { name: "Klara y el Sol", cat: "book" },
+  { name: "Severance", cat: "series" },
+  { name: "Oppenheimer", cat: "film" },
+  { name: "Pachinko", cat: "book" },
+  { name: "Hollow Knight", cat: "game" },
+  { name: "Shogun", cat: "series" },
+  { name: "Poor Things", cat: "film" },
+  { name: "La carretera", cat: "book" },
+];
+
 /* ---------- Cover carousel (auto-scrolls, real random products) ---------- */
 function FeaturedStrip() {
   const navigate = useNavigate();
@@ -128,7 +160,7 @@ function FeaturedStrip() {
   const open = (p: Product) =>
     navigate(`/product/${encodeURIComponent(p.Name)}`, { state: { product: p } });
 
-  if (loading || items.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div className="group relative overflow-hidden">

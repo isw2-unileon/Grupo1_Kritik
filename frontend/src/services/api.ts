@@ -360,50 +360,6 @@ export async function getRecommendations(
   return res.json();
 }
 
-export async function getRandomProducts(limit = 10, signal?: AbortSignal): Promise<Product[]> {
-  const res = await authedFetch(`${BASE}/api/products/random?limit=${limit}`, { signal });
-  if (!res.ok) {
-    throw new Error("could not load random products");
-  }
-  return res.json();
-}
-
-export async function getInfluencerRecommendations(
-  limit?: number,
-  signal?: AbortSignal,
-): Promise<Product[]> {
-  const url = limit
-    ? `${BASE}/api/recommendations/influencer?limit=${limit}`
-    : `${BASE}/api/recommendations/influencer`;
-  const res = await authedFetch(url, { signal });
-  if (!res.ok) {
-    throw new Error("could not load circle recommendations");
-  }
-  return res.json();
-}
-
-export async function getInfluencerNotRecommendations(
-  limit?: number,
-  signal?: AbortSignal,
-): Promise<Product[]> {
-  const url = limit
-    ? `${BASE}/api/recommendations/influencer/not?limit=${limit}`
-    : `${BASE}/api/recommendations/influencer/not`;
-  const res = await authedFetch(url, { signal });
-  if (!res.ok) {
-    throw new Error("could not load circle non-recommendations");
-  }
-  return res.json();
-}
-
-export async function getProductReviews(productId: number, signal?: AbortSignal): Promise<Review[]> {
-  const res = await authedFetch(`${BASE}/api/products/${productId}/reviews`, { signal });
-  if (!res.ok) {
-    throw new Error("could not load product reviews");
-  }
-  return res.json();
-}
-
 export async function getUserReviews(userId: number, signal?: AbortSignal): Promise<Review[]> {
   const res = await authedFetch(`${BASE}/api/users/${userId}/reviews`, { signal });
   if (!res.ok) {
