@@ -20,10 +20,15 @@ vi.mock("@/services/api", () => ({
   register: vi.fn(),
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
+  searchUsers: vi.fn(() => Promise.resolve([])),
   getFollowers: mockGetFollowers,
   getFollowing: mockGetFollowing,
   unfollowUser: mockUnfollowUser,
   getRecommendations: mockGetRecommendations,
+  getRandomProducts: vi.fn(() => Promise.resolve([])),
+  getInfluencerRecommendations: vi.fn(() => Promise.resolve([])),
+  getInfluencerNotRecommendations: vi.fn(() => Promise.resolve([])),
+  getUserReviews: vi.fn(() => Promise.resolve([])),
 }));
 
 function renderDashboard(followingOverride?: unknown[], recommendations?: unknown[]) {
@@ -68,7 +73,7 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
     });
-    expect(screen.getByText("A tus amigos les gustó")).toBeInTheDocument();
+    expect(screen.getByText("A tu círculo le gustó")).toBeInTheDocument();
     expect(screen.getByText("No les convenció")).toBeInTheDocument();
   });
 
@@ -153,7 +158,7 @@ describe("DashboardPage", () => {
       await user.click(screen.getByText("Perfil"));
       await user.click(screen.getByText("seguidos"));
 
-      expect(screen.getByRole("dialog", { name: "Usuarios que sigues" })).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Siguiendo" })).toBeInTheDocument();
       expect(screen.getByText("User One")).toBeInTheDocument();
       expect(screen.getByText("User Two")).toBeInTheDocument();
     });

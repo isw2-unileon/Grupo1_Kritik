@@ -1,14 +1,16 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 
-const { mockSearchProducts } = vi.hoisted(() => ({
+const { mockSearchProducts, mockGetProductReviews } = vi.hoisted(() => ({
   mockSearchProducts: vi.fn(),
+  mockGetProductReviews: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
   searchProducts: mockSearchProducts,
+  getProductReviews: mockGetProductReviews,
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
@@ -37,6 +39,11 @@ const SAMPLE_PRODUCT: DetailProduct = {
   Image: "https://example.com/hk.jpg",
 };
 
+const SAMPLE_API_REVIEWS = [
+  { id: 1, Description: "Una obra maestra de ritmo.", Recommended: true, ProductName: "Hollow Knight", UserName: "lucia" },
+  { id: 2, Description: "Bonita por fuera, vacía por dentro.", Recommended: false, ProductName: "Hollow Knight", UserName: "sara" },
+];
+
 function renderWithState(product: DetailProduct) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: "/product/42", state: { product } }]}>
@@ -54,6 +61,11 @@ function renderByUrl(name: string) {
     </MemoryRouter>,
   );
 }
+
+beforeEach(() => {
+  // Endpoint de reseñas por producto: por defecto vacío para que la ficha renderice sin reventar.
+  mockGetProductReviews.mockResolvedValue([]);
+});
 
 afterEach(() => {
   cleanup();
@@ -212,19 +224,21 @@ describe("ProductDetailPage", () => {
   });
 
   describe("community reviews section", () => {
-    it("renders the community reviews header", () => {
+    it("renders the community reviews header", async () => {
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
+      mockGetProductReviews.mockResolvedValue(SAMPLE_API_REVIEWS);
       renderWithState(SAMPLE_PRODUCT);
-      expect(screen.getByText("La comunidad opina")).toBeInTheDocument();
+      expect(await screen.findByText("La comunidad opina")).toBeInTheDocument();
     });
 
-    it("shows review verdicts", () => {
+    it("shows review verdicts", async () => {
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
+      mockGetProductReviews.mockResolvedValue(SAMPLE_API_REVIEWS);
       renderWithState(SAMPLE_PRODUCT);
-      const yesChips = screen.getAllByText("Sí");
-      const noChips = screen.getAllByText("No");
-      expect(yesChips.length).toBeGreaterThan(0);
-      expect(noChips.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        expect(screen.getAllByText("Sí").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("No").length).toBeGreaterThan(0);
+      });
     });
   });
 

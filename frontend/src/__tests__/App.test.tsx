@@ -14,8 +14,15 @@ vi.mock("@/services/api", () => ({
   register: vi.fn(),
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
+  searchUsers: vi.fn(() => Promise.resolve([])),
   createReview: vi.fn(),
   getRecommendations: mockGetRecommendations,
+  getFollowers: vi.fn(() => Promise.resolve([])),
+  getFollowing: vi.fn(() => Promise.resolve([])),
+  getRandomProducts: vi.fn(() => Promise.resolve([])),
+  getInfluencerRecommendations: vi.fn(() => Promise.resolve([])),
+  getInfluencerNotRecommendations: vi.fn(() => Promise.resolve([])),
+  getUserReviews: vi.fn(() => Promise.resolve([])),
 }));
 
 const fakeUser = { id: 1, email: "a@b.com", name: "Ana", surname: "G", user_name: "ana" };
