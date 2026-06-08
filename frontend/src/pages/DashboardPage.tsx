@@ -416,7 +416,7 @@ function ScrollArea({ children, className = "" }: { children: ReactNode; classNa
       <div
         ref={scrollRef}
         onScroll={update}
-        className="max-h-[28rem] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="max-h-[28rem] overflow-y-auto px-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         <div ref={contentRef} className={className}>
           {children}
