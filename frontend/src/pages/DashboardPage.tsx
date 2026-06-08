@@ -7,7 +7,6 @@ import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
 import { searchProducts, searchUsers, getRecommendations, getRandomProducts, getInfluencerRecommendations, getInfluencerNotRecommendations, getFollowing, getUserReviews, type Product, type ProfileUser, type Review } from "@/services/api";
 
-/* ---------- Mock data (recommendations and circle: API not yet available) ---------- */
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
   book: { label: "Libro", grad: "from-[#6b3b2d] via-[#a35a2e] to-[#3f261b]" },
@@ -15,14 +14,6 @@ const CATS = {
   film: { label: "Película", grad: "from-[#6b2d4a] via-[#a32e5e] to-[#3f1b2c]" },
 } as const;
 type CatKey = keyof typeof CATS;
-
-// type label for the example recommendations (when opening their profile)
-const CAT_TO_TYPE: Record<CatKey, string> = {
-  game: "Videojuego",
-  book: "Libro",
-  series: "Serie",
-  film: "Película",
-};
 
 function catKey(type?: string): CatKey {
   const t = (type ?? "").toLowerCase();
@@ -104,35 +95,7 @@ function Cover({
 
 
 
-/* ---------- Cover carousel (auto-scrolls) ---------- */
-// Sample titles for the carousel (until the backend provides real covers)
-const FEATURED: { name: string; cat: CatKey }[] = [
-  { name: "Dune: Parte Dos", cat: "film" },
-  { name: "The Last of Us", cat: "series" },
-  { name: "Tunic", cat: "game" },
-  { name: "Klara y el Sol", cat: "book" },
-  { name: "Severance", cat: "series" },
-  { name: "Oppenheimer", cat: "film" },
-  { name: "Pachinko", cat: "book" },
-  { name: "Hollow Knight", cat: "game" },
-  { name: "Shogun", cat: "series" },
-  { name: "Poor Things", cat: "film" },
-  { name: "La carretera", cat: "book" },
-  { name: "Elden Ring", cat: "game" },
-];
-
-// Deck (Fisher-Yates): randomized order on every load
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const tmp = a[i]!;
-    a[i] = a[j]!;
-    a[j] = tmp;
-  }
-  return a;
-}
-
+/* ---------- Cover carousel (auto-scrolls, real random products) ---------- */
 function FeaturedStrip() {
   const navigate = useNavigate();
   // Seed with shuffled sample covers so the strip is never empty; swap in the
@@ -165,9 +128,10 @@ function FeaturedStrip() {
   const open = (p: Product) =>
     navigate(`/product/${encodeURIComponent(p.Name)}`, { state: { product: p } });
 
+  if (loading || items.length === 0) return null;
+
   return (
     <div className="group relative overflow-hidden">
-      {/* Blurred edges so the cards blend with the background */}
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
       <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">

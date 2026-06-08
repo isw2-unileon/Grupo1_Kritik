@@ -539,3 +539,28 @@ func (h *ReviewHandler) GetRandomProductsHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, products)
 }
+
+// GetProductsFilterHandler returns products filtered by type and/or genre (public).
+func (h *ReviewHandler) GetProductsFilterHandler(c *gin.Context) {
+	typeFilter := strings.TrimSpace(c.Query("type"))
+	genreStr := strings.TrimSpace(c.Query("genre"))
+
+	limit := 10
+	if l, err := strconv.Atoi(c.DefaultQuery("limit", "10")); err == nil && l > 0 {
+		limit = l
+	}
+
+	var genreFilter []string
+	if genreStr != "" {
+		genreFilter = strings.Split(genreStr, ",")
+	}
+
+	products, err := h.DB.GetProductsFilter(typeFilter, genreFilter, limit)
+	if err != nil {
+		slog.Error("get products filter: query failed", "type", typeFilter, "genre", genreFilter, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load filtered products"})
+		return
+	}
+
+	c.JSON(http.StatusOK, products)
+}

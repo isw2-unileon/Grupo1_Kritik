@@ -15,7 +15,11 @@ func init() {
 }
 
 func TestNewRouter_HasAllRoutes(t *testing.T) {
-	mock := &bd.MockDatabase{}
+	mock := &bd.MockDatabase{
+		MockGetProductsFilter: func(typeFilter string, genreFilter []string, limit int) ([]bd.Product, error) {
+			return []bd.Product{}, nil
+		},
+	}
 	r := newRouter(mock)
 
 	routes := []struct {
@@ -34,6 +38,7 @@ func TestNewRouter_HasAllRoutes(t *testing.T) {
 		{"POST", "/api/follow"},
 		{"GET", "/api/recommendations/influencer"},
 		{"GET", "/api/recommendations/influencer/not"},
+		{"GET", "/api/products/filter"},
 	}
 
 	for _, rt := range routes {
