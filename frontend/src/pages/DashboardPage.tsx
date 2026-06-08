@@ -1,20 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
 import UserAvatar from "@/components/UserAvatar";
 import ProfilePanel from "@/components/ProfilePanel";
-import {
-  searchProducts,
-  searchUsers,
-  getRecommendations,
-  getRandomProducts,
-  getInfluencerRecommendations,
-  getInfluencerNotRecommendations,
-  type Product,
-  type ProfileUser,
-} from "@/services/api";
+import { searchProducts, searchUsers, getRecommendations, getRandomProducts, getInfluencerRecommendations, getInfluencerNotRecommendations, getFollowing, getUserReviews, type Product, type ProfileUser, type Review } from "@/services/api";
 
 const CATS = {
   game: { label: "Videojuego", grad: "from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]" },
@@ -32,6 +23,7 @@ function catKey(type?: string): CatKey {
   if (t.includes("libro") || t.includes("book")) return "book";
   return "game";
 }
+
 
 const TABS = [
   { id: "inicio", label: "Inicio" },
@@ -52,19 +44,40 @@ function Spinner() {
   );
 }
 
-function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; className?: string }) {
+function Cover({
+  cat,
+  name,
+  image,
+  className = "",
+}: {
+  cat: CatKey;
+  name?: string;
+  image?: string;
+  className?: string;
+}) {
   const c = CATS[cat];
   return (
     <div className={`relative overflow-hidden bg-gradient-to-br ${c.grad} ${className}`}>
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-35"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
-          backgroundSize: "14px 14px",
-        }}
-      />
+      {image ? (
+        // portada real del producto (columna Image); si no hay, se ve el gradiente
+        <img
+          src={image}
+          alt={name ?? ""}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px)",
+            backgroundSize: "14px 14px",
+          }}
+        />
+      )}
+      {/* velo oscuro inferior: mantiene el texto legible sobre imagen o gradiente */}
       <div
         aria-hidden
         className="absolute inset-0"
@@ -82,30 +95,72 @@ function Cover({ cat, name, className = "" }: { cat: CatKey; name?: string; clas
 
 
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i]!;
+    a[i] = a[j]!;
+    a[j] = tmp;
+  }
+  return a;
+}
+
+const CAT_TO_TYPE: Record<CatKey, string> = {
+  game: "game",
+  book: "book",
+  series: "series",
+  film: "film",
+};
+
+const FEATURED: { name: string; cat: CatKey }[] = [
+  { name: "Dune: Parte Dos", cat: "film" },
+  { name: "The Last of Us", cat: "series" },
+  { name: "Tunic", cat: "game" },
+  { name: "Klara y el Sol", cat: "book" },
+  { name: "Severance", cat: "series" },
+  { name: "Oppenheimer", cat: "film" },
+  { name: "Pachinko", cat: "book" },
+  { name: "Hollow Knight", cat: "game" },
+  { name: "Shogun", cat: "series" },
+  { name: "Poor Things", cat: "film" },
+  { name: "La carretera", cat: "book" },
+];
+
 /* ---------- Cover carousel (auto-scrolls, real random products) ---------- */
 function FeaturedStrip() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Seed with shuffled sample covers so the strip is never empty; swap in the
+  // real random products from the backend (GET /api/products/random) on mount.
+  const [items, setItems] = useState<Product[]>(() =>
+    shuffle(
+      FEATURED.map((f, i) => ({
+        id: -(i + 1), // negative ids: placeholders that never collide with real ones
+        Name: f.name,
+        Type: CAT_TO_TYPE[f.cat],
+      })),
+    ),
+  );
 
   useEffect(() => {
-    let active = true;
-    getRandomProducts(12)
-      .then((data) => { if (active) setItems(data); })
-      .catch(() => { /* silently ignore */ })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    const controller = new AbortController();
+    getRandomProducts(12, controller.signal)
+      .then((data) => {
+        if (data.length > 0) setItems(data); // si viene vacío, se quedan las de ejemplo
+      })
+      .catch(() => {
+        /* error de red o RPC get_random_products inexistente -> se mantiene el ejemplo */
+      });
+    return () => controller.abort();
   }, []);
 
-  // Duplicate the list so the loop is continuous and seamless.
-  const loop = [...items, ...items];
+  // We duplicate the list so the loop is continuous and seamless.
+  const loop = useMemo(() => [...items, ...items], [items]);
 
   const open = (p: Product) =>
-    navigate(`/product/${p.id}`, {
-      state: { product: p },
-    });
+    navigate(`/product/${encodeURIComponent(p.Name)}`, { state: { product: p } });
 
-  if (loading || items.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div className="group relative overflow-hidden">
@@ -120,7 +175,7 @@ function FeaturedStrip() {
             aria-label={`Ver ${p.Name}`}
             className="mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:-translate-y-1 hover:border-acid/40"
           >
-            <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[2/3]" />
+            <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} className="aspect-[2/3]" />
           </button>
         ))}
       </div>
@@ -260,7 +315,7 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
               }}
               className="cursor-pointer overflow-hidden rounded-3xl border border-line bg-ink/60 transition hover:-translate-y-1 hover:border-acid/35"
             >
-              <Cover cat={catKey(p.Type)} name={p.Name} className="aspect-[16/10]" />
+              <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} className="aspect-[16/10]" />
               <div className="p-4">
                 <p className="text-sm text-dim">"{p.Description}"</p>
                 <Link
@@ -294,12 +349,11 @@ function Recommendations({ limit, onSeeAll }: { limit?: number; onSeeAll?: () =>
   );
 }
 
-function ProductCircleRow({ product, accent }: { product: Product; accent: string }) {
+// one clickable row of the circle: opens the real product profile via router state
+function CircleRow({ product, accent }: { product: Product; accent: string }) {
   const navigate = useNavigate();
   const open = () =>
-    navigate(`/product/${product.id}`, {
-      state: { product },
-    });
+    navigate(`/product/${encodeURIComponent(product.Name)}`, { state: { product } });
 
   return (
     <div
@@ -314,149 +368,418 @@ function ProductCircleRow({ product, accent }: { product: Product; accent: strin
       }}
       className={`flex cursor-pointer items-center gap-3 rounded-2xl bg-ink/60 p-3 ring-1 ring-line transition hover:-translate-y-0.5 ${accent}`}
     >
-      <Cover cat={catKey(product.Type)} className="h-12 w-12 shrink-0 rounded-lg" />
+      <Cover cat={catKey(product.Type)} image={product.Image} className="h-12 w-12 shrink-0 rounded-lg" />
       <div className="min-w-0">
         <p className="truncate font-semibold">{product.Name}</p>
-        <p className="text-xs text-faint">{product.Description ? `"${product.Description}"` : "—"}</p>
+        <p className="text-xs text-faint">{product.Type || CATS[catKey(product.Type)].label}</p>
       </div>
     </div>
   );
 }
 
-function FriendsCircleSection({
-  fetchFn,
-  accentClass,
-  ringAccentClass,
-  subtitle,
-  title,
-  emptyMessage,
-  onExpand,
-}: {
-  fetchFn: (limit: number) => Promise<Product[]>;
-  accentClass: string;
-  ringAccentClass: string;
-  subtitle: string;
-  title: string;
-  emptyMessage: string;
-  onExpand?: () => void;
-}) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [offset, setOffset] = useState(-1);
+// shared list for the two circle blocks. Pulls the real products that the people
+// you follow recommended / did not recommend. Shows a preview (limit) with a
+// link to the full circle tab, and picks the empty message by follow state.
+/* Area con scroll interno y barra oculta. Muestra un degradado + chevron arriba
+   y abajo solo cuando hay mas contenido en esa direccion (se desvanecen al
+   llegar al borde), como pista visual de que se puede hacer scroll. */
+function ScrollArea({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [up, setUp] = useState(false);
+  const [down, setDown] = useState(false);
+
+  const update = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setUp(el.scrollTop > 4);
+    setDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    fetchFn(50)
-      .then((data) => { if (active) setProducts(data); })
-      .catch(() => { /* silently ignore */ })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [fetchFn]);
+    update();
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    ro.observe(content);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [update]);
 
-  const isExpanded = offset >= 0;
-  const visible = isExpanded ? products.slice(offset, offset + 10) : products.slice(0, 5);
-  const hasNext = offset + 10 < products.length;
-  const hasPrev = offset > 0;
+  return (
+    <div className="relative mt-5">
+      <div
+        ref={scrollRef}
+        onScroll={update}
+        className="max-h-[28rem] overflow-y-auto px-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div ref={contentRef} className={className}>
+          {children}
+        </div>
+      </div>
 
-  const handleToggle = () => {
-    if (onExpand) {
-      onExpand();
-    } else if (isExpanded) {
-      setOffset(-1);
-    } else if (products.length > 5) {
-      setOffset(0);
-    }
-  };
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 top-0 flex h-10 items-start justify-center bg-gradient-to-b from-surface to-transparent transition-opacity duration-200 ${up ? "opacity-100" : "opacity-0"}`}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="mt-0.5 text-dim">
+          <path d="m18 15-6-6-6 6" />
+        </svg>
+      </div>
 
-  if (loading) {
-    return (
-      <Card as="article" className="p-6">
-        <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentClass}`}>{subtitle}</p>
-        <h2 className="mt-2 font-display text-2xl font-semibold">{title}</h2>
-        <p className="mt-5 text-sm text-faint">Cargando…</p>
-      </Card>
-    );
-  }
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 bottom-0 flex h-10 items-end justify-center bg-gradient-to-t from-surface to-transparent transition-opacity duration-200 ${down ? "opacity-100" : "opacity-0"}`}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="mb-0.5 animate-bounce text-dim">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function CircleList({
+  title,
+  heading,
+  accentText,
+  rowAccent,
+  fetcher,
+  emptyFollowing,
+  emptyNoFollows,
+  limit,
+  onSeeAll,
+}: {
+  title: string;
+  heading: string;
+  accentText: string;
+  rowAccent: string;
+  fetcher: (limit?: number, signal?: AbortSignal) => Promise<Product[]>;
+  emptyFollowing: string;
+  emptyNoFollows: string;
+  limit?: number;
+  onSeeAll?: () => void;
+}) {
+  const preview = typeof limit === "number";
+  const [items, setItems] = useState<Product[]>([]);
+  const [followsAnyone, setFollowsAnyone] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(false);
+    fetcher(undefined, controller.signal)
+      .then(async (data) => {
+        if (controller.signal.aborted) return;
+        setItems(data);
+        // Solo cuando no hay nada que mostrar necesitamos saber si sigues a
+        // alguien, para elegir el mensaje de vacío correcto.
+        if (data.length === 0) {
+          try {
+            const following = await getFollowing(controller.signal);
+            if (controller.signal.aborted) return;
+            setFollowsAnyone(following.length > 0);
+          } catch {
+            if (controller.signal.aborted) return;
+            setFollowsAnyone(null);
+          }
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setItems([]);
+        setFollowsAnyone(null);
+        setError(true);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [fetcher, reloadKey]);
+
+  const visible = preview ? items.slice(0, limit) : items;
 
   return (
     <Card as="article" className="p-6">
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="w-full text-left"
-        aria-expanded={onExpand ? undefined : isExpanded}
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentClass}`}>{subtitle}</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold">{title}</h2>
+      <p className={`text-xs font-medium uppercase tracking-[0.34em] ${accentText}`}>{title}</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">{heading}</h2>
+      <ScrollArea className="space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6 text-faint">
+            <Spinner />
           </div>
-          {products.length > 5 && (
-            <svg
-              className={`h-5 w-5 shrink-0 text-faint transition-transform duration-200 ${!onExpand && isExpanded ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        ) : error ? (
+          <div className="py-4">
+            <p className="text-sm text-faint">
+              No se pudieron cargar las recomendaciones de tu círculo.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
             >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          )}
-        </div>
-      </button>
+              Reintentar
+            </button>
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-4 text-sm text-faint">
+            {followsAnyone ? emptyFollowing : emptyNoFollows}
+          </p>
+        ) : (
+          visible.map((p) => <CircleRow key={p.id} product={p} accent={rowAccent} />)
+        )}
+      </ScrollArea>
+      {preview && onSeeAll && items.length > (limit ?? 0) && (
+        <button
+          type="button"
+          onClick={onSeeAll}
+          className="mt-4 w-full rounded-2xl border border-line py-2.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+        >
+          Ver más
+        </button>
+      )}
+    </Card>
+  );
+}
 
-      {products.length === 0 ? (
-        <p className="mt-5 text-sm text-faint">{emptyMessage}</p>
-      ) : (
-        <>
-          <div className="mt-5 space-y-3">
-            {visible.map((p) => (
-              <ProductCircleRow key={p.id} product={p} accent={ringAccentClass} />
+function FriendsYes({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
+  return (
+    <CircleList
+      title="Tu círculo · Sí"
+      heading="A tu círculo le gustó"
+      accentText="text-acid"
+      rowAccent="hover:ring-acid/35"
+      fetcher={getInfluencerRecommendations}
+      emptyFollowing="La gente que sigues aún no ha recomendado nada."
+      emptyNoFollows="Aún no sigues a nadie. Sigue a gente para ver lo que recomienda tu círculo."
+      limit={limit}
+      onSeeAll={onSeeAll}
+    />
+  );
+}
+
+function FriendsNo({ limit, onSeeAll }: { limit?: number; onSeeAll?: () => void }) {
+  return (
+    <CircleList
+      title="Tu círculo · No"
+      heading="No les convenció"
+      accentText="text-coral"
+      rowAccent="hover:ring-coral/35"
+      fetcher={getInfluencerNotRecommendations}
+      emptyFollowing="La gente que sigues aún no ha descartado nada."
+      emptyNoFollows="Aún no sigues a nadie. Sigue a gente para ver lo que recomienda tu círculo."
+      limit={limit}
+      onSeeAll={onSeeAll}
+    />
+  );
+}
+
+/* Avatares de la gente a la que sigues (cabecera de la pestaña Tu círculo). */
+function FollowingStrip() {
+  const [people, setPeople] = useState<ProfileUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(false);
+    getFollowing(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setPeople(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setPeople([]);
+        setError(true);
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  return (
+    <Card as="section" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-dim">Sigues a</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">
+        Tu círculo{!loading && people.length > 0 ? ` · ${people.length}` : ""}
+      </h2>
+      <div className="mt-5">
+        {loading ? (
+          <div className="flex justify-center py-4 text-faint">
+            <Spinner />
+          </div>
+        ) : error ? (
+          <div className="py-2">
+            <p className="text-sm text-faint">No se pudo cargar tu círculo.</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : people.length === 0 ? (
+          <p className="py-2 text-sm text-faint">
+            Aún no sigues a nadie. Busca usuarios y síguelos para empezar a construir tu círculo.
+          </p>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {people.map((u) => (
+              <Link
+                key={u.id}
+                to={`/user/${u.id}`}
+                title={`@${u.UserName}`}
+                className="flex w-16 shrink-0 flex-col items-center gap-2 text-center transition hover:-translate-y-0.5"
+              >
+                <UserAvatar image={u.Image} name={u.Name} size="md" />
+                <span className="w-full truncate text-xs text-dim">{u.Name}</span>
+              </Link>
             ))}
           </div>
+        )}
+      </div>
+    </Card>
+  );
+}
 
-          {onExpand ? (
-            products.length > 5 && (
-              <button
-                type="button"
-                onClick={onExpand}
-                className="mt-4 w-full rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
-              >
-                Ir a tu círculo →
-              </button>
-            )
-          ) : (
-            (isExpanded || products.length > 5) && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {isExpanded && (
-                  <button
-                    type="button"
-                    onClick={() => setOffset(-1)}
-                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
-                  >
-                    Mostrar menos ↑
-                  </button>
-                )}
-                {hasPrev && (
-                  <button
-                    type="button"
-                    onClick={() => setOffset((p) => Math.max(p - 10, 0))}
-                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
-                  >
-                    ← Anterior
-                  </button>
-                )}
-                {hasNext && (
-                  <button
-                    type="button"
-                    onClick={() => setOffset((p) => p + 10)}
-                    className="flex-1 rounded-2xl border border-line bg-ink/40 px-4 py-2.5 text-sm font-semibold text-dim transition hover:border-acid/35 hover:text-cream"
-                  >
-                    Siguientes 10 →
-                  </button>
-                )}
+/* Chip de veredicto compacto para el feed (lima = sí, coral = no). */
+function FeedVerdict({ recommended }: { recommended: boolean }) {
+  return recommended ? (
+    <span className="shrink-0 rounded-full border border-acid bg-acid/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-acid">
+      Recomienda
+    </span>
+  ) : (
+    <span className="shrink-0 rounded-full border border-coral bg-coral/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-coral">
+      No recomienda
+    </span>
+  );
+}
+
+type FeedItem = { review: Review; author: ProfileUser };
+
+/* Ultimas resenas de la gente a la que sigues. El backend no tiene endpoint de
+   feed, asi que se compone juntando getFollowing + las resenas de cada uno y se
+   ordena por id descendente (no hay fecha; el id es autoincremental, asi que el
+   mas alto es el mas reciente). Son N+1 peticiones: ok con circulos pequenos. */
+function CircleFeed({ limit = 12 }: { limit?: number }) {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [followsAnyone, setFollowsAnyone] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(false);
+    (async () => {
+      try {
+        const following = await getFollowing(controller.signal);
+        if (controller.signal.aborted) return;
+        setFollowsAnyone(following.length > 0);
+        if (following.length === 0) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+        const perUser = await Promise.all(
+          following.map((u) =>
+            getUserReviews(u.id, controller.signal)
+              .then((revs) => revs.map((review) => ({ review, author: u })))
+              .catch(() => [] as FeedItem[]),
+          ),
+        );
+        if (controller.signal.aborted) return;
+        const all = perUser.flat().sort((a, b) => b.review.id - a.review.id);
+        setItems(all.slice(0, limit));
+        setLoading(false);
+      } catch {
+        if (controller.signal.aborted) return;
+        setItems([]);
+        setError(true);
+        setLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [limit, reloadKey]);
+
+  return (
+    <Card as="section" className="p-6">
+      <p className="text-xs font-medium uppercase tracking-[0.34em] text-dim">Actividad reciente</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold">Últimas reseñas de tu círculo</h2>
+      <ScrollArea className="space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-6 text-faint">
+            <Spinner />
+          </div>
+        ) : error ? (
+          <div className="py-4">
+            <p className="text-sm text-faint">No se pudieron cargar las reseñas de tu círculo.</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="mt-3 rounded-full border border-line px-4 py-1.5 text-sm font-medium text-dim transition hover:border-cream/35 hover:bg-cream/5"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : items.length === 0 ? (
+          <p className="py-4 text-sm text-faint">
+            {followsAnyone
+              ? "La gente que sigues aún no ha publicado reseñas."
+              : "Aún no sigues a nadie. Sigue a gente para ver aquí sus reseñas."}
+          </p>
+        ) : (
+          items.map(({ review, author }) => (
+            <article
+              key={review.id}
+              className="rounded-2xl border border-line bg-ink/60 p-4 transition hover:border-acid/35"
+            >
+              <div className="flex items-start gap-3">
+                <Link to={`/user/${author.id}`} className="shrink-0">
+                  <UserAvatar image={author.Image} name={author.Name} size="sm" />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link
+                      to={`/user/${author.id}`}
+                      className="font-semibold text-cream transition hover:text-acid"
+                    >
+                      {author.Name}
+                    </Link>
+                    <span className="text-xs text-faint">@{author.UserName}</span>
+                    <FeedVerdict recommended={review.Recommended} />
+                  </div>
+                  {review.ProductName && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/product/${encodeURIComponent(review.ProductName)}`)}
+                      className="mt-1 block text-sm text-dim transition hover:text-cream"
+                    >
+                      sobre <span className="font-medium">{review.ProductName}</span>
+                    </button>
+                  )}
+                  {review.Description && (
+                    <p className="mt-2 text-sm leading-relaxed text-cream/90">{review.Description}</p>
+                  )}
+                </div>
               </div>
-            )
-          )}
-        </>
-      )}
+            </article>
+          ))
+        )}
+      </ScrollArea>
     </Card>
   );
 }
@@ -518,7 +841,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const q = query.trim();
-    if (searchMode !== "products" || q.length < 2) {
+    if (searchMode !== "products" || q.length < 1) {
       setResults([]);
       setSearching(false);
       return;
@@ -545,7 +868,7 @@ export default function DashboardPage() {
   // User search — debounced; runs only when the bar is in "users" mode
   useEffect(() => {
     const q = query.trim();
-    if (searchMode !== "users" || q.length < 2) {
+    if (searchMode !== "users" || q.length < 1) {
       setUserResults([]);
       setUserSearching(false);
       return;
@@ -579,7 +902,7 @@ export default function DashboardPage() {
     tabsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, [activeTab]);
 
-  const isSearching = query.trim().length >= 2;
+  const isSearching = query.trim().length >= 1;
 
   const renderTab = () => {
     switch (activeTab) {
@@ -594,24 +917,8 @@ export default function DashboardPage() {
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
               <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
               <aside className="space-y-6">
-                <FriendsCircleSection
-                  fetchFn={getInfluencerRecommendations}
-                  accentClass="text-acid"
-                  ringAccentClass="hover:ring-acid/35"
-                  subtitle="Tu círculo · Sí"
-                  title="A tus amigos les gustó"
-                  emptyMessage="Tus amigos no han recomendado nada todavía."
-                  onExpand={() => setActiveTab("circulo")}
-                />
-                <FriendsCircleSection
-                  fetchFn={getInfluencerNotRecommendations}
-                  accentClass="text-coral"
-                  ringAccentClass="hover:ring-coral/35"
-                  subtitle="Tu círculo · No"
-                  title="No les convenció"
-                  emptyMessage="No hay productos descartados por tu círculo."
-                  onExpand={() => setActiveTab("circulo")}
-                />
+                <FriendsYes limit={3} onSeeAll={() => setActiveTab("circulo")} />
+                <FriendsNo limit={3} onSeeAll={() => setActiveTab("circulo")} />
                 <ProfileCard user={user} onOpen={() => setActiveTab("perfil")} />
               </aside>
             </div>
@@ -623,23 +930,13 @@ export default function DashboardPage() {
         return <ReviewsSection />;
       case "circulo":
         return (
-          <div className="grid gap-6 md:grid-cols-2">
-            <FriendsCircleSection
-              fetchFn={getInfluencerRecommendations}
-              accentClass="text-acid"
-              ringAccentClass="hover:ring-acid/35"
-              subtitle="Tu círculo · Sí"
-              title="A tus amigos les gustó"
-              emptyMessage="Tus amigos no han recomendado nada todavía."
-            />
-            <FriendsCircleSection
-              fetchFn={getInfluencerNotRecommendations}
-              accentClass="text-coral"
-              ringAccentClass="hover:ring-coral/35"
-              subtitle="Tu círculo · No"
-              title="No les convenció"
-              emptyMessage="No hay productos descartados por tu círculo."
-            />
+          <div className="space-y-6">
+            <FollowingStrip />
+            <div className="grid gap-6 md:grid-cols-2">
+              <FriendsYes />
+              <FriendsNo />
+            </div>
+            <CircleFeed />
           </div>
         );
       case "perfil":

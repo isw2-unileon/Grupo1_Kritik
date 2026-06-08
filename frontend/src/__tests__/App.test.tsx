@@ -3,20 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import App from "@/App";
 
-const {
-  mockGetReviews,
-  mockSearchProducts,
-  mockGetRecommendations,
-  mockGetRandomProducts,
-  mockGetInfluencerRecommendations,
-  mockGetInfluencerNotRecommendations,
-} = vi.hoisted(() => ({
+const { mockGetReviews, mockSearchProducts, mockGetRecommendations } = vi.hoisted(() => ({
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
   mockGetRecommendations: vi.fn(),
-  mockGetRandomProducts: vi.fn(),
-  mockGetInfluencerRecommendations: vi.fn(),
-  mockGetInfluencerNotRecommendations: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -24,11 +14,15 @@ vi.mock("@/services/api", () => ({
   register: vi.fn(),
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
+  searchUsers: vi.fn(() => Promise.resolve([])),
   createReview: vi.fn(),
   getRecommendations: mockGetRecommendations,
-  getRandomProducts: mockGetRandomProducts,
-  getInfluencerRecommendations: mockGetInfluencerRecommendations,
-  getInfluencerNotRecommendations: mockGetInfluencerNotRecommendations,
+  getFollowers: vi.fn(() => Promise.resolve([])),
+  getFollowing: vi.fn(() => Promise.resolve([])),
+  getRandomProducts: vi.fn(() => Promise.resolve([])),
+  getInfluencerRecommendations: vi.fn(() => Promise.resolve([])),
+  getInfluencerNotRecommendations: vi.fn(() => Promise.resolve([])),
+  getUserReviews: vi.fn(() => Promise.resolve([])),
 }));
 
 const fakeUser = { id: 1, email: "a@b.com", name: "Ana", surname: "G", user_name: "ana" };
@@ -36,9 +30,6 @@ const fakeUser = { id: 1, email: "a@b.com", name: "Ana", surname: "G", user_name
 function authenticatedSetup() {
   mockGetReviews.mockResolvedValue([]);
   mockGetRecommendations.mockResolvedValue([]);
-  mockGetRandomProducts.mockResolvedValue([]);
-  mockGetInfluencerRecommendations.mockResolvedValue([]);
-  mockGetInfluencerNotRecommendations.mockResolvedValue([]);
   mockSearchProducts.mockReturnValue(new Promise(() => {}));
   localStorage.setItem("token", "t");
   localStorage.setItem("user", JSON.stringify(fakeUser));

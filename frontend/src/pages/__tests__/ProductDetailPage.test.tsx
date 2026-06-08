@@ -1,6 +1,6 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 
 const { mockSearchProducts, mockGetProductReviews } = vi.hoisted(() => ({
@@ -28,11 +28,6 @@ type DetailProduct = {
   Image?: string;
 };
 
-const MOCK_REVIEWS = [
-  { id: 1, Description: "Increíble juego, muy recomendado.", Recommended: true, ProductName: "Hollow Knight", UserName: "lucia" },
-  { id: 2, Description: "Bueno pero podría mejorar.", Recommended: false, ProductName: "Hollow Knight", UserName: "dani" },
-];
-
 const SAMPLE_PRODUCT: DetailProduct = {
   id: 42,
   Name: "Hollow Knight",
@@ -43,6 +38,11 @@ const SAMPLE_PRODUCT: DetailProduct = {
   Genre: ["action", "adventure"],
   Image: "https://example.com/hk.jpg",
 };
+
+const SAMPLE_API_REVIEWS = [
+  { id: 1, Description: "Una obra maestra de ritmo.", Recommended: true, ProductName: "Hollow Knight", UserName: "lucia" },
+  { id: 2, Description: "Bonita por fuera, vacía por dentro.", Recommended: false, ProductName: "Hollow Knight", UserName: "sara" },
+];
 
 function renderWithState(product: DetailProduct) {
   return render(
@@ -63,6 +63,7 @@ function renderByUrl(name: string) {
 }
 
 beforeEach(() => {
+  // Endpoint de reseñas por producto: por defecto vacío para que la ficha renderice sin reventar.
   mockGetProductReviews.mockResolvedValue([]);
 });
 
@@ -224,23 +225,19 @@ describe("ProductDetailPage", () => {
 
   describe("community reviews section", () => {
     it("renders the community reviews header", async () => {
-      mockGetProductReviews.mockResolvedValue(MOCK_REVIEWS);
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
+      mockGetProductReviews.mockResolvedValue(SAMPLE_API_REVIEWS);
       renderWithState(SAMPLE_PRODUCT);
-      await waitFor(() => {
-        expect(screen.getByText("La comunidad opina")).toBeInTheDocument();
-      });
+      expect(await screen.findByText("La comunidad opina")).toBeInTheDocument();
     });
 
     it("shows review verdicts", async () => {
-      mockGetProductReviews.mockResolvedValue(MOCK_REVIEWS);
       mockSearchProducts.mockRejectedValue(new Error("should not be called"));
+      mockGetProductReviews.mockResolvedValue(SAMPLE_API_REVIEWS);
       renderWithState(SAMPLE_PRODUCT);
       await waitFor(() => {
-        const yesChips = screen.getAllByText("Sí");
-        const noChips = screen.getAllByText("No");
-        expect(yesChips.length).toBeGreaterThan(0);
-        expect(noChips.length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Sí").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("No").length).toBeGreaterThan(0);
       });
     });
   });

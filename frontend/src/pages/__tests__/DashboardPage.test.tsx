@@ -5,7 +5,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { AuthProvider } from "@/contexts/AuthContext";
 import DashboardPage from "@/pages/DashboardPage";
 
-const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser, mockGetRecommendations, mockGetRandomProducts, mockGetInfluencerRecommendations, mockGetInfluencerNotRecommendations } = vi.hoisted(() => ({
+const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGetFollowing, mockUnfollowUser, mockGetRecommendations } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockGetReviews: vi.fn(),
   mockSearchProducts: vi.fn(),
@@ -13,9 +13,6 @@ const { mockLogin, mockGetReviews, mockSearchProducts, mockGetFollowers, mockGet
   mockGetFollowing: vi.fn(),
   mockUnfollowUser: vi.fn(),
   mockGetRecommendations: vi.fn(),
-  mockGetRandomProducts: vi.fn(),
-  mockGetInfluencerRecommendations: vi.fn(),
-  mockGetInfluencerNotRecommendations: vi.fn(),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -23,20 +20,19 @@ vi.mock("@/services/api", () => ({
   register: vi.fn(),
   getReviews: mockGetReviews,
   searchProducts: mockSearchProducts,
+  searchUsers: vi.fn(() => Promise.resolve([])),
   getFollowers: mockGetFollowers,
   getFollowing: mockGetFollowing,
   unfollowUser: mockUnfollowUser,
   getRecommendations: mockGetRecommendations,
-  getRandomProducts: mockGetRandomProducts,
-  getInfluencerRecommendations: mockGetInfluencerRecommendations,
-  getInfluencerNotRecommendations: mockGetInfluencerNotRecommendations,
+  getRandomProducts: vi.fn(() => Promise.resolve([])),
+  getInfluencerRecommendations: vi.fn(() => Promise.resolve([])),
+  getInfluencerNotRecommendations: vi.fn(() => Promise.resolve([])),
+  getUserReviews: vi.fn(() => Promise.resolve([])),
 }));
 
 function renderDashboard(followingOverride?: unknown[], recommendations?: unknown[]) {
   mockGetRecommendations.mockResolvedValue(recommendations ?? []);
-  mockGetRandomProducts.mockResolvedValue([]);
-  mockGetInfluencerRecommendations.mockResolvedValue([]);
-  mockGetInfluencerNotRecommendations.mockResolvedValue([]);
   mockGetFollowers.mockResolvedValue([]);
   mockGetFollowing.mockResolvedValue(followingOverride ?? []);
   localStorage.setItem("token", "t");
@@ -77,7 +73,7 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Sugerencias para ti")).toBeInTheDocument();
     });
-    expect(screen.getByText("A tus amigos les gustó")).toBeInTheDocument();
+    expect(screen.getByText("A tu círculo le gustó")).toBeInTheDocument();
     expect(screen.getByText("No les convenció")).toBeInTheDocument();
   });
 
@@ -162,7 +158,7 @@ describe("DashboardPage", () => {
       await user.click(screen.getByText("Perfil"));
       await user.click(screen.getByText("seguidos"));
 
-      expect(screen.getByRole("dialog", { name: "Usuarios que sigues" })).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Siguiendo" })).toBeInTheDocument();
       expect(screen.getByText("User One")).toBeInTheDocument();
       expect(screen.getByText("User Two")).toBeInTheDocument();
     });

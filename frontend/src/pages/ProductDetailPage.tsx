@@ -6,6 +6,20 @@ import ProductEditModal from "@/components/ProductEditModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { searchProducts, getProductReviews, type Review } from "@/services/api";
 
+/* ============================================================
+   Title Detail Page — Steam-inspired, with Kritik's identity
+   (the Yes/No verdict as "% recommended").
+
+   HOW THE DATA ARRIVES
+   The product is received via router state when clicking a card
+   (catalog search or recommendations). The page uses that real
+   data (Type, Genre, Release Date, Description, Average Score).
+
+   REVIEWS
+   The community reviews and the "% recommended" verdict are real:
+   they come from GET /api/products/:id/reviews (GetReviewsByProductID).
+   ============================================================ */
+
 type DetailProduct = {
   id: number;
   Name: string;
@@ -35,6 +49,7 @@ function catFromType(type?: string): CatKey {
   if (t.includes("libro") || t.includes("book")) return "book";
   return "other";
 }
+
 
 type Tier = { label: string; tone: "acid" | "cream" | "coral" };
 function tierFor(pct: number): Tier {
@@ -123,6 +138,18 @@ function RecommendationCard({
   positives: number;
   total: number;
 }) {
+  if (total === 0) {
+    return (
+      <Card as="section" className="p-6">
+        <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Veredicto de la comunidad</p>
+        <p className="mt-4 font-display text-2xl font-semibold text-cream">Sin veredictos todavía</p>
+        <p className="mt-2 text-sm text-dim">
+          Nadie ha publicado una reseña de este título. ¡Sé el primero en dar tu veredicto!
+        </p>
+      </Card>
+    );
+  }
+
   return (
     <Card as="section" className="p-6">
       <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">Veredicto de la comunidad</p>
@@ -204,38 +231,39 @@ function DetailsCard({
   );
 }
 
-function CommunityReviews({ reviews }: { reviews: Review[] }) {
-  if (reviews.length === 0) return null;
-
+function CommunityReviews({ reviews, loading }: { reviews: Review[]; loading: boolean }) {
   return (
     <Card as="section" className="p-7 sm:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">La comunidad opina</p>
-          <h2 className="mt-2 font-display text-3xl font-semibold">Veredictos</h2>
-        </div>
-        <span className="shrink-0 rounded-full border border-line bg-ink/50 px-3 py-1 text-xs font-semibold text-dim">
-          {reviews.length} {reviews.length === 1 ? "veredicto" : "veredictos"}
-        </span>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-[0.34em] text-acid">La comunidad opina</p>
+        <h2 className="mt-2 font-display text-3xl font-semibold">Veredictos</h2>
       </div>
 
       <div className="mt-6 space-y-3">
-        {reviews.map((r) => (
-          <article key={r.id} className="rounded-2xl border border-line bg-ink/60 p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                  {r.UserName.charAt(0).toUpperCase()}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-cream">@{r.UserName}</p>
+        {loading ? (
+          <p className="py-6 text-center text-sm text-faint">Cargando reseñas…</p>
+        ) : reviews.length === 0 ? (
+          <p className="py-6 text-center text-sm text-faint">
+            Aún no hay reseñas de este título. Sé el primero en publicar tu veredicto.
+          </p>
+        ) : (
+          reviews.map((r) => (
+            <article key={r.id} className="rounded-2xl border border-line bg-ink/60 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
+                    {(r.UserName || "?").charAt(0).toUpperCase()}
+                  </span>
+                  <p className="text-sm font-semibold text-cream">@{r.UserName || "anónimo"}</p>
                 </div>
+                <VerdictChip yes={r.Recommended} />
               </div>
-              <VerdictChip yes={r.Recommended} />
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-dim">{r.Description}</p>
-          </article>
-        ))}
+              {r.Description && (
+                <p className="mt-3 text-sm leading-relaxed text-dim">{r.Description}</p>
+              )}
+            </article>
+          ))
+        )}
       </div>
     </Card>
   );
@@ -257,6 +285,7 @@ export default function ProductDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   // WITHOUT TOUCHING THE BACKEND: we request the REAL product by name using the existing
   // endpoint (GET /api/products?q=). The product from state, if available, renders instantly;
@@ -290,14 +319,26 @@ export default function ProductDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
+  // Reviews for this product (real, from GET /api/products/:id/reviews).
   useEffect(() => {
-    if (!product?.id) return;
+    if (!product || product.id <= 0) {
+      setReviews([]);
+      return;
+    }
     const controller = new AbortController();
+    setReviewsLoading(true);
     getProductReviews(product.id, controller.signal)
-      .then(setReviews)
-      .catch(() => {});
+      .then((data) => {
+        setReviews(data);
+        setReviewsLoading(false);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setReviews([]);
+        setReviewsLoading(false);
+      });
     return () => controller.abort();
-  }, [product?.id]);
+  }, [product]);
 
   if (loading && !product) {
     return (
@@ -335,7 +376,7 @@ export default function ProductDetailPage() {
   const positives = reviews.filter((r) => r.Recommended).length;
   const pct = total ? Math.round((positives / total) * 100) : 0;
   const tier = tierFor(pct);
-  const recommended = pct >= 50;
+  const recommended = total > 0 && pct >= 50;
   const release = formatRelease(product.Release);
 
   return (
@@ -395,9 +436,11 @@ export default function ProductDetailPage() {
                 </div>
               )}
             </div>
-            <div className="hidden shrink-0 sm:block">
-              <VerdictStamp recommended={recommended} />
-            </div>
+            {total > 0 && (
+              <div className="hidden shrink-0 sm:block">
+                <VerdictStamp recommended={recommended} />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -407,7 +450,7 @@ export default function ProductDetailPage() {
         {/* main column */}
         <div className="space-y-6">
           <AboutCard description={product.Description} />
-          <CommunityReviews reviews={reviews} />
+          <CommunityReviews reviews={reviews} loading={reviewsLoading} />
         </div>
 
         {/* lateral bar */}

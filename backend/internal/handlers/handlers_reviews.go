@@ -505,7 +505,7 @@ func (h *ReviewHandler) GetUserReviewsByIDHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, h.enrichReviews(reviews))
 }
 
-// GetProductReviewsHandler returns reviews for a specific product (enriched).
+// GetProductReviewsHandler returns all reviews written about a given product.
 func (h *ReviewHandler) GetProductReviewsHandler(c *gin.Context) {
 	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil || productID < 1 {

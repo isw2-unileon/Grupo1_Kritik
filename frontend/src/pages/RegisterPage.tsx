@@ -96,6 +96,10 @@ export default function RegisterPage() {
       setError("El nombre de usuario es obligatorio");
       return;
     }
+    if (userName.trim().length < 2) {
+      setError("El nombre de usuario debe tener al menos 2 caracteres");
+      return;
+    }
     if (isEmpty(birth)) {
       setError("La fecha de nacimiento es obligatoria");
       return;
