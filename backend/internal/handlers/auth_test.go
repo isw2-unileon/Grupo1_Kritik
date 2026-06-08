@@ -75,9 +75,10 @@ func TestRegisterHandler_DuplicateEmail(t *testing.T) {
 	r := setupAuthRouter(mock)
 
 	body, _ := json.Marshal(map[string]string{
-		"email":    "dup@test.com",
-		"password": "pass",
-		"name":     "Dup",
+		"email":     "dup@test.com",
+		"password":  "pass",
+		"name":      "Dup",
+		"user_name": "dupuser",
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/auth/register", bytes.NewReader(body))
@@ -220,6 +221,33 @@ func TestLoginHandler_UserNotFound(t *testing.T) {
 	}
 }
 
+func TestLoginHandler_LoginByUsername(t *testing.T) {
+	hash, err := bd.HashPassword("mypass")
+	if err != nil {
+		t.Fatalf("HashPassword failed: %v", err)
+	}
+
+	mock := &bd.MockDatabase{
+		MockGetUserByUserName: func(name string) (*bd.User, error) {
+			return &bd.User{ID: 20, Email: "byuser@test.com", UserName: name, Password: hash}, nil
+		},
+	}
+	r := setupAuthRouter(mock)
+
+	body, _ := json.Marshal(map[string]string{
+		"user_name": "myuser",
+		"password":  "mypass",
+	})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func setupAvatarRouter(db bd.Database) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -333,32 +361,5 @@ func TestDeleteAvatarHandler_DBError(t *testing.T) {
 
 	if resp.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", resp.Code)
-	}
-}
-
-func TestLoginHandler_LoginByUsername(t *testing.T) {
-	hash, err := bd.HashPassword("mypass")
-	if err != nil {
-		t.Fatalf("HashPassword failed: %v", err)
-	}
-
-	mock := &bd.MockDatabase{
-		MockGetUserByUserName: func(name string) (*bd.User, error) {
-			return &bd.User{ID: 20, Email: "byuser@test.com", UserName: name, Password: hash}, nil
-		},
-	}
-	r := setupAuthRouter(mock)
-
-	body, _ := json.Marshal(map[string]string{
-		"user_name": "myuser",
-		"password":  "mypass",
-	})
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/auth/login", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 }
