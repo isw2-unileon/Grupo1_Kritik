@@ -55,8 +55,17 @@ function Header() {
                 Publicar
               </NavLink>
 
-              <span className="hidden text-sm text-dim sm:block">{user?.name}</span>
-              {user && <UserAvatar image={user.image} name={user.name} size="xs" />}
+              {user && (
+                <Link
+                  to={isAdmin ? "/dashboard" : "/dashboard?tab=perfil"}
+                  aria-label="Ir a tu perfil"
+                  title="Tu perfil"
+                  className="flex items-center gap-2.5 rounded-full px-2 py-1 transition hover:bg-cream/5"
+                >
+                  <span className="hidden text-sm text-dim sm:block">{user.name}</span>
+                  <UserAvatar image={user.image} name={user.name} size="xs" />
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={logout}
