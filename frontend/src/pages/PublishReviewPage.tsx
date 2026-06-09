@@ -313,7 +313,7 @@ export default function PublishReviewPage() {
           </div>
         </div>
 
-        {/* description */}
+        {/*description*/}
         <label className="block">
           <span className="text-sm font-medium text-cream">Tu reseña</span>
           <textarea
