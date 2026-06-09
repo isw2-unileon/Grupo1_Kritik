@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-cream">{p.Name}</p>
                         <p className="text-xs text-faint">
-                          {p.AverageGrade != null ? `${p.AverageGrade}/10` : "Sin nota"}
+                          {p.AverageGrade != null ? `${p.AverageGrade}%` : "Sin nota"}
                         </p>
                       </div>
                     </button>
