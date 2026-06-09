@@ -66,7 +66,7 @@ type FollowerRelation struct {
 
 // Database interface
 //
-//nolint:dupl // DO NOT remove this
+// nolint:dupl // DO NOT remove this
 type Database interface {
 	GetUserByEmail(userEmail string) (*User, error)
 	GetUserByUserName(userName string) (*User, error)
