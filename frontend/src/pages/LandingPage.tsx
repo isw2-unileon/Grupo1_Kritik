@@ -106,6 +106,13 @@ export default function LandingPage() {
           <div>
             <article className="rounded-[2rem] border border-line bg-surface p-3 shadow-2xl">
               <div className="relative aspect-[4/3] overflow-hidden rounded-[1.4rem] bg-gradient-to-br from-[#3a2d6b] via-[#5b3b8c] to-[#241b3f]">
+                <img
+                  src="https://cdn.mos.cms.futurecdn.net/v2/t:0,l:0,cw:1079,ch:607,q:80,w:1079/Jz2CTv2AenNdvM7uf6brPF.jpg"
+                  alt="Hollow Knight"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
                 <div
                   aria-hidden
                   className="absolute inset-0 opacity-40"
@@ -125,7 +132,7 @@ export default function LandingPage() {
                 </span>
                 <div className="absolute bottom-4 left-4 z-10">
                   <p className="text-[10px] uppercase tracking-[0.34em] text-cream/70">Videojuego</p>
-                  <p className="font-display text-2xl font-semibold text-cream">Hollow Lumen</p>
+                  <p className="font-display text-2xl font-semibold text-cream">Hollow Knight</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 px-4 pb-3 pt-4">
