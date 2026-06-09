@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import Card from "@/components/Card";
 import ProductEditModal from "@/components/ProductEditModal";
+import UserAvatar from "@/components/UserAvatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { searchProducts, getProductReviews, type Review } from "@/services/api";
 
@@ -250,12 +251,23 @@ function CommunityReviews({ reviews, loading }: { reviews: Review[]; loading: bo
           reviews.map((r) => (
             <article key={r.id} className="rounded-2xl border border-line bg-ink/60 p-5">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface2 font-display text-sm font-bold text-acid ring-1 ring-line">
-                    {(r.UserName || "?").charAt(0).toUpperCase()}
-                  </span>
-                  <p className="text-sm font-semibold text-cream">@{r.UserName || "anónimo"}</p>
-                </div>
+                {r.UserId ? (
+                  <Link
+                    to={`/user/${r.UserId}`}
+                    aria-label={`Ver el perfil de ${r.UserName || "usuario"}`}
+                    className="flex items-center gap-3 rounded-full transition hover:opacity-80"
+                  >
+                    <UserAvatar image={r.UserImage} name={r.UserName || ""} size="xs" />
+                    <p className="text-sm font-semibold text-cream transition hover:text-acid">
+                      @{r.UserName || "anónimo"}
+                    </p>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <UserAvatar image={r.UserImage} name={r.UserName || ""} size="xs" />
+                    <p className="text-sm font-semibold text-cream">@{r.UserName || "anónimo"}</p>
+                  </div>
+                )}
                 <VerdictChip yes={r.Recommended} />
               </div>
               {r.Description && (

@@ -54,6 +54,7 @@ type Review struct {
 	UserID      int    `json:"UserId,omitempty"`
 	ProductName string `json:"ProductName,omitempty"`
 	UserName    string `json:"UserName,omitempty"`
+	UserImage   string `json:"UserImage,omitempty"`
 }
 
 // FollowerRelation struct

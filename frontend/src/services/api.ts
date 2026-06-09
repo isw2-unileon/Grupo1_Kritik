@@ -168,6 +168,8 @@ export interface Review {
   Recommended: boolean;
   ProductName: string;
   UserName: string;
+  UserId?: number;
+  UserImage?: string;
 }
 
 export async function getReviews(signal?: AbortSignal): Promise<Review[]> {

@@ -49,11 +49,13 @@ function Cover({
   name,
   image,
   className = "",
+  revealOnHover = false,
 }: {
   cat: CatKey;
   name?: string;
   image?: string;
   className?: string;
+  revealOnHover?: boolean;
 }) {
   const c = CATS[cat];
   return (
@@ -77,17 +79,29 @@ function Cover({
           }}
         />
       )}
-      {/* velo oscuro inferior: mantiene el texto legible sobre imagen o gradiente */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg,transparent 35%,rgba(0,0,0,.55))" }}
-      />
-      {name && (
-        <div className="absolute bottom-3 left-3 z-10">
-          <p className="text-[9px] uppercase tracking-[0.34em] text-cream/70">{c.label}</p>
-          <p className="font-display text-lg font-semibold leading-tight text-cream">{name}</p>
-        </div>
+      {revealOnHover ? (
+        // nombre oculto: aparece centrado al pasar el cursor, con el fondo oscurecido y difuminado
+        name && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-black/45 px-2 text-center opacity-0 backdrop-blur-sm transition duration-300 group-hover/card:opacity-100">
+            <p className="text-[9px] uppercase tracking-[0.34em] text-cream/70">{c.label}</p>
+            <p className="font-display text-base font-semibold leading-tight text-cream">{name}</p>
+          </div>
+        )
+      ) : (
+        <>
+          {/* velo oscuro inferior: mantiene el texto legible sobre imagen o gradiente */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(180deg,transparent 35%,rgba(0,0,0,.55))" }}
+          />
+          {name && (
+            <div className="absolute bottom-3 left-3 z-10">
+              <p className="text-[9px] uppercase tracking-[0.34em] text-cream/70">{c.label}</p>
+              <p className="font-display text-lg font-semibold leading-tight text-cream">{name}</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -130,6 +144,8 @@ const FEATURED: { name: string; cat: CatKey }[] = [
 /* ---------- Cover carousel (auto-scrolls, real random products) ---------- */
 function FeaturedStrip() {
   const navigate = useNavigate();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
   // Seed with shuffled sample covers so the strip is never empty; swap in the
   // real random products from the backend (GET /api/products/random) on mount.
   const [items, setItems] = useState<Product[]>(() =>
@@ -154,28 +170,109 @@ function FeaturedStrip() {
     return () => controller.abort();
   }, []);
 
-  // We duplicate the list so the loop is continuous and seamless.
-  const loop = useMemo(() => [...items, ...items], [items]);
+  // We triplicate the list: with a full copy on each side of the middle one, the
+  // arrows can always move either way without hitting the start/end (seamless loop).
+  const loop = useMemo(() => [...items, ...items, ...items], [items]);
+
+  // auto-scroll: advance scrollLeft over time and wrap at the halfway point
+  // (the duplicate) so it loops seamlessly. Pauses while the cursor is over it.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    let raf = 0;
+    let last = performance.now();
+    let pos = el.scrollLeft; // acumulador float: scrollLeft puede redondearse y atascarse
+    const SPEED = 30; // px per second
+    const step = (now: number) => {
+      const dt = Math.min(now - last, 50);
+      last = now;
+      if (pausedRef.current) {
+        // en pausa (cursor encima / arrastrando): seguimos el scroll manual
+        pos = el.scrollLeft;
+      } else {
+        pos += (SPEED * dt) / 1000;
+        const set = el.scrollWidth / 3;
+        if (set > 0) {
+          if (pos >= 2 * set) pos -= set;
+          else if (pos < set) pos += set;
+        }
+        el.scrollLeft = pos;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [loop.length]);
 
   const open = (p: Product) =>
     navigate(`/product/${encodeURIComponent(p.Name)}`, { state: { product: p } });
 
+  const nudge = (dir: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    // nos colocamos en la copia central (hay una copia entera a cada lado), asi el
+    // desplazamiento nunca topa con el principio ni con el final: salto invisible.
+    const set = el.scrollWidth / 3;
+    if (set > 0) el.scrollLeft = (el.scrollLeft % set) + set;
+    el.scrollBy({ left: dir * 320, behavior: "smooth" });
+  };
+
   if (items.length === 0) return null;
 
   return (
-    <div className="group relative overflow-hidden">
+    <div
+      className="group relative"
+      onMouseEnter={() => {
+        pausedRef.current = true;
+      }}
+      onMouseLeave={() => {
+        pausedRef.current = false;
+      }}
+      onTouchStart={() => {
+        pausedRef.current = true;
+      }}
+      onTouchEnd={() => {
+        pausedRef.current = false;
+      }}
+    >
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-ink to-transparent" />
-      <div className="flex w-max animate-[kritik-marquee_50s_linear_infinite] group-hover:[animation-play-state:paused]">
+
+      {/* flechas laterales (aparecen al pasar el cursor) */}
+      <button
+        type="button"
+        aria-label="Desplazar a la izquierda"
+        onClick={() => nudge(-1)}
+        className="absolute left-1 top-1/2 z-20 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-line bg-ink/80 text-cream opacity-0 backdrop-blur transition hover:border-acid/40 hover:bg-ink group-hover:opacity-100"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        aria-label="Desplazar a la derecha"
+        onClick={() => nudge(1)}
+        className="absolute right-1 top-1/2 z-20 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-line bg-ink/80 text-cream opacity-0 backdrop-blur transition hover:border-acid/40 hover:bg-ink group-hover:opacity-100"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+
+      <div
+        ref={trackRef}
+        className="flex overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
         {loop.map((p, i) => (
           <button
             key={`${p.id}-${i}`}
             type="button"
             onClick={() => open(p)}
             aria-label={`Ver ${p.Name}`}
-            className="mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:-translate-y-1 hover:border-acid/40"
+            className="group/card mr-4 w-32 shrink-0 overflow-hidden rounded-2xl border border-line transition hover:border-acid/40"
           >
-            <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} className="aspect-[2/3]" />
+            <Cover cat={catKey(p.Type)} name={p.Name} image={p.Image} revealOnHover className="aspect-[2/3]" />
           </button>
         ))}
       </div>

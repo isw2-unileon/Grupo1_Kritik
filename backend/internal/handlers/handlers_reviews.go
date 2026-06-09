@@ -133,6 +133,7 @@ func (h *ReviewHandler) enrichReviews(reviews []bd.Review) []bd.Review {
 		if r.UserID > 0 {
 			if u, err := h.DB.GetUserByID(r.UserID); err == nil && u != nil {
 				reviews[i].UserName = u.UserName
+				reviews[i].UserImage = u.Image
 			}
 		}
 	}
