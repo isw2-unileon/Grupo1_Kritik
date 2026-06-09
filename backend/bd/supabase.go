@@ -19,10 +19,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Comment for lint
-
-// Defined structs:
-
 // User struct
 type User struct {
 	ID       int         `json:"id,omitempty"`

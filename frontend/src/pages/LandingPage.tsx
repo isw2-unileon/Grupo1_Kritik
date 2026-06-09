@@ -187,6 +187,21 @@ export default function LandingPage() {
           </p>
         </article>
       </section>
+
+      <footer className="text-center">
+          <a
+            href="https://docs.google.com/presentation/d/1Ow9Re_BpCZswfvMotO8vIE8nVqVdRTYT/edit?usp=sharing&ouid=102955451044475985862&rtpof=true&sd=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-faint transition-colors hover:text-cream"
+            onClick={(e) => {
+              e.preventDefault();
+              window.open(e.currentTarget.href, "_blank");
+            }}
+          >
+            Conoce mas sobre nosotros
+          </a>
+        </footer>
     </div>
   );
 }
