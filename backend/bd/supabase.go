@@ -410,10 +410,6 @@ func (db *SupabaseDB) GetProductsByName(productName string) ([]Product, error) {
 		return nil, err
 	}
 
-	if len(products) == 0 {
-		return nil, fmt.Errorf("not found product with name %s", productName)
-	}
-
 	return products, nil
 }
 
