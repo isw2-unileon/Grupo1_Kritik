@@ -41,6 +41,7 @@ frontend, and a **Supabase** database.
 
 ## Getting Started
 
+### Linux
 ```bash
 make install
 
@@ -49,6 +50,18 @@ make run-backend    # port 8080
 
 # Terminal 2
 make run-frontend   # port 5173
+```
+
+### Windows
+```bash
+make install
+
+# Terminal 1
+cd backend/cmd/server
+go run main.go           # port 8080
+
+# Terminal 2
+make run-frontend        # port 5173
 ```
 
 Open <http://localhost:5173>. The Vite dev server proxies `/api` requests to
