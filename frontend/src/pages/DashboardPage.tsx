@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import ReviewsSection from "@/components/ReviewsSection";
 import Card from "@/components/Card";
@@ -824,9 +824,37 @@ function ProfileCard({ user, onOpen }: { user: SessionUser; onOpen: () => void }
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabId>("inicio");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const t = searchParams.get("tab");
+    return TABS.some((tab) => tab.id === t) ? (t as TabId) : "inicio";
+  });
   const tabsRef = useRef<HTMLElement>(null);
   const didMount = useRef(false);
+
+  // The URL (?tab=) is the source of truth for the active tab, so the header
+  // avatar (-> ?tab=perfil) works every time, even after switching tabs.
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    setActiveTab(t && TABS.some((tab) => tab.id === t) ? (t as TabId) : "inicio");
+  }, [searchParams]);
+
+  // change tab and keep it in the URL (replace -> doesn't pollute history)
+  const goToTab = useCallback(
+    (id: TabId) => {
+      setActiveTab(id);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id === "inicio") next.delete("tab");
+          else next.set("tab", id);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   // Catalog search (real API: searchProducts)
   const [query, setQuery] = useState("");
@@ -912,14 +940,14 @@ export default function DashboardPage() {
             {/* featured carousel (only on Home) */}
             <FeaturedStrip />
             {/* main area: recommendations (preview) */}
-            <Recommendations limit={3} onSeeAll={() => setActiveTab("recomendaciones")} />
+            <Recommendations limit={3} onSeeAll={() => goToTab("recomendaciones")} />
             {/* secondary: your reviews, your circle and your profile */}
             <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-              <ReviewsSection limit={3} onSeeAll={() => setActiveTab("resenas")} />
+              <ReviewsSection limit={3} onSeeAll={() => goToTab("resenas")} />
               <aside className="space-y-6">
-                <FriendsYes limit={3} onSeeAll={() => setActiveTab("circulo")} />
-                <FriendsNo limit={3} onSeeAll={() => setActiveTab("circulo")} />
-                <ProfileCard user={user} onOpen={() => setActiveTab("perfil")} />
+                <FriendsYes limit={3} onSeeAll={() => goToTab("circulo")} />
+                <FriendsNo limit={3} onSeeAll={() => goToTab("circulo")} />
+                <ProfileCard user={user} onOpen={() => goToTab("perfil")} />
               </aside>
             </div>
           </div>
@@ -1154,7 +1182,7 @@ export default function DashboardPage() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setActiveTab(t.id)}
+                onClick={() => goToTab(t.id)}
                 aria-current={activeTab === t.id ? "page" : undefined}
                 className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition ${
                   activeTab === t.id
